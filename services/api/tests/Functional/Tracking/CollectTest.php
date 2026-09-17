@@ -346,6 +346,29 @@ final class CollectTest extends HttpTestCase
         $this->assertProblem($this->request('POST', '/t/forget', json_encode(['k' => $this->site->publicKey, 'vid' => $vid], \JSON_THROW_ON_ERROR), ['Origin' => 'https://other.test', 'Content-Type' => 'text/plain']), 403);
     }
 
+    public function testForgetInvalidatesCachedReports(): void
+    {
+        $this->site->cookieLevelEnabled = true;
+        $this->em->flush();
+        $vid = Payloads::id22();
+        $this->collect(Payloads::batch($this->site->publicKey, [Payloads::pageview('https://www.site.test/erase-me')], 'c', ['vid' => $vid, 'sid' => Payloads::id22(), 'cv' => 1]));
+        $this->service(\Analytics\Reporting\Application\Rollup\RollupRunner::class)->runDirty($this->site->id());
+
+        $viewer = $this->factory->user();
+        $this->factory->grant($viewer, $this->site, \Analytics\Identity\Domain\SiteRole::Viewer);
+        $this->loginAs($viewer);
+        $url = '/api/v1/sites/' . $this->site->id() . '/reports/pages?period=7d';
+        self::assertSame(['/erase-me'], array_column($this->data($this->get($url))['rows'], 'path'));
+        self::assertSame('hit', $this->json($this->get($url))['meta']['cache']);
+
+        $this->request('POST', '/t/forget', json_encode(['k' => $this->site->publicKey, 'vid' => $vid], \JSON_THROW_ON_ERROR), ['Origin' => 'https://www.site.test', 'Content-Type' => 'text/plain']);
+        $this->service(\Analytics\Reporting\Application\Rollup\RollupRunner::class)->runDirty($this->site->id());
+
+        $after = $this->json($this->get($url));
+        self::assertSame('miss', $after['meta']['cache'], 'the cached report is unreachable after an erasure');
+        self::assertSame([], $after['data']['rows']);
+    }
+
     public function testTrackingEndpointsNeverSetOrReadCookies(): void
     {
         $this->cookies = ['__Host-an_session' => 'x', 'an_vid' => 'y'];

@@ -37,6 +37,9 @@ final readonly class ForgetService
             foreach ($days as $day) {
                 DirtyDayMarker::mark($c, $site->id, $day, $this->clock->now());
             }
+            // Bumping the rollup version makes every cached report for this site unreachable at once,
+            // so erased data cannot be served from the cache while the rollups catch up.
+            $c->executeStatement('UPDATE sites SET rollup_version = rollup_version + 1 WHERE id = ?', [$site->id]);
 
             return $affected;
         });

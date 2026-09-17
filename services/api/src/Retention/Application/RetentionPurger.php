@@ -94,6 +94,10 @@ final readonly class RetentionPurger
             [$now->modify('-' . self::ACCEPTED_INVITATION_DAYS . ' days')->format('Y-m-d H:i:s'), $now->modify('-' . self::ACCEPTED_INVITATION_DAYS . ' days')->format('Y-m-d H:i:s')],
         ));
         $stats['password_resets'] = Types::int($this->connection->executeStatement('DELETE FROM password_resets WHERE expires_at < ?', [$now->format('Y-m-d H:i:s')]));
+        if ($stats['events_raw'] > 0 || $stats['visits'] > 0 || $stats['conversions'] > 0 || $stats['dropped_partitions'] !== []) {
+            // Reports cached before the purge would still show the removed data.
+            $this->connection->executeStatement('UPDATE sites SET rollup_version = rollup_version + 1');
+        }
         $stats['audit_log'] = $this->partitions->deleteBefore('audit_log', 'occurred_at', $now->modify('-' . self::AUDIT_MONTHS . ' months'));
         $stats['job_runs'] = $this->partitions->deleteBefore('job_runs', 'started_at', $now->modify('-' . self::JOB_RUNS_DAYS . ' days'));
 
