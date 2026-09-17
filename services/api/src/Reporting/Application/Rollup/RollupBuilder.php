@@ -118,7 +118,7 @@ final readonly class RollupBuilder
             'rollup_content_daily',
             ['content_key', 'channel', 'pageviews', 'visits', 'visitors', 'contacts'],
             'SELECT :site, day, content_key, channel, SUM(pageviews), SUM(visits), SUM(visitors), SUM(contacts)
-               FROM (' . RawSelects::content($events) . ') parts GROUP BY day, content_key, channel',
+               FROM (' . RawSelects::content($events, $visits) . ') parts GROUP BY day, content_key, channel',
             $p + ['contacts' => $contacts],
             ['contacts' => ArrayParameterType::STRING],
         );

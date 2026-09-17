@@ -216,7 +216,7 @@ final class RawSelects
     }
 
     /** Columns: day, content_key, channel, pageviews, visits, visitors, contacts. */
-    public static function content(string $eventsWhere): string
+    public static function content(string $eventsWhere, string $visitsWhere = ''): string
     {
         $visitorsE = self::VISITORS_E;
 
@@ -224,12 +224,12 @@ final class RawSelects
             SELECT e.local_day AS day, e.content_key, COALESCE(v.channel, e.channel) AS channel, COUNT(*) AS pageviews,
                    COUNT(DISTINCT e.visit_id) + COALESCE(SUM(e.visit_id IS NULL AND e.is_entry = 1), 0) AS visits,
                    {$visitorsE} AS visitors, 0 AS contacts
-              FROM events_raw e LEFT JOIN visits v ON v.site_id = e.site_id AND v.id = e.visit_id AND v.local_day = e.local_day
+              FROM events_raw e LEFT JOIN visits v ON v.site_id = e.site_id AND v.id = e.visit_id AND v.local_day = e.local_day{$visitsWhere}
              WHERE e.site_id = :site AND e.type = 'pv' AND e.content_key IS NOT NULL {$eventsWhere}
              GROUP BY e.local_day, e.content_key, 3
             UNION ALL
             SELECT e.local_day, e.content_key, COALESCE(v.channel, e.channel), 0, 0, 0, COUNT(*)
-              FROM events_raw e LEFT JOIN visits v ON v.site_id = e.site_id AND v.id = e.visit_id AND v.local_day = e.local_day
+              FROM events_raw e LEFT JOIN visits v ON v.site_id = e.site_id AND v.id = e.visit_id AND v.local_day = e.local_day{$visitsWhere}
              WHERE e.site_id = :site AND e.type = 'ev' AND e.content_key IS NOT NULL AND e.name IN (:contacts) {$eventsWhere}
              GROUP BY e.local_day, e.content_key, 3
             SQL;

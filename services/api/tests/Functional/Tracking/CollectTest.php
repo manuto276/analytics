@@ -176,7 +176,7 @@ final class CollectTest extends HttpTestCase
         $this->container->get(\Symfony\Component\Cache\Adapter\AdapterInterface::class)->clear();
         $this->clock->sleep(60);
         $this->collect(Payloads::batch($key, [Payloads::pageview('https://www.site.test/?utm_source=other')]));
-        self::assertSame(2, \count($this->visits()), 'with the flag off the campaign change continues the visit');
+        self::assertSame(2, (int) $this->db->fetchOne('SELECT COUNT(*) FROM visits WHERE site_id = ?', [$this->site->id()]), 'with the flag off the campaign change continues the visit');
     }
 
     public function testVisitorHashDependsOnNetworkUserAgentAndDay(): void

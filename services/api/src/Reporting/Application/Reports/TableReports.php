@@ -257,7 +257,7 @@ final readonly class TableReports
         if ($useRollup) {
             [$inner, $params] = $this->rollupInner('rollup_content_daily', ['content_key', 'channel', ...$sums], $q, $range, ['content' => 'content_key', 'channel' => 'channel'], $extraWhere);
         } else {
-            [$inner, $params] = $this->rawInner(static fn(string $e, string $v): string => RawSelects::content($e . ($prefix === '' ? '' : ' AND e.content_key LIKE :prefix')), $q, $range, false);
+            [$inner, $params] = $this->rawInner(static fn(string $e, string $v): string => RawSelects::content($e . ($prefix === '' ? '' : ' AND e.content_key LIKE :prefix'), $v), $q, $range, false);
             $params['contacts'] = $q->site->contentContactEvents === [] ? ['__none__'] : $q->site->contentContactEvents;
         }
         if ($prefix !== '') {
