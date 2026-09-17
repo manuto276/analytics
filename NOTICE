@@ -19,6 +19,8 @@ Third-party components
   in this repository.
 * matomo/device-detector, LGPL-3.0-or-later.
 * jaybizzle/crawler-detect, MIT License.
+* MaxMind test database (services/api/tests/fixtures/GeoIP2-Country-Test.mmdb) from
+  https://github.com/maxmind/MaxMind-DB, Apache-2.0; used only by the test suite.
 * PHP and JavaScript dependencies are listed with their licenses in services/api/composer.lock,
   services/dashboard/pnpm-lock.yaml and services/tracker/pnpm-lock.yaml.
 * The optional WordPress plugin in services/wordpress-plugin/analytics-connector is licensed
