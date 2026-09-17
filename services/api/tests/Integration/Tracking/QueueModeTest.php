@@ -139,6 +139,36 @@ final class QueueModeTest extends IntegrationTestCase
         self::assertSame(0, (int) $this->db->fetchOne('SELECT COUNT(*) FROM daily_salts'), 'no salt is stored in MySQL');
     }
 
+    public function testMalformedQueueEntriesAreDroppedAndTheLockIsHonoured(): void
+    {
+        $container = $this->queueContainer;
+        self::assertNotNull($container);
+        $redis = $container->get('redis');
+        \assert($redis instanceof \Predis\ClientInterface);
+        $queue = $container->get(RedisQueueEventSink::class);
+        \assert($queue instanceof RedisQueueEventSink);
+
+        $redis->rpush(RedisQueueEventSink::KEY, ['not json', '{"site": "wrong"}', '{}']);
+        self::assertSame(3, $queue->length());
+        self::assertSame([], $queue->pop(10), 'malformed entries are dropped, not retried forever');
+        self::assertSame(0, $queue->length());
+
+        // A second worker finds the lock taken and exits quietly.
+        $locks = $container->get(\Symfony\Component\Lock\LockFactory::class);
+        \assert($locks instanceof \Symfony\Component\Lock\LockFactory);
+        $lock = $locks->createLock('job:queue:work', 60);
+        self::assertTrue($lock->acquire(false));
+        try {
+            $application = ConsoleApplicationFactory::create($container);
+            $application->setAutoExit(false);
+            $output = new BufferedOutput();
+            self::assertSame(0, $application->run(new ArrayInput(['command' => 'queue:work', '--once' => true, '-v' => true]), $output));
+            self::assertStringContainsString('already running', $output->fetch());
+        } finally {
+            $lock->release();
+        }
+    }
+
     public function testTheAppStillBootsInQueueMode(): void
     {
         $container = $this->queueContainer;

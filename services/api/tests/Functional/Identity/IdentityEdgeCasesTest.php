@@ -144,6 +144,43 @@ final class IdentityEdgeCasesTest extends HttpTestCase
         $this->addToAssertionCount(1);
     }
 
+    public function testDisablingAUserKillsTheirOpenSession(): void
+    {
+        $this->factory->admin();
+        $user = $this->factory->user();
+        $this->loginAs($user);
+        $this->data($this->get('/api/v1/auth/me'));
+
+        $user->status = \Analytics\Identity\Domain\UserStatus::Disabled;
+        $this->em->flush();
+
+        $this->assertProblem($this->get('/api/v1/auth/me'), 401, 'unauthorized');
+        self::assertSame(0, \count($this->service(SessionManager::class)->activeSessions($user->id())), 'the session is revoked on the spot');
+    }
+
+    public function testSiteRolesAreReadableThroughTheMapping(): void
+    {
+        $user = $this->factory->user();
+        $site = $this->factory->site();
+        $this->factory->grant($user, $site, SiteRole::Viewer);
+        $this->em->clear();
+
+        $role = $this->em->find(\Analytics\Identity\Domain\UserSiteRole::class, ['userId' => $user->id(), 'siteId' => $site->id()]);
+        self::assertInstanceOf(\Analytics\Identity\Domain\UserSiteRole::class, $role);
+        self::assertSame(SiteRole::Viewer, $role->role);
+
+        $entity = new \Analytics\Identity\Domain\UserSiteRole($user->id(), $site->id(), SiteRole::Admin, $this->clock->now());
+        self::assertSame(SiteRole::Admin, $entity->role);
+        self::assertSame($site->id(), $entity->siteId);
+    }
+
+    public function testSiteScopedRoutesRejectNonNumericSiteIds(): void
+    {
+        $this->validateOpenApi = false;
+        $this->loginAs($this->factory->admin());
+        $this->assertProblem($this->get('/api/v1/sites/999999/reports/overview'), 404, 'not_found');
+    }
+
     public function testSiteAdminsSeeAndRevokeOnlyTheirSiteInvitations(): void
     {
         $site = $this->factory->site();
