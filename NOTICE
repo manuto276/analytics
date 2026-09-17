@@ -1,0 +1,25 @@
+analytics
+Copyright (C) 2026 The analytics contributors
+
+This program is free software: you can redistribute it and/or modify it under the terms of the
+GNU Affero General Public License as published by the Free Software Foundation, either version 3
+of the License, or (at your option) any later version. See LICENSE.
+
+Source code: https://github.com/manuto276/analytics
+
+Third-party components
+----------------------
+
+* Nuxt UI dashboard template (https://github.com/nuxt-ui-templates/dashboard), MIT License,
+  Copyright (c) 2025 Nuxt UI Templates. The dashboard in services/dashboard started as a copy of
+  this template; its license text is in services/dashboard/TEMPLATE_LICENSE and the imported commit
+  in services/dashboard/TEMPLATE_COMMIT.
+* DB-IP Lite Country database (https://db-ip.com), Creative Commons Attribution 4.0 International.
+  "IP Geolocation by DB-IP" — downloaded at runtime by `bin/analytics geo:update`, not redistributed
+  in this repository.
+* matomo/device-detector, LGPL-3.0-or-later.
+* jaybizzle/crawler-detect, MIT License.
+* PHP and JavaScript dependencies are listed with their licenses in services/api/composer.lock,
+  services/dashboard/pnpm-lock.yaml and services/tracker/pnpm-lock.yaml.
+* The optional WordPress plugin in services/wordpress-plugin/analytics-connector is licensed
+  GPL-2.0-or-later (see its own LICENSE file).

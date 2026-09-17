@@ -1,0 +1,25 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use Analytics\Kernel\ConsoleApplicationFactory;
+use Analytics\Kernel\Kernel;
+
+if (PHP_SAPI !== 'cli') {
+    exit(1);
+}
+
+require dirname(__DIR__) . '/vendor/autoload.php';
+
+date_default_timezone_set('UTC');
+ini_set('memory_limit', '512M');
+
+try {
+    $container = Kernel::container();
+} catch (InvalidArgumentException $e) {
+    fwrite(STDERR, 'Configuration error: ' . $e->getMessage() . PHP_EOL);
+    exit(1);
+}
+
+exit(ConsoleApplicationFactory::create($container)->run());

@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/manuto276/analytics/docs/api/tracking-payload.v1.schema.json",
+  "title": "Tracking payload v1",
+  "description": "Body of POST /t/e. Sent as text/plain (sendBeacon) or application/json (fetch fallback).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["v", "k", "l", "e"],
+  "properties": {
+    "v": { "const": 1, "description": "Payload version" },
+    "k": { "type": "string", "pattern": "^pk_[A-Za-z0-9]{21}$", "description": "Site public key" },
+    "l": { "enum": ["b", "c"], "description": "Tracking level: b = base (no consent), c = consented cookie level" },
+    "vid": { "type": "string", "pattern": "^[A-Za-z0-9_-]{22}$", "description": "Visitor id (an_vid cookie). Only when l=c; ignored server-side for l=b." },
+    "sid": { "type": "string", "pattern": "^[A-Za-z0-9_-]{22}$", "description": "Session id (an_sid cookie). Only when l=c." },
+    "cv": { "type": "integer", "minimum": 0, "description": "Consent version the client decided on (0 if none)" },
+    "sw": { "type": "integer", "minimum": 0, "maximum": 100000, "description": "Screen width in CSS px" },
+    "e": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": { "$ref": "#/$defs/event" }
+    }
+  },
+  "$defs": {
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "t", "u"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{16}$", "description": "Event uid: base64url of 12 random bytes" },
+        "t": { "enum": ["pv", "ev", "en", "cu", "cs"], "description": "pv pageview, ev custom event, en engagement, cu consent upgrade, cs consent statistic" },
+        "u": { "type": "string", "maxLength": 2048, "description": "Absolute page URL" },
+        "r": { "type": "string", "maxLength": 2048, "description": "Referrer URL (pv, cu)" },
+        "a": { "type": "integer", "minimum": 0, "description": "Age in ms: time between the event and the send" },
+        "n": { "type": "string", "pattern": "^[a-z0-9_:.-]{1,64}$", "description": "Event name (ev)" },
+        "p": {
+          "type": "object",
+          "maxProperties": 10,
+          "propertyNames": { "maxLength": 32, "minLength": 1 },
+          "additionalProperties": {
+            "anyOf": [
+              { "type": "string", "maxLength": 100 },
+              { "type": "number" },
+              { "type": "boolean" }
+            ]
+          }
+        },
+        "ck": { "type": "string", "maxLength": 128, "description": "Content key, e.g. author:42" },
+        "ms": { "type": "integer", "minimum": 0, "description": "Engaged (visible) milliseconds (en)" },
+        "sp": { "type": "integer", "minimum": 0, "maximum": 100, "description": "Max scroll depth percent (en)" },
+        "cs": { "enum": ["shown", "accept", "reject", "dismiss", "reopen"], "description": "Consent statistic kind (cs)" },
+        "lu": { "type": "string", "maxLength": 2048, "description": "Landing URL of the visit (cu only)" },
+        "lr": { "type": "string", "maxLength": 2048, "description": "Landing referrer of the visit (cu only)" }
+      }
+    }
+  }
+}

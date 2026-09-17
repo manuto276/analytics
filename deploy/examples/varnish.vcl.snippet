@@ -1,0 +1,27 @@
+# analytics — Varnish (VCL 4.1) snippet for a TRACKED site's page cache
+#
+# 1. Never cache or alter the first-party tracker proxy path (/stats/, see
+#    tracked-site-proxy.nginx.conf).
+# 2. Ignore the tracker's consent/visitor cookies (an_consent, an_vid, an_sid, any an_*)
+#    in cache decisions: they are read by JavaScript on the page and by the site's
+#    backend only where it needs them (e.g. a conversion endpoint), so they must not
+#    make pages uncacheable or split the cache.
+#
+# Merge into the existing vcl_recv (before any cookie-based pass/hash logic).
+# If your backend reads an_vid (server-side conversions), exclude that URL from the
+# cookie stripping below, e.g. `if (req.url !~ "^/checkout/complete")`.
+
+sub vcl_recv {
+    if (req.url ~ "^/stats/") {
+        return (pass);
+    }
+
+    if (req.http.Cookie) {
+        # Remove an_* cookies, then clean up separators.
+        set req.http.Cookie = regsuball(req.http.Cookie, "(^|;\s*)an_[A-Za-z0-9_]+=[^;]*", "");
+        set req.http.Cookie = regsub(req.http.Cookie, "^;\s*", "");
+        if (req.http.Cookie ~ "^\s*$") {
+            unset req.http.Cookie;
+        }
+    }
+}

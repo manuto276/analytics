@@ -1,0 +1,24 @@
+{
+    "name": "analytics/wordpress-analytics-connector-tests",
+    "description": "Unit tests for the Analytics Connector WordPress plugin.",
+    "type": "project",
+    "license": "GPL-2.0-or-later",
+    "require-dev": {
+        "brain/monkey": "^2.7",
+        "phpunit/phpunit": "^13.0"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "AnalyticsConnector\\Tests\\": "Unit/"
+        }
+    },
+    "config": {
+        "platform": {
+            "php": "8.4.1"
+        },
+        "sort-packages": true
+    },
+    "scripts": {
+        "test": "phpunit"
+    }
+}

@@ -1,0 +1,47 @@
+{
+  "name": "@analytics/tracker",
+  "version": "0.0.0",
+  "private": true,
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "packageManager": "pnpm@10.34.5",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:api": "node scripts/build.mjs && node scripts/copy-to-api.mjs",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "size": "size-limit",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "size-limit": [
+    {
+      "name": "tracker (core + banner)",
+      "path": "dist/tracker.js",
+      "limit": "5.0 KB",
+      "gzip": true
+    }
+  ],
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@size-limit/file": "^14.0.0",
+    "@vitest/coverage-v8": "^5.0.1",
+    "ajv": "^8.20.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.10.0",
+    "globals": "^17.12.0",
+    "happy-dom": "^20.14.5",
+    "size-limit": "^14.0.0",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.70.0",
+    "vitest": "^5.0.1"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}

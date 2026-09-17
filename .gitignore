@@ -1,0 +1,52 @@
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Build output
+/dist/
+node_modules/
+.pnpm-store/
+
+# PHP
+services/api/vendor/
+services/api/var/*
+!services/api/var/.gitkeep
+services/api/.env
+services/api/.env.local
+services/api/.phpunit.cache/
+services/api/.php-cs-fixer.cache
+services/api/coverage/
+services/api/public/_nuxt/
+services/api/public/index.html
+services/api/public/200.html
+services/api/public/404.html
+services/api/resources/tracker/
+deploy/manual/tests/vendor/
+deploy/manual/.phpunit.cache/
+
+# Nuxt
+services/dashboard/.nuxt/
+services/dashboard/.output/
+services/dashboard/.data/
+services/dashboard/coverage/
+
+# Tracker
+services/tracker/dist/
+services/tracker/coverage/
+
+# E2E
+services/e2e/test-results/
+services/e2e/playwright-report/
+services/e2e/blob-report/
+
+# Docker local
+deploy/docker/certs/*.pem
+deploy/docker/certs/*.key
+deploy/docker/certs/*.srl
+deploy/docker/certs/*.csr
+.env
+services/api/.deptrac.cache
+services/wordpress-plugin/analytics-connector/tests/vendor/
+.nuxtrc.local

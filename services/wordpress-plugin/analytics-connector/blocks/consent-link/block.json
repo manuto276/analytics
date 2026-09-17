@@ -1,0 +1,21 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "analytics-connector/consent-link",
+	"title": "Consent settings link",
+	"category": "widgets",
+	"icon": "shield",
+	"description": "A link that reopens the analytics consent preferences.",
+	"keywords": [ "cookie", "consent", "privacy" ],
+	"textdomain": "analytics-connector",
+	"attributes": {
+		"label": {
+			"type": "string",
+			"default": ""
+		}
+	},
+	"supports": {
+		"html": false
+	},
+	"editorScript": "file:./editor.js"
+}

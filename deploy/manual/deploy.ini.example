@@ -1,0 +1,47 @@
+; deploy.ini — configuration of the analytics deploy console (./console)
+;
+; Lives next to ./console in the deploy root. `./console init` writes a copy with
+; these defaults if none exists. Quote string values ("...") so INI special
+; characters in URLs and paths are not interpreted.
+
+; PHP CLI used for bin/analytics (preflight, cache warmup, migrations, `./console app`)
+; and for the package runtime check (PHP version + extensions from BUILD_INFO.json).
+; Empty = the PHP binary running ./console. On panels with several PHP versions,
+; point it at the 8.4 CLI explicitly, e.g. "/usr/bin/php8.4".
+php_binary = ""
+
+; Retention. Releases beyond keep_releases (newest first) and packages beyond
+; keep_packages are removed after every successful deploy and by `./console cleanup`.
+; The current and previous release (and their packages) are never removed.
+keep_releases = 5
+keep_packages = 3
+
+; Health check run right after `current` is switched. The URL must return HTTP 200
+; with a JSON object whose "commit" equals the deployed commit, e.g.
+;   GET /api/v1/health -> {"status":"ok","commit":"<sha>","version":"<TS>"}
+; Empty disables the check (`deploy --no-health` skips it once).
+health_url = "https://stats.example.net/api/v1/health"
+; attempts, seconds between attempts (decimals allowed), per-request timeout in seconds
+health_tries = 5
+health_interval = 10
+health_timeout = 10
+
+; When the health check fails, point `current` back to the previous release and
+; exit non-zero. Database migrations are never rolled back (they must stay
+; backward compatible with the previous release by policy).
+auto_rollback = true
+
+; Dump the database before running migrations (same as `deploy --backup`).
+; Credentials come from shared/.env: DATABASE_URL="mysql://user:pass@host:3306/db"
+; or DB_HOST / DB_PORT / DB_NAME / DB_USER / DB_PASSWORD. The dump uses
+; --single-transaction, skips the daily_salts table (salts must never be backed up)
+; and is written to shared/var/storage/backups/<TS>.sql.gz.
+backup_before_migrate = false
+mysqldump_binary = "mysqldump"
+
+; Items kept across releases. Each release gets a relative symlink
+; <item> -> ../../shared/<item> (deeper items get more "../"), replacing whatever
+; the package contains at that path.
+shared[] = ".env"
+shared[] = "var/log"
+shared[] = "var/storage"

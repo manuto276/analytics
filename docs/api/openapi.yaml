@@ -1,0 +1,2551 @@
+openapi: 3.0.3
+info:
+  title: Analytics API
+  version: 1.0.0
+  description: |
+    JSON API of the self-hosted analytics service. The dashboard SPA is served from the same origin.
+
+    * Dashboard routes use an httpOnly session cookie (`__Host-an_session`) and require the
+      `X-CSRF-Token` header (value from `POST /auth/login` or `GET /auth/me`) on every non-GET request.
+    * Server routes (`/server/*`) use `Authorization: Bearer ak_<prefix>_<secret>` API keys with scopes.
+    * Errors are RFC 9457 problem details (`application/problem+json`) with a stable `code`.
+    * Reports expose aggregates only; no endpoint returns individual visitor or conversion rows.
+  license:
+    name: AGPL-3.0-or-later
+    url: https://www.gnu.org/licenses/agpl-3.0.html
+servers:
+  - url: /api/v1
+tags:
+  - name: auth
+  - name: users
+  - name: sites
+  - name: consent
+  - name: conversions
+  - name: reports
+  - name: admin
+  - name: server
+security:
+  - session: []
+paths:
+  /health:
+    get:
+      tags: [admin]
+      summary: Public health status (used by deploy health checks)
+      security: []
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: Healthy or degraded
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PublicHealth' }
+        '503':
+          description: Failing
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PublicHealth' }
+
+  /auth/config:
+    get:
+      tags: [auth]
+      summary: Public client configuration
+      security: []
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [version, commit, source_url, mailer_enabled, locales, app_url]
+                    properties:
+                      version: { type: string }
+                      commit: { type: string }
+                      source_url: { type: string }
+                      mailer_enabled: { type: boolean }
+                      locales: { type: array, items: { type: string } }
+                      app_url: { type: string }
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Sign in with email and password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: Signed in, or second factor required. Sets the session cookie.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LoginResponse' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+  /auth/mfa:
+    post:
+      tags: [auth]
+      summary: Complete sign-in with a TOTP or recovery code (pending session cookie)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: Signed in; the session cookie is rotated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LoginResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: Sign out
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '204': { description: Signed out }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /auth/me:
+    get:
+      tags: [auth]
+      summary: Current user, CSRF token and session
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeResponse' }
+        '401': { $ref: '#/components/responses/Problem' }
+    patch:
+      tags: [auth]
+      summary: Update own display name or locale
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                display_name: { type: string }
+                locale: { type: string, enum: [en, it] }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeResponse' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /auth/password:
+    post:
+      tags: [auth]
+      summary: Change own password (other sessions are revoked)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password, new_password]
+              properties:
+                current_password: { type: string }
+                new_password: { type: string }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '204': { description: Changed }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+  /auth/password/forgot:
+    post:
+      tags: [auth]
+      summary: Request a reset link by email (only when a mailer is configured)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '202':
+          description: Accepted (sent if the account exists)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [status]
+                    properties:
+                      status: { type: string }
+        '422': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+        '501': { $ref: '#/components/responses/Problem' }
+  /auth/password/reset:
+    post:
+      tags: [auth]
+      summary: Set a new password with a reset token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token: { type: string }
+                password: { type: string }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '204': { description: Password changed; all sessions revoked }
+        '410': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /auth/totp/setup:
+    post:
+      tags: [auth]
+      summary: Start TOTP enrolment
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: Secret and QR code (not active until confirmed)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [secret, otpauth_uri, qr_svg]
+                    properties:
+                      secret: { type: string }
+                      otpauth_uri: { type: string }
+                      qr_svg: { type: string }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /auth/totp/confirm:
+    post:
+      tags: [auth]
+      summary: Confirm TOTP enrolment with a first code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200': { $ref: '#/components/responses/RecoveryCodes' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /auth/totp:
+    delete:
+      tags: [auth]
+      summary: Disable TOTP (requires the password)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password: { type: string }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '204': { description: Disabled }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /auth/totp/recovery-codes:
+    post:
+      tags: [auth]
+      summary: Regenerate recovery codes
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200': { $ref: '#/components/responses/RecoveryCodes' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /auth/sessions:
+    get:
+      tags: [auth]
+      summary: Active sessions of the current user
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/SessionInfo' }
+        '401': { $ref: '#/components/responses/Problem' }
+    delete:
+      tags: [auth]
+      summary: Revoke all other sessions
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [revoked]
+                    properties:
+                      revoked: { type: integer }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /auth/sessions/{sessionId}:
+    parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema: { type: string, pattern: '^[0-9a-f]{16}$' }
+    delete:
+      tags: [auth]
+      summary: Revoke one session
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '204': { description: Revoked }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /invitations/{token}:
+    parameters:
+      - $ref: '#/components/parameters/InvitationToken'
+    get:
+      tags: [users]
+      summary: Show a pending invitation
+      security: []
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [email, global_role, sites, expires_at]
+                    properties:
+                      email: { type: string }
+                      global_role: { $ref: '#/components/schemas/GlobalRole' }
+                      sites:
+                        type: array
+                        items:
+                          type: object
+                          required: [name, role]
+                          properties:
+                            name: { type: string }
+                            role: { $ref: '#/components/schemas/SiteRole' }
+                      expires_at: { type: string, format: date-time }
+        '404': { $ref: '#/components/responses/Problem' }
+        '410': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+  /invitations/{token}/accept:
+    parameters:
+      - $ref: '#/components/parameters/InvitationToken'
+    post:
+      tags: [users]
+      summary: Accept an invitation, create the account and sign in
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [display_name, password]
+              properties:
+                display_name: { type: string }
+                password: { type: string }
+                locale: { type: string, enum: [en, it] }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '201':
+          description: Account created; session cookie set
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LoginResponse' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '410': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+  /invitations:
+    get:
+      tags: [users]
+      summary: List invitations (global admin)
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Invitation' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+    post:
+      tags: [users]
+      summary: Create an invitation (global admin); returns a copyable link
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string }
+                global_role: { $ref: '#/components/schemas/GlobalRole' }
+                site_roles:
+                  type: array
+                  items:
+                    type: object
+                    required: [site_id, role]
+                    properties:
+                      site_id: { type: integer }
+                      role: { $ref: '#/components/schemas/SiteRole' }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '201': { $ref: '#/components/responses/InvitationCreated' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /invitations/{invitationId}:
+    parameters:
+      - { name: invitationId, in: path, required: true, schema: { type: integer } }
+    delete:
+      tags: [users]
+      summary: Revoke an invitation (global admin)
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: Revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Invitation' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /users:
+    get:
+      tags: [users]
+      summary: List users (global admin)
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /users/{userId}:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    get:
+      tags: [users]
+      summary: Show a user (global admin)
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200': { $ref: '#/components/responses/UserResponse' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+    patch:
+      tags: [users]
+      summary: Update role, status or name (global admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                display_name: { type: string }
+                global_role: { $ref: '#/components/schemas/GlobalRole' }
+                status: { type: string, enum: [active, disabled] }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200': { $ref: '#/components/responses/UserResponse' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /users/{userId}/totp:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    delete:
+      tags: [users]
+      summary: Reset a user's two-factor authentication (global admin)
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '204': { description: Reset }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /sites:
+    get:
+      tags: [sites]
+      summary: Sites the current user can access
+      parameters:
+        - { name: archived, in: query, schema: { type: string, enum: ['0', '1'] } }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Site' }
+        '401': { $ref: '#/components/responses/Problem' }
+    post:
+      tags: [sites]
+      summary: Create a site (global admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SiteInput' }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '201': { $ref: '#/components/responses/SiteResponse' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}:
+    parameters:
+      - $ref: '#/components/parameters/SiteId'
+    get:
+      tags: [sites]
+      summary: Show a site
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200': { $ref: '#/components/responses/SiteResponse' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+    patch:
+      tags: [sites]
+      summary: Update site settings (site admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SiteInput' }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200': { $ref: '#/components/responses/SiteResponse' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+    delete:
+      tags: [sites]
+      summary: Archive a site (site admin); data stays until retention removes it
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '204': { description: Archived }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/snippet:
+    parameters:
+      - $ref: '#/components/parameters/SiteId'
+    get:
+      tags: [sites]
+      summary: Tracking snippet
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [html, script_url, proxy_html, public_key]
+                    properties:
+                      html: { type: string }
+                      script_url: { type: string }
+                      proxy_html: { type: string }
+                      public_key: { type: string }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/members:
+    parameters:
+      - $ref: '#/components/parameters/SiteId'
+    get:
+      tags: [sites]
+      summary: Members of a site (site admin)
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200': { $ref: '#/components/responses/MembersResponse' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+    post:
+      tags: [sites]
+      summary: Grant an existing user access by email (site admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string }
+                role: { $ref: '#/components/schemas/SiteRole' }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200': { $ref: '#/components/responses/MembersResponse' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/members/{userId}:
+    parameters:
+      - $ref: '#/components/parameters/SiteId'
+      - $ref: '#/components/parameters/UserId'
+    put:
+      tags: [sites]
+      summary: Set a member's role (site admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role: { $ref: '#/components/schemas/SiteRole' }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200': { $ref: '#/components/responses/MembersResponse' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+    delete:
+      tags: [sites]
+      summary: Remove a member (site admin)
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '204': { description: Removed }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/invitations:
+    parameters:
+      - $ref: '#/components/parameters/SiteId'
+    post:
+      tags: [sites]
+      summary: Invite someone to this site (site admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string }
+                role: { $ref: '#/components/schemas/SiteRole' }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '201': { $ref: '#/components/responses/InvitationCreated' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /sites/{siteId}/consent:
+    parameters:
+      - $ref: '#/components/parameters/SiteId'
+    get:
+      tags: [consent]
+      summary: Published and draft consent configuration
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [published, draft, defaults]
+                    properties:
+                      published: { allOf: [{ $ref: '#/components/schemas/ConsentConfig' }], nullable: true }
+                      draft: { allOf: [{ $ref: '#/components/schemas/ConsentConfig' }], nullable: true }
+                      defaults: { $ref: '#/components/schemas/ConsentConfigInput' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/consent/draft:
+    parameters:
+      - $ref: '#/components/parameters/SiteId'
+    put:
+      tags: [consent]
+      summary: Create or replace the draft (site admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConsentConfigInput' }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200': { $ref: '#/components/responses/ConsentConfigResponse' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+    delete:
+      tags: [consent]
+      summary: Discard the draft (site admin)
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '204': { description: Discarded }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/consent/publish:
+    parameters:
+      - $ref: '#/components/parameters/SiteId'
+    post:
+      tags: [consent]
+      summary: Publish the draft (site admin). A material change increments consent_version and asks every visitor again.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [material_change]
+              properties:
+                material_change: { type: boolean }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200': { $ref: '#/components/responses/ConsentConfigResponse' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/consent/history:
+    parameters:
+      - $ref: '#/components/parameters/SiteId'
+    get:
+      tags: [consent]
+      summary: Published and archived revisions, newest first
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/ConsentConfig' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /sites/{siteId}/api-keys:
+    parameters:
+      - $ref: '#/components/parameters/SiteId'
+    get:
+      tags: [conversions]
+      summary: API keys of a site (site admin)
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/ApiKey' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+    post:
+      tags: [conversions]
+      summary: Create an API key (site admin). The secret is returned once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, scopes]
+              properties:
+                name: { type: string }
+                scopes:
+                  type: array
+                  items: { type: string, enum: ['conversions:write', 'stats:read'] }
+                expires_at: { type: string, format: date-time, nullable: true }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/ApiKey'
+                      - type: object
+                        required: [secret]
+                        properties:
+                          secret: { type: string }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/api-keys/{keyId}:
+    parameters:
+      - $ref: '#/components/parameters/SiteId'
+      - { name: keyId, in: path, required: true, schema: { type: integer } }
+    delete:
+      tags: [conversions]
+      summary: Revoke an API key (site admin)
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '204': { description: Revoked }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /sites/{siteId}/goals:
+    parameters:
+      - $ref: '#/components/parameters/SiteId'
+    get:
+      tags: [conversions]
+      summary: Goals
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Goal' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+    post:
+      tags: [conversions]
+      summary: Create a goal (site admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GoalInput' }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '201': { $ref: '#/components/responses/GoalResponse' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/goals/{goalId}:
+    parameters:
+      - $ref: '#/components/parameters/SiteId'
+      - { name: goalId, in: path, required: true, schema: { type: integer } }
+    patch:
+      tags: [conversions]
+      summary: Update a goal (site admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GoalInput' }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200': { $ref: '#/components/responses/GoalResponse' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+    delete:
+      tags: [conversions]
+      summary: Delete a goal (site admin); refused while used by a funnel
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /sites/{siteId}/funnels:
+    parameters:
+      - $ref: '#/components/parameters/SiteId'
+    get:
+      tags: [conversions]
+      summary: Funnels
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Funnel' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+    post:
+      tags: [conversions]
+      summary: Create a funnel (site admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FunnelInput' }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '201': { $ref: '#/components/responses/FunnelResponse' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/funnels/{funnelId}:
+    parameters:
+      - $ref: '#/components/parameters/SiteId'
+      - $ref: '#/components/parameters/FunnelId'
+    patch:
+      tags: [conversions]
+      summary: Update a funnel (site admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FunnelInput' }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200': { $ref: '#/components/responses/FunnelResponse' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+    delete:
+      tags: [conversions]
+      summary: Delete a funnel (site admin)
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /sites/{siteId}/costs:
+    parameters:
+      - $ref: '#/components/parameters/SiteId'
+    get:
+      tags: [conversions]
+      summary: Campaign costs overlapping a range
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/CampaignCost' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+    post:
+      tags: [conversions]
+      summary: Add a cost entry (site admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CampaignCostInput' }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '201': { $ref: '#/components/responses/CostResponse' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/costs/{costId}:
+    parameters:
+      - $ref: '#/components/parameters/SiteId'
+      - { name: costId, in: path, required: true, schema: { type: integer } }
+    patch:
+      tags: [conversions]
+      summary: Update a cost entry (site admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CampaignCostInput' }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200': { $ref: '#/components/responses/CostResponse' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+    delete:
+      tags: [conversions]
+      summary: Delete a cost entry (site admin)
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/costs/import:
+    parameters:
+      - $ref: '#/components/parameters/SiteId'
+      - { name: dry_run, in: query, schema: { type: string, enum: ['0', '1'] } }
+    post:
+      tags: [conversions]
+      summary: Import costs from CSV (site admin). With dry_run=1 only a preview is returned.
+      description: |
+        Header row required: `day_from,day_to,channel,utm_source,utm_medium,utm_campaign,amount,currency,note`.
+        `amount` is a decimal in major units (e.g. `123.45`); `day_to` defaults to `day_from`.
+        Nothing is imported if any row is invalid.
+      requestBody:
+        required: true
+        content:
+          text/csv:
+            schema: { type: string }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: Preview or import result
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/CostImportResult' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '413': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /sites/{siteId}/reports/overview:
+    parameters: [ { $ref: '#/components/parameters/SiteId' } ]
+    get:
+      tags: [reports]
+      summary: Headline metrics with comparison deltas
+      parameters: &reportParams
+        - $ref: '#/components/parameters/Period'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/Interval'
+        - $ref: '#/components/parameters/Compare'
+        - $ref: '#/components/parameters/Filter'
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [metrics, compare, deltas]
+                    properties:
+                      metrics: { $ref: '#/components/schemas/OverviewMetrics' }
+                      compare: { allOf: [{ $ref: '#/components/schemas/OverviewMetrics' }], nullable: true }
+                      deltas:
+                        type: object
+                        additionalProperties: { type: number, nullable: true }
+                  meta: { $ref: '#/components/schemas/ReportMeta' }
+        '304': { description: Not modified }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/reports/timeseries:
+    parameters: [ { $ref: '#/components/parameters/SiteId' } ]
+    get:
+      tags: [reports]
+      summary: Metrics per interval with optional comparison series
+      parameters: *reportParams
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [points, compare_points]
+                    properties:
+                      points:
+                        type: array
+                        items: { $ref: '#/components/schemas/TimeseriesPoint' }
+                      compare_points:
+                        type: array
+                        nullable: true
+                        items: { $ref: '#/components/schemas/TimeseriesPoint' }
+                  meta: { $ref: '#/components/schemas/ReportMeta' }
+          text/csv:
+            schema: { type: string }
+        '304': { description: Not modified }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/reports/pages:
+    parameters: [ { $ref: '#/components/parameters/SiteId' } ]
+    get:
+      tags: [reports]
+      summary: Top, entry or exit pages
+      parameters:
+        - $ref: '#/components/parameters/Period'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/Compare'
+        - $ref: '#/components/parameters/Filter'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Sort'
+        - { name: kind, in: query, schema: { type: string, enum: [top, entry, exit], default: top } }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200': { $ref: '#/components/responses/TableReport' }
+        '304': { description: Not modified }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/reports/landing-pages:
+    parameters: [ { $ref: '#/components/parameters/SiteId' } ]
+    get:
+      tags: [reports]
+      summary: Landing pages with entries and bounce rate
+      parameters: &tableParams
+        - $ref: '#/components/parameters/Period'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/Compare'
+        - $ref: '#/components/parameters/Filter'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200': { $ref: '#/components/responses/TableReport' }
+        '304': { description: Not modified }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/reports/sources:
+    parameters: [ { $ref: '#/components/parameters/SiteId' } ]
+    get:
+      tags: [reports]
+      summary: Traffic by channel, source or referrer
+      parameters:
+        - $ref: '#/components/parameters/Period'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/Compare'
+        - $ref: '#/components/parameters/Filter'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Sort'
+        - { name: group, in: query, schema: { type: string, enum: [channel, source, referrer], default: channel } }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200': { $ref: '#/components/responses/TableReport' }
+        '304': { description: Not modified }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/reports/campaigns:
+    parameters: [ { $ref: '#/components/parameters/SiteId' } ]
+    get:
+      tags: [reports]
+      summary: UTM campaigns
+      parameters: *tableParams
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200': { $ref: '#/components/responses/TableReport' }
+        '304': { description: Not modified }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/reports/tech:
+    parameters: [ { $ref: '#/components/parameters/SiteId' } ]
+    get:
+      tags: [reports]
+      summary: Devices, browsers or operating systems
+      parameters:
+        - $ref: '#/components/parameters/Period'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/Compare'
+        - $ref: '#/components/parameters/Filter'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Sort'
+        - { name: group, in: query, schema: { type: string, enum: [device, browser, os], default: device } }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200': { $ref: '#/components/responses/TableReport' }
+        '304': { description: Not modified }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/reports/countries:
+    parameters: [ { $ref: '#/components/parameters/SiteId' } ]
+    get:
+      tags: [reports]
+      summary: Countries (DB-IP Lite, CC BY 4.0)
+      parameters: *tableParams
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200': { $ref: '#/components/responses/TableReport' }
+        '304': { description: Not modified }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/reports/events:
+    parameters: [ { $ref: '#/components/parameters/SiteId' } ]
+    get:
+      tags: [reports]
+      summary: Custom events
+      parameters: *tableParams
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200': { $ref: '#/components/responses/TableReport' }
+        '304': { description: Not modified }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/reports/events/{eventName}/props:
+    parameters:
+      - $ref: '#/components/parameters/SiteId'
+      - { name: eventName, in: path, required: true, schema: { type: string, pattern: '^[a-z0-9_:.-]{1,64}$' } }
+    get:
+      tags: [reports]
+      summary: Property breakdown of one event
+      parameters: *tableParams
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200': { $ref: '#/components/responses/TableReport' }
+        '304': { description: Not modified }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/reports/content:
+    parameters: [ { $ref: '#/components/parameters/SiteId' } ]
+    get:
+      tags: [reports]
+      summary: Content groups (content keys) with views, visitors, contacts and channel split
+      parameters:
+        - $ref: '#/components/parameters/Period'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/Compare'
+        - $ref: '#/components/parameters/Filter'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Sort'
+        - { name: prefix, in: query, schema: { type: string, maxLength: 128 } }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200': { $ref: '#/components/responses/TableReport' }
+        '304': { description: Not modified }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/reports/realtime:
+    parameters: [ { $ref: '#/components/parameters/SiteId' } ]
+    get:
+      tags: [reports]
+      summary: Active visitors (5 min), pageviews per minute (30 min), top pages and sources
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data: { $ref: '#/components/schemas/Realtime' }
+                  meta: { $ref: '#/components/schemas/ReportMeta' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/reports/goals:
+    parameters: [ { $ref: '#/components/parameters/SiteId' } ]
+    get:
+      tags: [reports]
+      summary: Goal completions
+      parameters: *tableParams
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200': { $ref: '#/components/responses/TableReport' }
+        '304': { description: Not modified }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/reports/conversions:
+    parameters: [ { $ref: '#/components/parameters/SiteId' } ]
+    get:
+      tags: [reports]
+      summary: Conversions by name with value
+      parameters: *tableParams
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200': { $ref: '#/components/responses/TableReport' }
+        '304': { description: Not modified }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/reports/funnels/{funnelId}:
+    parameters:
+      - $ref: '#/components/parameters/SiteId'
+      - $ref: '#/components/parameters/FunnelId'
+    get:
+      tags: [reports]
+      summary: Funnel step counts, conversion and drop-off
+      parameters:
+        - $ref: '#/components/parameters/Period'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - { name: breakdown, in: query, schema: { type: string, enum: [none, channel, device], default: none } }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data: { $ref: '#/components/schemas/FunnelReport' }
+                  meta: { $ref: '#/components/schemas/ReportMeta' }
+        '304': { description: Not modified }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/reports/attribution:
+    parameters: [ { $ref: '#/components/parameters/SiteId' } ]
+    get:
+      tags: [reports]
+      summary: Attribution of conversions to channels, sources or campaigns with cost, CAC and ROAS
+      parameters:
+        - $ref: '#/components/parameters/Period'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - { name: model, in: query, schema: { type: string, enum: [first_touch, last_non_direct, declared], default: first_touch } }
+        - { name: group, in: query, schema: { type: string, enum: [channel, source, campaign], default: channel } }
+        - { name: window, in: query, schema: { type: integer, enum: [7, 30, 90], default: 30 } }
+        - { name: base, in: query, description: 'Conversion name counted as base conversion (e.g. signup)', schema: { type: string } }
+        - { name: target, in: query, description: 'Conversion name counted as target conversion (e.g. purchase); revenue is summed from it', schema: { type: string } }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data: { $ref: '#/components/schemas/AttributionReport' }
+                  meta: { $ref: '#/components/schemas/ReportMeta' }
+          text/csv:
+            schema: { type: string }
+        '304': { description: Not modified }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/reports/cohorts:
+    parameters: [ { $ref: '#/components/parameters/SiteId' } ]
+    get:
+      tags: [reports]
+      summary: Returning consented visitors by first-seen cohort
+      parameters:
+        - { name: cohort, in: query, schema: { type: string, enum: [week, month], default: month } }
+        - { name: periods, in: query, schema: { type: integer, minimum: 1, maximum: 13, default: 6 } }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data: { $ref: '#/components/schemas/CohortReport' }
+                  meta: { $ref: '#/components/schemas/ReportMeta' }
+        '304': { description: Not modified }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/reports/consent:
+    parameters: [ { $ref: '#/components/parameters/SiteId' } ]
+    get:
+      tags: [reports]
+      summary: Banner statistics per day and consent version
+      parameters:
+        - $ref: '#/components/parameters/Period'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data: { $ref: '#/components/schemas/ConsentReport' }
+                  meta: { $ref: '#/components/schemas/ReportMeta' }
+        '304': { description: Not modified }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /admin/health:
+    get:
+      tags: [admin]
+      summary: Detailed health checks (global admin)
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [status, checks, version, commit]
+                    properties:
+                      status: { type: string, enum: [ok, warn, fail] }
+                      version: { type: string }
+                      commit: { type: string }
+                      checks:
+                        type: object
+                        additionalProperties:
+                          type: object
+                          required: [status, detail]
+                          properties:
+                            status: { type: string, enum: [ok, warn, fail] }
+                            detail: { type: string }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /admin/jobs:
+    get:
+      tags: [admin]
+      summary: Scheduled job status, rollup lag, geo database age (global admin)
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/JobsStatus' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /admin/audit-log:
+    get:
+      tags: [admin]
+      summary: Audit log (global admin), newest first
+      parameters:
+        - { name: site_id, in: query, schema: { type: integer } }
+        - { name: action, in: query, schema: { type: string } }
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/AuditEntry' }
+                  meta:
+                    type: object
+                    required: [next_cursor]
+                    properties:
+                      next_cursor: { type: string, nullable: true }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
+  /server/sites/{publicKey}/conversions:
+    parameters:
+      - $ref: '#/components/parameters/PublicKey'
+    post:
+      tags: [server]
+      summary: Record server-side conversions (scope conversions:write)
+      security:
+        - apiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/ConversionInput'
+                - type: array
+                  minItems: 1
+                  maxItems: 100
+                  items: { $ref: '#/components/schemas/ConversionInput' }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [accepted, duplicates, rejected]
+                properties:
+                  accepted: { type: integer }
+                  duplicates: { type: integer }
+                  rejected:
+                    type: array
+                    items:
+                      type: object
+                      required: [index, error]
+                      properties:
+                        index: { type: integer }
+                        error: { type: string }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '413': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+  /server/sites/{publicKey}/content/{contentKey}/stats:
+    parameters:
+      - $ref: '#/components/parameters/PublicKey'
+      - { name: contentKey, in: path, required: true, schema: { type: string, maxLength: 128 } }
+    get:
+      tags: [server]
+      summary: Aggregated stats of one content key (scope stats:read); small groups are suppressed
+      security:
+        - apiKey: []
+      parameters:
+        - { name: days, in: query, schema: { type: integer, minimum: 1, maximum: 395, default: 30 } }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [content_key, days, from, to, pageviews, visitors, contacts, suppressed, channels]
+                    properties:
+                      content_key: { type: string }
+                      days: { type: integer }
+                      from: { type: string, format: date }
+                      to: { type: string, format: date }
+                      pageviews: { type: integer, nullable: true }
+                      visitors: { type: integer, nullable: true }
+                      contacts: { type: integer, nullable: true }
+                      suppressed: { type: boolean }
+                      channels:
+                        type: object
+                        additionalProperties: { type: integer }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+
+components:
+  securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: __Host-an_session
+    apiKey:
+      type: http
+      scheme: bearer
+      bearerFormat: ak_<prefix>_<secret>
+  parameters:
+    SiteId:
+      name: siteId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    FunnelId:
+      name: funnelId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    PublicKey:
+      name: publicKey
+      in: path
+      required: true
+      schema: { type: string, pattern: '^pk_[A-Za-z0-9]{21}$' }
+    InvitationToken:
+      name: token
+      in: path
+      required: true
+      schema: { type: string, pattern: '^[A-Za-z0-9_-]{43}$' }
+    Period:
+      name: period
+      in: query
+      schema: { type: string, enum: [today, yesterday, 7d, 30d, 90d, month, last_month, 12mo, year, custom], default: 30d }
+    From:
+      name: from
+      in: query
+      description: Start day (inclusive) in the site time zone; required with period=custom
+      schema: { type: string, format: date }
+    To:
+      name: to
+      in: query
+      description: End day (inclusive); required with period=custom
+      schema: { type: string, format: date }
+    Interval:
+      name: interval
+      in: query
+      schema: { type: string, enum: [hour, day, week, month] }
+    Compare:
+      name: compare
+      in: query
+      schema: { type: string, enum: [none, previous_period, previous_year], default: none }
+    Filter:
+      name: filter
+      in: query
+      description: 'filter[dim][op]=value, dims: page, entry_page, exit_page, host, channel, source, referrer, utm_source, utm_medium, utm_campaign, utm_content, utm_term, device, browser, os, country, event, content, level; ops: is, is_not, contains, prefix, glob'
+      style: deepObject
+      explode: true
+      schema:
+        type: object
+        additionalProperties:
+          type: object
+          additionalProperties: { type: string }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 1000, default: 50 }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+    Sort:
+      name: sort
+      in: query
+      description: Metric name, prefix with - for descending (default descending by the main metric)
+      schema: { type: string, pattern: '^-?[a-z_]{1,32}$' }
+  responses:
+    Problem:
+      description: Error (RFC 9457 problem details)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    RecoveryCodes:
+      description: Recovery codes (shown once)
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data:
+                type: object
+                required: [recovery_codes]
+                properties:
+                  recovery_codes:
+                    type: array
+                    items: { type: string }
+    UserResponse:
+      description: OK
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data: { $ref: '#/components/schemas/User' }
+    SiteResponse:
+      description: OK
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data: { $ref: '#/components/schemas/Site' }
+    MembersResponse:
+      description: OK
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data:
+                type: array
+                items: { $ref: '#/components/schemas/Member' }
+    InvitationCreated:
+      description: Created
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data:
+                allOf:
+                  - $ref: '#/components/schemas/Invitation'
+                  - type: object
+                    required: [link]
+                    properties:
+                      link: { type: string }
+    ConsentConfigResponse:
+      description: OK
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data: { $ref: '#/components/schemas/ConsentConfig' }
+    GoalResponse:
+      description: OK
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data: { $ref: '#/components/schemas/Goal' }
+    FunnelResponse:
+      description: OK
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data: { $ref: '#/components/schemas/Funnel' }
+    CostResponse:
+      description: OK
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data: { $ref: '#/components/schemas/CampaignCost' }
+    TableReport:
+      description: Table report (rows depend on the report, see ReportRow)
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data, meta]
+            properties:
+              data:
+                type: object
+                required: [rows, total_rows]
+                properties:
+                  rows:
+                    type: array
+                    items: { $ref: '#/components/schemas/ReportRow' }
+                  total_rows: { type: integer }
+                  totals: { $ref: '#/components/schemas/ReportRow' }
+              meta: { $ref: '#/components/schemas/ReportMeta' }
+        text/csv:
+          schema: { type: string }
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status, code]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        code: { type: string }
+        detail: { type: string }
+        request_id: { type: string }
+        retry_after: { type: integer }
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items: { type: string }
+    PublicHealth:
+      type: object
+      required: [status, version, commit]
+      properties:
+        status: { type: string, enum: [ok, warn, fail] }
+        version: { type: string }
+        commit: { type: string }
+    GlobalRole:
+      type: string
+      enum: [admin, member]
+    SiteRole:
+      type: string
+      enum: [admin, viewer]
+    User:
+      type: object
+      required: [id, email, display_name, global_role, locale, status, mfa_enabled, last_login_at, created_at, site_roles]
+      properties:
+        id: { type: integer }
+        email: { type: string }
+        display_name: { type: string }
+        global_role: { $ref: '#/components/schemas/GlobalRole' }
+        locale: { type: string }
+        status: { type: string, enum: [active, disabled] }
+        mfa_enabled: { type: boolean }
+        last_login_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+        site_roles:
+          type: array
+          items:
+            type: object
+            required: [site_id, role]
+            properties:
+              site_id: { type: integer }
+              role: { $ref: '#/components/schemas/SiteRole' }
+    LoginResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [status]
+          properties:
+            status: { type: string, enum: [ok, mfa_required] }
+            user: { $ref: '#/components/schemas/User' }
+            csrf_token: { type: string }
+    MeResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [user, csrf_token, session]
+          properties:
+            user: { $ref: '#/components/schemas/User' }
+            csrf_token: { type: string }
+            session:
+              type: object
+              required: [id, absolute_expires_at]
+              properties:
+                id: { type: string }
+                absolute_expires_at: { type: string, format: date-time }
+    SessionInfo:
+      type: object
+      required: [id, current, created_at, last_seen_at, ua_summary, ip_prefix]
+      properties:
+        id: { type: string }
+        current: { type: boolean }
+        created_at: { type: string, format: date-time }
+        last_seen_at: { type: string, format: date-time }
+        ua_summary: { type: string, nullable: true }
+        ip_prefix: { type: string, nullable: true }
+    Invitation:
+      type: object
+      required: [id, email, global_role, site_roles, status, expires_at, created_at]
+      properties:
+        id: { type: integer }
+        email: { type: string }
+        global_role: { $ref: '#/components/schemas/GlobalRole' }
+        site_roles:
+          type: array
+          items:
+            type: object
+            required: [site_id, role]
+            properties:
+              site_id: { type: integer }
+              role: { $ref: '#/components/schemas/SiteRole' }
+        status: { type: string, enum: [pending, accepted, revoked, expired] }
+        expires_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+    Member:
+      type: object
+      required: [user_id, email, display_name, status, global_role, role, inherited]
+      properties:
+        user_id: { type: integer }
+        email: { type: string }
+        display_name: { type: string }
+        status: { type: string }
+        global_role: { $ref: '#/components/schemas/GlobalRole' }
+        role: { $ref: '#/components/schemas/SiteRole' }
+        inherited: { type: boolean, description: true when access comes from the global admin role }
+    SiteDomain:
+      type: object
+      required: [host, include_subdomains]
+      properties:
+        host: { type: string }
+        include_subdomains: { type: boolean }
+    Site:
+      type: object
+      required: [id, public_key, name, timezone, currency, domains, base_tracking_enabled, visitor_hash_mode, cookie_level_enabled, cookie_domain, visitor_cookie_days, new_visit_on_campaign_change, dnt_mode, respect_gpc, hash_routing, allow_localhost, tracker_global, allowed_query_params, excluded_paths, excluded_ip_prefixes, content_contact_events, auto_events, min_group_size, consent_receipts_enabled, archived, created_at, updated_at, role]
+      properties:
+        id: { type: integer }
+        public_key: { type: string }
+        name: { type: string }
+        timezone: { type: string }
+        currency: { type: string }
+        domains:
+          type: array
+          items: { $ref: '#/components/schemas/SiteDomain' }
+        base_tracking_enabled: { type: boolean }
+        visitor_hash_mode: { type: string, enum: [daily_hash, pageviews_only] }
+        cookie_level_enabled: { type: boolean }
+        cookie_domain: { type: string, nullable: true }
+        visitor_cookie_days: { type: integer }
+        new_visit_on_campaign_change: { type: boolean }
+        dnt_mode: { type: string, enum: [ignore, no_cookie, no_tracking] }
+        respect_gpc: { type: boolean }
+        hash_routing: { type: boolean }
+        allow_localhost: { type: boolean }
+        tracker_global: { type: string }
+        allowed_query_params: { type: array, items: { type: string } }
+        excluded_paths: { type: array, items: { type: string } }
+        excluded_ip_prefixes: { type: array, items: { type: string } }
+        content_contact_events: { type: array, items: { type: string } }
+        auto_events:
+          type: object
+          properties:
+            outbound: { type: boolean }
+            downloads: { type: boolean }
+            forms: { type: boolean }
+        min_group_size: { type: integer }
+        consent_receipts_enabled: { type: boolean }
+        archived: { type: boolean }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        role: { allOf: [{ $ref: '#/components/schemas/SiteRole' }], nullable: true }
+        timezone_changed: { type: boolean }
+    SiteInput:
+      type: object
+      properties:
+        name: { type: string }
+        timezone: { type: string }
+        currency: { type: string }
+        domains:
+          type: array
+          items: { $ref: '#/components/schemas/SiteDomain' }
+        base_tracking_enabled: { type: boolean }
+        visitor_hash_mode: { type: string, enum: [daily_hash, pageviews_only] }
+        cookie_level_enabled: { type: boolean }
+        cookie_domain: { type: string, nullable: true }
+        visitor_cookie_days: { type: integer }
+        new_visit_on_campaign_change: { type: boolean }
+        dnt_mode: { type: string, enum: [ignore, no_cookie, no_tracking] }
+        respect_gpc: { type: boolean }
+        hash_routing: { type: boolean }
+        allow_localhost: { type: boolean }
+        tracker_global: { type: string }
+        allowed_query_params: { type: array, items: { type: string } }
+        excluded_paths: { type: array, items: { type: string } }
+        excluded_ip_prefixes: { type: array, items: { type: string } }
+        content_contact_events: { type: array, items: { type: string } }
+        auto_events:
+          type: object
+          properties:
+            outbound: { type: boolean }
+            downloads: { type: boolean }
+            forms: { type: boolean }
+        min_group_size: { type: integer }
+        consent_receipts_enabled: { type: boolean }
+    ConsentTexts:
+      type: object
+      required: [title, body, accept, reject, close, policy, reopen]
+      properties:
+        title: { type: string, maxLength: 120 }
+        body: { type: string, maxLength: 1200 }
+        accept: { type: string, maxLength: 40 }
+        reject: { type: string, maxLength: 40 }
+        close: { type: string, maxLength: 40 }
+        policy: { type: string, maxLength: 60 }
+        reopen: { type: string, maxLength: 60 }
+    ConsentTheme:
+      type: object
+      required: [bg, fg, ac, acf, rad, pos]
+      properties:
+        bg: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
+        fg: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
+        ac: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
+        acf: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
+        rad: { type: integer, minimum: 0, maximum: 24 }
+        pos: { type: string, enum: [bottom, bottom-left, bottom-right] }
+    ConsentConfigInput:
+      type: object
+      required: [texts, policy_urls, default_locale, theme, accepted_ttl_days, rejected_ttl_days, show_floating_reopen]
+      properties:
+        texts:
+          type: object
+          additionalProperties: { $ref: '#/components/schemas/ConsentTexts' }
+        policy_urls:
+          type: object
+          additionalProperties: { type: string }
+        default_locale: { type: string }
+        theme: { $ref: '#/components/schemas/ConsentTheme' }
+        accepted_ttl_days: { type: integer, minimum: 1, maximum: 395 }
+        rejected_ttl_days: { type: integer, minimum: 1, maximum: 395 }
+        show_floating_reopen: { type: boolean }
+    ConsentConfig:
+      allOf:
+        - $ref: '#/components/schemas/ConsentConfigInput'
+        - type: object
+          required: [id, revision, consent_version, status, created_at, published_at, published_by]
+          properties:
+            id: { type: integer }
+            revision: { type: integer }
+            consent_version: { type: integer }
+            status: { type: string, enum: [draft, published, archived] }
+            created_at: { type: string, format: date-time }
+            published_at: { type: string, format: date-time, nullable: true }
+            published_by: { type: integer, nullable: true }
+            contrast_warnings:
+              type: array
+              items: { type: string }
+    ApiKey:
+      type: object
+      required: [id, name, prefix, scopes, created_at, last_used_at, expires_at, revoked_at]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        prefix: { type: string }
+        scopes: { type: array, items: { type: string } }
+        created_at: { type: string, format: date-time }
+        last_used_at: { type: string, format: date-time, nullable: true }
+        expires_at: { type: string, format: date-time, nullable: true }
+        revoked_at: { type: string, format: date-time, nullable: true }
+    GoalInput:
+      type: object
+      properties:
+        name: { type: string }
+        type: { type: string, enum: [pageview, event, conversion] }
+        match:
+          type: object
+          description: 'pageview: {path: glob}; event: {name, props?: {k: v}}; conversion: {name}'
+          properties:
+            path: { type: string }
+            name: { type: string }
+            props:
+              type: object
+              additionalProperties: { type: string }
+    Goal:
+      type: object
+      required: [id, name, type, match]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        type: { type: string, enum: [pageview, event, conversion] }
+        match:
+          type: object
+          properties:
+            path: { type: string }
+            name: { type: string }
+            props:
+              type: object
+              additionalProperties: { type: string }
+    FunnelInput:
+      type: object
+      properties:
+        name: { type: string }
+        scope: { type: string, enum: [visit, visitor] }
+        window_days: { type: integer, minimum: 1, maximum: 90 }
+        goal_ids:
+          type: array
+          minItems: 2
+          maxItems: 10
+          items: { type: integer }
+    Funnel:
+      type: object
+      required: [id, name, scope, window_days, steps]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        scope: { type: string, enum: [visit, visitor] }
+        window_days: { type: integer }
+        steps:
+          type: array
+          items:
+            type: object
+            required: [position, goal_id, goal_name]
+            properties:
+              position: { type: integer }
+              goal_id: { type: integer }
+              goal_name: { type: string }
+    CampaignCostInput:
+      type: object
+      properties:
+        day_from: { type: string, format: date }
+        day_to: { type: string, format: date }
+        channel: { type: string, nullable: true }
+        utm_source: { type: string, nullable: true }
+        utm_medium: { type: string, nullable: true }
+        utm_campaign: { type: string, nullable: true }
+        amount_minor: { type: integer, minimum: 0 }
+        currency: { type: string }
+        note: { type: string, nullable: true }
+    CampaignCost:
+      type: object
+      required: [id, day_from, day_to, channel, utm_source, utm_medium, utm_campaign, amount_minor, currency, note, import_batch_id, created_at]
+      properties:
+        id: { type: integer }
+        day_from: { type: string, format: date }
+        day_to: { type: string, format: date }
+        channel: { type: string, nullable: true }
+        utm_source: { type: string, nullable: true }
+        utm_medium: { type: string, nullable: true }
+        utm_campaign: { type: string, nullable: true }
+        amount_minor: { type: integer }
+        currency: { type: string }
+        note: { type: string, nullable: true }
+        import_batch_id: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+    CostImportResult:
+      type: object
+      required: [dry_run, imported, batch_id, valid_rows, invalid_rows, rows]
+      properties:
+        dry_run: { type: boolean }
+        imported: { type: boolean }
+        batch_id: { type: string, nullable: true }
+        valid_rows: { type: integer }
+        invalid_rows: { type: integer }
+        rows:
+          type: array
+          items:
+            type: object
+            required: [line, errors]
+            properties:
+              line: { type: integer }
+              day_from: { type: string, nullable: true }
+              day_to: { type: string, nullable: true }
+              channel: { type: string, nullable: true }
+              utm_source: { type: string, nullable: true }
+              utm_medium: { type: string, nullable: true }
+              utm_campaign: { type: string, nullable: true }
+              amount_minor: { type: integer, nullable: true }
+              currency: { type: string, nullable: true }
+              note: { type: string, nullable: true }
+              errors: { type: array, items: { type: string } }
+    ReportMeta:
+      type: object
+      required: [site_id, range, compare_range, interval, source, availability, generated_at, cache, timezone, currency]
+      properties:
+        site_id: { type: integer }
+        range:
+          type: object
+          required: [from, to]
+          properties:
+            from: { type: string, format: date }
+            to: { type: string, format: date }
+        compare_range:
+          type: object
+          nullable: true
+          required: [from, to]
+          properties:
+            from: { type: string, format: date }
+            to: { type: string, format: date }
+        interval: { type: string, nullable: true, enum: [hour, day, week, month, null] }
+        source: { type: string, enum: [rollup, raw, mixed] }
+        availability:
+          type: object
+          required: [visitors, bounce, duration]
+          properties:
+            visitors: { type: boolean }
+            bounce: { type: boolean }
+            duration: { type: boolean }
+        generated_at: { type: string, format: date-time }
+        cache: { type: string, enum: [hit, miss] }
+        timezone: { type: string }
+        currency: { type: string }
+        next_cursor: { type: string, nullable: true }
+    OverviewMetrics:
+      type: object
+      required: [visitors, visits, pageviews, views_per_visit, bounce_rate, avg_duration_ms, events, conversions, revenue_minor, consented_visits, consent_rate]
+      properties:
+        visitors: { type: integer, nullable: true }
+        visits: { type: integer }
+        pageviews: { type: integer }
+        views_per_visit: { type: number, nullable: true }
+        bounce_rate: { type: number, nullable: true }
+        avg_duration_ms: { type: integer, nullable: true }
+        events: { type: integer }
+        conversions: { type: integer }
+        revenue_minor: { type: integer }
+        consented_visits: { type: integer }
+        consent_rate: { type: number, nullable: true }
+    TimeseriesPoint:
+      type: object
+      required: [t, visitors, visits, pageviews, bounce_rate, avg_duration_ms, conversions, revenue_minor]
+      properties:
+        t: { type: string, description: 'Day (YYYY-MM-DD), week start, month start, or hour (YYYY-MM-DDTHH:00)' }
+        visitors: { type: integer, nullable: true }
+        visits: { type: integer }
+        pageviews: { type: integer }
+        bounce_rate: { type: number, nullable: true }
+        avg_duration_ms: { type: integer, nullable: true }
+        conversions: { type: integer }
+        revenue_minor: { type: integer }
+    ReportRow:
+      type: object
+      description: 'Columns depend on the report: dimension columns (host, path, channel, source, referrer_host, utm_*, value, country, name, prop_key, prop_value, content_key, goal_id...) plus metric columns.'
+      additionalProperties: true
+    Realtime:
+      type: object
+      required: [active_visitors, pageviews_per_minute, top_pages, top_sources]
+      properties:
+        active_visitors: { type: integer }
+        pageviews_per_minute:
+          type: array
+          items:
+            type: object
+            required: [t, pageviews]
+            properties:
+              t: { type: string }
+              pageviews: { type: integer }
+        top_pages:
+          type: array
+          items:
+            type: object
+            required: [host, path, pageviews]
+            properties:
+              host: { type: string }
+              path: { type: string }
+              pageviews: { type: integer }
+        top_sources:
+          type: array
+          items:
+            type: object
+            required: [channel, source, visits]
+            properties:
+              channel: { type: string }
+              source: { type: string, nullable: true }
+              visits: { type: integer }
+    FunnelReport:
+      type: object
+      required: [funnel, entered, completed, conversion_rate, steps, breakdown]
+      properties:
+        funnel: { $ref: '#/components/schemas/Funnel' }
+        entered: { type: integer }
+        completed: { type: integer }
+        conversion_rate: { type: number, nullable: true }
+        steps:
+          type: array
+          items:
+            type: object
+            required: [position, goal_id, name, count, conversion_rate, drop_off]
+            properties:
+              position: { type: integer }
+              goal_id: { type: integer }
+              name: { type: string }
+              count: { type: integer }
+              conversion_rate: { type: number, nullable: true }
+              drop_off: { type: integer }
+        breakdown:
+          type: array
+          items:
+            type: object
+            required: [value, steps]
+            properties:
+              value: { type: string }
+              steps: { type: array, items: { type: integer } }
+    AttributionReport:
+      type: object
+      required: [model, group, window_days, base, target, rows, totals]
+      properties:
+        model: { type: string }
+        group: { type: string }
+        window_days: { type: integer }
+        base: { type: string, nullable: true }
+        target: { type: string, nullable: true }
+        rows:
+          type: array
+          items:
+            type: object
+            required: [key, channel, source, utm_campaign, visits, base_conversions, target_conversions, revenue_minor, cost_minor, cac_minor, roas]
+            properties:
+              key: { type: string }
+              channel: { type: string, nullable: true }
+              source: { type: string, nullable: true }
+              utm_campaign: { type: string, nullable: true }
+              visits: { type: integer, nullable: true }
+              base_conversions: { type: integer }
+              target_conversions: { type: integer }
+              revenue_minor: { type: integer }
+              cost_minor: { type: integer, nullable: true }
+              cac_minor: { type: integer, nullable: true }
+              roas: { type: number, nullable: true }
+        totals:
+          type: object
+          required: [base_conversions, target_conversions, revenue_minor, cost_minor, unattributed_share]
+          properties:
+            base_conversions: { type: integer }
+            target_conversions: { type: integer }
+            revenue_minor: { type: integer }
+            cost_minor: { type: integer }
+            unattributed_share: { type: number, nullable: true }
+    CohortReport:
+      type: object
+      required: [cohort, rows]
+      properties:
+        cohort: { type: string, enum: [week, month] }
+        rows:
+          type: array
+          items:
+            type: object
+            required: [cohort, size, retained]
+            properties:
+              cohort: { type: string }
+              size: { type: integer }
+              retained:
+                type: array
+                items: { type: number, nullable: true }
+    ConsentReport:
+      type: object
+      required: [rows, totals]
+      properties:
+        rows:
+          type: array
+          items:
+            type: object
+            required: [day, consent_version, shown, accepted, rejected, dismissed, reopened]
+            properties:
+              day: { type: string, format: date }
+              consent_version: { type: integer }
+              shown: { type: integer }
+              accepted: { type: integer }
+              rejected: { type: integer }
+              dismissed: { type: integer }
+              reopened: { type: integer }
+        totals:
+          type: object
+          required: [shown, accepted, rejected, dismissed, reopened, acceptance_rate]
+          properties:
+            shown: { type: integer }
+            accepted: { type: integer }
+            rejected: { type: integer }
+            dismissed: { type: integer }
+            reopened: { type: integer }
+            acceptance_rate: { type: number, nullable: true }
+    JobsStatus:
+      type: object
+      required: [jobs, rollup_lag_minutes, dirty_days, geo_db_age_days, pending_consent_drafts]
+      properties:
+        jobs:
+          type: array
+          items:
+            type: object
+            required: [job, last_started_at, last_status, last_message, last_duration_ms]
+            properties:
+              job: { type: string }
+              last_started_at: { type: string, format: date-time, nullable: true }
+              last_status: { type: string, nullable: true }
+              last_message: { type: string, nullable: true }
+              last_duration_ms: { type: integer, nullable: true }
+        rollup_lag_minutes: { type: integer }
+        dirty_days: { type: integer }
+        geo_db_age_days: { type: integer, nullable: true }
+        pending_consent_drafts:
+          type: array
+          items:
+            type: object
+            required: [site_id, site_name]
+            properties:
+              site_id: { type: integer }
+              site_name: { type: string }
+    AuditEntry:
+      type: object
+      required: [id, occurred_at, actor_type, actor_id, actor_email, action, site_id, target_type, target_id, metadata, ip_prefix]
+      properties:
+        id: { type: integer }
+        occurred_at: { type: string, format: date-time }
+        actor_type: { type: string }
+        actor_id: { type: integer, nullable: true }
+        actor_email: { type: string, nullable: true }
+        action: { type: string }
+        site_id: { type: integer, nullable: true }
+        target_type: { type: string, nullable: true }
+        target_id: { type: string, nullable: true }
+        metadata: { type: object, additionalProperties: true }
+        ip_prefix: { type: string, nullable: true }
+    ConversionInput:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string, maxLength: 128, description: External id; idempotency key per site }
+        name: { type: string, pattern: '^[a-z0-9_:.-]{1,64}$' }
+        occurred_at: { type: string, format: date-time }
+        visitor_id: { type: string, pattern: '^[A-Za-z0-9_-]{22}$' }
+        customer_ref: { type: string, maxLength: 256, description: Opaque customer reference; stored only as a keyed hash }
+        value:
+          type: object
+          required: [amount_minor, currency]
+          properties:
+            amount_minor: { type: integer }
+            currency: { type: string, pattern: '^[A-Z]{3}$' }
+        props:
+          type: object
+          maxProperties: 10
+          additionalProperties:
+            oneOf:
+              - { type: string, maxLength: 100 }
+              - { type: number }
+              - { type: boolean }
+        declared_source:
+          type: object
+          properties:
+            utm_source: { type: string, maxLength: 100 }
+            utm_medium: { type: string, maxLength: 100 }
+            utm_campaign: { type: string, maxLength: 100 }
+            channel: { type: string, maxLength: 16 }

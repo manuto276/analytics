@@ -1,0 +1,25 @@
+# analytics — cron jobs for a tarball deploy (crontab of the site user)
+#
+# Always run through `current` so jobs follow deploys and rollbacks, with low CPU
+# priority. Replace the deploy root and PHP binary (use the same one as php_binary in
+# deploy.ini). Every job takes its own lock and records job_runs, so overlapping runs
+# are skipped safely. Output goes to shared/var/log through the release symlink.
+#
+# ROOT=/home/site/htdocs/stats.example.net
+SHELL=/bin/sh
+MAILTO=""
+
+# Rollups of dirty days
+*/5 * * * *  cd /home/site/htdocs/stats.example.net/current && nice -n 10 /usr/bin/php8.4 bin/analytics rollup:run -q >> var/log/cron.log 2>&1
+
+# Daily salt rotation invariant (salt destroyed at rotation)
+*/15 * * * * cd /home/site/htdocs/stats.example.net/current && nice -n 10 /usr/bin/php8.4 bin/analytics salt:rotate -q >> var/log/cron.log 2>&1
+
+# Queue worker — only if INGEST_MODE=queue
+# * * * * *  cd /home/site/htdocs/stats.example.net/current && nice -n 10 /usr/bin/php8.4 bin/analytics queue:work --max-time=55 -q >> var/log/cron.log 2>&1
+
+# Future partitions, then retention purge (raw data 13 months)
+20 3 * * *   cd /home/site/htdocs/stats.example.net/current && (nice -n 10 /usr/bin/php8.4 bin/analytics partitions:maintain -q && nice -n 10 /usr/bin/php8.4 bin/analytics retention:purge -q) >> var/log/cron.log 2>&1
+
+# Monthly DB-IP Lite country database update (atomic swap)
+40 4 5 * *   cd /home/site/htdocs/stats.example.net/current && nice -n 10 /usr/bin/php8.4 bin/analytics geo:update -q >> var/log/cron.log 2>&1

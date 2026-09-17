@@ -1,0 +1,2179 @@
+#!/usr/bin/env php
+<?php
+
+/*
+ * analytics deploy console
+ *
+ * Release manager for timestamp-versioned analytics packages on hosts without
+ * Docker, Node or sudo. It lives in the deploy root, outside releases, and has
+ * no Composer dependencies so it keeps working when the current release is
+ * broken. The per-release application console is `bin/analytics`; this one is
+ * only about packages, releases and the `current` symlink.
+ *
+ * Layout managed (deploy root = directory containing this file, or the
+ * ANALYTICS_DEPLOY_ROOT environment variable):
+ *
+ *   console  deploy.ini  packages/  releases/<TS>/  shared/  current -> releases/<TS>  .deploy/
+ *
+ * Exit codes: 0 success, 1 failure, 2 usage error.
+ *
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+declare(strict_types=1);
+
+namespace AnalyticsDeploy;
+
+const VERSION = '1.0.0';
+const PACKAGE_REGEX = '/^analytics-(\d{8}T\d{6}Z)\.tar\.gz$/';
+const TS_REGEX = '/^\d{8}T\d{6}Z$/';
+
+final class DeployError extends \RuntimeException
+{
+}
+
+final class UsageError extends \RuntimeException
+{
+}
+
+final class Out
+{
+    public static function line(string $text = ''): void
+    {
+        fwrite(STDOUT, $text . "\n");
+    }
+
+    public static function step(string $text): void
+    {
+        fwrite(STDOUT, '==> ' . $text . "\n");
+    }
+
+    public static function detail(string $text): void
+    {
+        fwrite(STDOUT, '    ' . $text . "\n");
+    }
+
+    public static function warn(string $text): void
+    {
+        fwrite(STDERR, 'WARNING: ' . $text . "\n");
+    }
+
+    public static function error(string $text): void
+    {
+        fwrite(STDERR, 'ERROR: ' . $text . "\n");
+    }
+}
+
+final class Proc
+{
+    /**
+     * Runs a command without a shell and captures its output.
+     *
+     * @param list<string> $cmd
+     * @param array<string, string>|null $env
+     * @return array{0: int, 1: string, 2: string}
+     */
+    public static function capture(array $cmd, ?string $cwd = null, ?array $env = null): array
+    {
+        $pipes = [];
+        $proc = @proc_open($cmd, [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, $cwd, $env);
+        if (!\is_resource($proc)) {
+            throw new DeployError('Cannot start command: ' . $cmd[0]);
+        }
+        fclose($pipes[0]);
+        $out = '';
+        $err = '';
+        stream_set_blocking($pipes[1], false);
+        stream_set_blocking($pipes[2], false);
+        $open = [1 => $pipes[1], 2 => $pipes[2]];
+        while ($open !== []) {
+            $read = array_values($open);
+            $write = null;
+            $except = null;
+            if (@stream_select($read, $write, $except, 1) === false) {
+                break;
+            }
+            foreach ($open as $i => $pipe) {
+                $chunk = fread($pipe, 65536);
+                if ($chunk !== false && $chunk !== '') {
+                    if ($i === 1) {
+                        $out .= $chunk;
+                    } else {
+                        $err .= $chunk;
+                    }
+                }
+                if (feof($pipe)) {
+                    fclose($pipe);
+                    unset($open[$i]);
+                }
+            }
+        }
+
+        return [proc_close($proc), $out, $err];
+    }
+
+    /**
+     * Runs a command attached to this process's stdin/stdout/stderr.
+     *
+     * @param list<string> $cmd
+     */
+    public static function passthru(array $cmd, ?string $cwd = null): int
+    {
+        $pipes = [];
+        $proc = @proc_open($cmd, [0 => STDIN, 1 => STDOUT, 2 => STDERR], $pipes, $cwd);
+        if (!\is_resource($proc)) {
+            throw new DeployError('Cannot start command: ' . $cmd[0]);
+        }
+
+        return proc_close($proc);
+    }
+}
+
+final class Fs
+{
+    public static function rmTree(string $path): void
+    {
+        if (is_link($path) || is_file($path)) {
+            if (!@unlink($path)) {
+                throw new DeployError('Cannot remove ' . $path);
+            }
+
+            return;
+        }
+        if (!is_dir($path)) {
+            return;
+        }
+        @chmod($path, 0750);
+        foreach (scandir($path) ?: [] as $entry) {
+            if ($entry === '.' || $entry === '..') {
+                continue;
+            }
+            self::rmTree($path . '/' . $entry);
+        }
+        if (!@rmdir($path)) {
+            throw new DeployError('Cannot remove directory ' . $path);
+        }
+    }
+
+    /** Sets dirs to 0750 and files to 0640 (0750 when executable); symlinks are left alone. */
+    public static function normalisePermissions(string $path): void
+    {
+        if (is_link($path)) {
+            return;
+        }
+        if (is_dir($path)) {
+            @chmod($path, 0750);
+            foreach (scandir($path) ?: [] as $entry) {
+                if ($entry !== '.' && $entry !== '..') {
+                    self::normalisePermissions($path . '/' . $entry);
+                }
+            }
+
+            return;
+        }
+        $perms = @fileperms($path);
+        @chmod($path, ($perms !== false && ($perms & 0111) !== 0) ? 0750 : 0640);
+    }
+
+    public static function mkdir(string $path, int $mode = 0750): bool
+    {
+        if (is_dir($path)) {
+            return false;
+        }
+        if (!@mkdir($path, $mode, true) && !is_dir($path)) {
+            throw new DeployError('Cannot create directory ' . $path);
+        }
+        @chmod($path, $mode);
+
+        return true;
+    }
+
+    /**
+     * Visits every symlink below $root.
+     *
+     * @param callable(string): void $visit
+     */
+    public static function eachSymlink(string $root, callable $visit): void
+    {
+        foreach (scandir($root) ?: [] as $entry) {
+            if ($entry === '.' || $entry === '..') {
+                continue;
+            }
+            $path = $root . '/' . $entry;
+            if (is_link($path)) {
+                $visit($path);
+            } elseif (is_dir($path)) {
+                self::eachSymlink($path, $visit);
+            }
+        }
+    }
+}
+
+final class Config
+{
+    public const DEFAULTS = [
+        'php_binary' => '',
+        'keep_releases' => 5,
+        'keep_packages' => 3,
+        'health_url' => '',
+        'health_tries' => 5,
+        'health_interval' => 10,
+        'health_timeout' => 10,
+        'auto_rollback' => true,
+        'backup_before_migrate' => false,
+        'mysqldump_binary' => 'mysqldump',
+        'shared' => ['.env', 'var/log', 'var/storage'],
+    ];
+
+    public string $phpBinary;
+    public int $keepReleases;
+    public int $keepPackages;
+    public string $healthUrl;
+    public int $healthTries;
+    public float $healthInterval;
+    public float $healthTimeout;
+    public bool $autoRollback;
+    public bool $backupBeforeMigrate;
+    public string $mysqldumpBinary;
+    /** @var list<string> */
+    public array $shared;
+    public bool $fromFile = false;
+
+    public static function load(string $file): self
+    {
+        $values = self::DEFAULTS;
+        $cfg = new self();
+        if (is_file($file)) {
+            $parsed = @parse_ini_file($file, false, INI_SCANNER_TYPED);
+            if ($parsed === false) {
+                $e = error_get_last();
+                throw new DeployError('Cannot parse ' . $file . ($e !== null ? ': ' . $e['message'] : ''));
+            }
+            foreach ($parsed as $key => $value) {
+                if (!\array_key_exists($key, self::DEFAULTS)) {
+                    Out::warn(sprintf('Unknown key "%s" in deploy.ini (ignored)', $key));
+                    continue;
+                }
+                $values[$key] = $value;
+            }
+            $cfg->fromFile = true;
+        }
+
+        $cfg->phpBinary = trim((string) $values['php_binary']) !== '' ? trim((string) $values['php_binary']) : PHP_BINARY;
+        $cfg->keepReleases = self::int($values['keep_releases'], 'keep_releases', 1);
+        $cfg->keepPackages = self::int($values['keep_packages'], 'keep_packages', 1);
+        $cfg->healthUrl = trim((string) $values['health_url']);
+        $cfg->healthTries = self::int($values['health_tries'], 'health_tries', 1);
+        $cfg->healthInterval = self::float($values['health_interval'], 'health_interval');
+        $cfg->healthTimeout = max(0.1, self::float($values['health_timeout'], 'health_timeout'));
+        $cfg->autoRollback = self::bool($values['auto_rollback'], 'auto_rollback');
+        $cfg->backupBeforeMigrate = self::bool($values['backup_before_migrate'], 'backup_before_migrate');
+        $cfg->mysqldumpBinary = trim((string) $values['mysqldump_binary']) !== '' ? trim((string) $values['mysqldump_binary']) : 'mysqldump';
+
+        $shared = $values['shared'];
+        if (!\is_array($shared)) {
+            $shared = [$shared];
+        }
+        $cfg->shared = [];
+        foreach ($shared as $item) {
+            $item = trim((string) $item);
+            if ($item === '') {
+                continue;
+            }
+            if (str_starts_with($item, '/') || Tar::normaliseName(rtrim($item, '/')) !== rtrim($item, '/') || rtrim($item, '/') === '.') {
+                throw new DeployError(sprintf('Invalid shared item "%s" in deploy.ini (must be a plain relative path)', $item));
+            }
+            $cfg->shared[] = rtrim($item, '/');
+        }
+        $cfg->shared = array_values(array_unique($cfg->shared));
+
+        return $cfg;
+    }
+
+    private static function int(mixed $v, string $key, int $min): int
+    {
+        if (\is_int($v) || (\is_string($v) && preg_match('/^\d+$/', $v) === 1)) {
+            $v = (int) $v;
+            if ($v >= $min) {
+                return $v;
+            }
+        }
+        throw new DeployError(sprintf('deploy.ini: %s must be an integer >= %d', $key, $min));
+    }
+
+    private static function float(mixed $v, string $key): float
+    {
+        if ((\is_int($v) || \is_float($v) || (\is_string($v) && is_numeric($v))) && (float) $v >= 0) {
+            return (float) $v;
+        }
+        throw new DeployError(sprintf('deploy.ini: %s must be a number >= 0', $key));
+    }
+
+    private static function bool(mixed $v, string $key): bool
+    {
+        if (\is_bool($v)) {
+            return $v;
+        }
+        if ($v === 1 || $v === 0 || $v === '' || $v === null) {
+            return (bool) $v;
+        }
+        $s = strtolower((string) $v);
+        if (\in_array($s, ['1', 'true', 'yes', 'on'], true)) {
+            return true;
+        }
+        if (\in_array($s, ['0', 'false', 'no', 'off', 'none'], true)) {
+            return false;
+        }
+        throw new DeployError(sprintf('deploy.ini: %s must be true or false', $key));
+    }
+}
+
+final class Tar
+{
+    private const MAX_CONTENT = 1048576;
+
+    /** Returns the canonical relative name, or null when the name is unsafe. */
+    public static function normaliseName(string $name): ?string
+    {
+        if ($name === '' || str_contains($name, "\0") || str_starts_with($name, '/')) {
+            return null;
+        }
+        $parts = [];
+        foreach (explode('/', $name) as $part) {
+            if ($part === '' || $part === '.') {
+                continue;
+            }
+            if ($part === '..') {
+                return null;
+            }
+            $parts[] = $part;
+        }
+
+        return $parts === [] ? '.' : implode('/', $parts);
+    }
+
+    /**
+     * Streams a .tar.gz and calls $onEntry for each member.
+     *
+     * @param callable(array{name: string, type: string, link: string, size: int, mode: int, content: ?string}): void $onEntry
+     * @param list<string> $wantContent members (raw names, normalised) whose content is returned
+     */
+    public static function scan(string $path, callable $onEntry, array $wantContent = []): void
+    {
+        $proc = null;
+        if (\function_exists('gzopen')) {
+            $fh = @fopen('compress.zlib://' . $path, 'rb');
+        } else {
+            $pipes = [];
+            $proc = @proc_open(['gzip', '-dc', $path], [1 => ['pipe', 'w'], 2 => ['file', '/dev/null', 'w']], $pipes);
+            $fh = \is_resource($proc) ? $pipes[1] : false;
+        }
+        if ($fh === false) {
+            throw new DeployError('Cannot open package ' . $path);
+        }
+
+        try {
+            $longName = null;
+            $longLink = null;
+            $pax = [];
+            $zeroBlocks = 0;
+            while (true) {
+                $header = self::read($fh, 512);
+                if ($header === '') {
+                    break;
+                }
+                if (\strlen($header) < 512) {
+                    throw new DeployError('Package is truncated or not a tar.gz archive');
+                }
+                if (trim($header, "\0") === '') {
+                    if (++$zeroBlocks >= 2) {
+                        break;
+                    }
+                    continue;
+                }
+                $zeroBlocks = 0;
+                self::verifyChecksum($header);
+
+                $name = rtrim(substr($header, 0, 100), "\0");
+                $mode = (int) octdec(trim(substr($header, 100, 8), " \0"));
+                $size = self::parseSize(substr($header, 124, 12));
+                $flag = $header[156];
+                $link = rtrim(substr($header, 157, 100), "\0");
+                if (str_starts_with(substr($header, 257, 6), 'ustar')) {
+                    $prefix = rtrim(substr($header, 345, 155), "\0");
+                    if ($prefix !== '') {
+                        $name = $prefix . '/' . $name;
+                    }
+                }
+
+                if (\in_array($flag, ['L', 'K', 'x', 'g'], true)) {
+                    $data = self::readData($fh, $size);
+                    if ($flag === 'L') {
+                        $longName = rtrim($data, "\0");
+                    } elseif ($flag === 'K') {
+                        $longLink = rtrim($data, "\0");
+                    } elseif ($flag === 'x') {
+                        $pax = self::parsePax($data);
+                    }
+                    continue;
+                }
+
+                if ($longName !== null) {
+                    $name = $longName;
+                }
+                if ($longLink !== null) {
+                    $link = $longLink;
+                }
+                if (isset($pax['path'])) {
+                    $name = $pax['path'];
+                }
+                if (isset($pax['linkpath'])) {
+                    $link = $pax['linkpath'];
+                }
+                if (isset($pax['size']) && ctype_digit($pax['size'])) {
+                    $size = (int) $pax['size'];
+                }
+                $longName = $longLink = null;
+                $pax = [];
+
+                $type = match ($flag) {
+                    '0', "\0", '7' => 'file',
+                    '5' => 'dir',
+                    '2' => 'symlink',
+                    '1' => 'hardlink',
+                    default => 'other',
+                };
+                if ($type === 'file' && str_ends_with($name, '/')) {
+                    $type = 'dir';
+                }
+
+                $content = null;
+                $normalised = self::normaliseName($name);
+                if ($type === 'file' && $normalised !== null && \in_array($normalised, $wantContent, true) && $size <= self::MAX_CONTENT) {
+                    $content = substr(self::readData($fh, $size), 0, $size);
+                } else {
+                    self::skipData($fh, $size);
+                }
+
+                $onEntry(['name' => $name, 'type' => $type, 'link' => $link, 'size' => $size, 'mode' => $mode, 'content' => $content]);
+            }
+        } finally {
+            fclose($fh);
+            if (\is_resource($proc)) {
+                proc_close($proc);
+            }
+        }
+    }
+
+    /**
+     * Validates all members: no absolute paths, no "..", no duplicates, no
+     * device/fifo members, and no symlink or hardlink (or path through one)
+     * that resolves outside the archive root.
+     *
+     * @param list<string> $wantContent
+     * @return array{entries: array<string, string>, raw: array<string, string>, links: array<string, string>, hardlinks: array<string, string>, contents: array<string, string>}
+     */
+    public static function inspect(string $path, array $wantContent = []): array
+    {
+        $entries = [];
+        $rawNames = [];
+        $links = [];
+        $hardlinks = [];
+        $contents = [];
+        self::scan($path, function (array $e) use (&$entries, &$rawNames, &$links, &$hardlinks, &$contents): void {
+            $raw = $e['name'];
+            if (str_starts_with($raw, '/')) {
+                throw new DeployError(sprintf('Unsafe package member "%s": absolute path', $raw));
+            }
+            $name = self::normaliseName($raw);
+            if ($name === null) {
+                throw new DeployError(sprintf('Unsafe package member "%s": path traversal', $raw));
+            }
+            if ($e['type'] === 'other') {
+                throw new DeployError(sprintf('Unsupported package member "%s": only files, directories and symlinks are allowed', $raw));
+            }
+            if ($name === '.') {
+                if ($e['type'] !== 'dir') {
+                    throw new DeployError('Unsafe package member: archive root is not a directory');
+                }
+
+                return;
+            }
+            if (isset($entries[$name])) {
+                if ($entries[$name] === 'dir' && $e['type'] === 'dir') {
+                    return;
+                }
+                throw new DeployError(sprintf('Duplicate package member "%s"', $raw));
+            }
+            $entries[$name] = $e['type'];
+            $rawNames[$name] = $raw;
+            if ($e['type'] === 'symlink') {
+                if ($e['link'] === '' || str_starts_with($e['link'], '/')) {
+                    throw new DeployError(sprintf('Unsafe symlink "%s" -> "%s": absolute or empty target', $raw, $e['link']));
+                }
+                $links[$name] = $e['link'];
+            } elseif ($e['type'] === 'hardlink') {
+                $hardlinks[$name] = $e['link'];
+            }
+            if ($e['content'] !== null) {
+                $contents[$name] = $e['content'];
+            }
+        }, $wantContent);
+
+        foreach ($entries as $name => $type) {
+            if (self::resolve($name, $links) === null) {
+                $detail = $type === 'symlink' ? sprintf('symlink -> "%s" escapes the package', $links[$name]) : 'path goes through a symlink outside the package';
+                throw new DeployError(sprintf('Unsafe package member "%s": %s', $name, $detail));
+            }
+        }
+        foreach ($hardlinks as $name => $target) {
+            $t = self::normaliseName($target);
+            if ($t === null || $t === '.' || self::resolve($t, $links) === null) {
+                throw new DeployError(sprintf('Unsafe hardlink "%s" -> "%s"', $name, $target));
+            }
+        }
+
+        return ['entries' => $entries, 'raw' => $rawNames, 'links' => $links, 'hardlinks' => $hardlinks, 'contents' => $contents];
+    }
+
+    /**
+     * Resolves a path through the archive's own symlinks. Returns null when it
+     * escapes the root.
+     *
+     * @param array<string, string> $links
+     */
+    public static function resolve(string $path, array $links): ?string
+    {
+        $queue = explode('/', $path);
+        $stack = [];
+        $hops = 0;
+        while ($queue !== []) {
+            $part = array_shift($queue);
+            if ($part === '' || $part === '.') {
+                continue;
+            }
+            if ($part === '..') {
+                if ($stack === []) {
+                    return null;
+                }
+                array_pop($stack);
+                continue;
+            }
+            $stack[] = $part;
+            $current = implode('/', $stack);
+            if (isset($links[$current])) {
+                if (++$hops > 64) {
+                    throw new DeployError(sprintf('Symlink loop in package at "%s"', $current));
+                }
+                $target = $links[$current];
+                if (str_starts_with($target, '/')) {
+                    return null;
+                }
+                array_pop($stack);
+                $queue = array_merge(explode('/', $target), $queue);
+            }
+        }
+
+        return implode('/', $stack);
+    }
+
+    /** @param array{entries: array<string, string>, raw: array<string, string>, links: array<string, string>, hardlinks: array<string, string>} $inspection */
+    public static function extract(string $package, string $dest, array $inspection): void
+    {
+        Fs::mkdir($dest);
+        $mode = getenv('ANALYTICS_DEPLOY_TAR') ?: 'auto';
+        if ($mode !== 'phar' && self::systemTarAvailable()) {
+            [$code, , $err] = Proc::capture(['tar', '-x', '-z', '--no-same-owner', '-f', $package, '-C', $dest]);
+            if ($code !== 0) {
+                throw new DeployError('tar failed to extract the package: ' . trim($err));
+            }
+        } else {
+            self::extractWithPharData($package, $dest, $inspection);
+        }
+
+        $real = realpath($dest);
+        Fs::eachSymlink($dest, function (string $link) use ($real): void {
+            $target = (string) readlink($link);
+            $resolved = realpath($link);
+            if (str_starts_with($target, '/') || ($resolved !== false && $resolved !== $real && !str_starts_with($resolved, $real . '/'))) {
+                throw new DeployError(sprintf('Extracted symlink %s -> %s escapes the release', $link, $target));
+            }
+        });
+    }
+
+    /**
+     * PharData cannot extract the archive root entry nor symlinks, so members
+     * are extracted by name and directories/symlinks are created here.
+     *
+     * @param array{entries: array<string, string>, raw: array<string, string>, links: array<string, string>, hardlinks: array<string, string>} $inspection
+     */
+    private static function extractWithPharData(string $package, string $dest, array $inspection): void
+    {
+        if (!class_exists(\PharData::class)) {
+            throw new DeployError('Neither the tar command nor the phar extension is available to extract packages');
+        }
+        if ($inspection['hardlinks'] !== []) {
+            throw new DeployError('Packages with hardlinks need the tar command to be extracted');
+        }
+        $files = [];
+        foreach ($inspection['entries'] as $name => $type) {
+            if ($type === 'dir') {
+                Fs::mkdir($dest . '/' . $name);
+            } elseif ($type === 'file') {
+                $files[] = $inspection['raw'][$name];
+            }
+        }
+        try {
+            $phar = new \PharData($package);
+            foreach (array_chunk($files, 500) as $chunk) {
+                $phar->extractTo($dest, $chunk, true);
+            }
+        } catch (\Throwable $e) {
+            throw new DeployError('PharData failed to extract the package: ' . $e->getMessage());
+        }
+        $links = $inspection['links'];
+        ksort($links, SORT_STRING);
+        foreach ($links as $name => $target) {
+            Fs::mkdir(\dirname($dest . '/' . $name));
+            if (!@symlink($target, $dest . '/' . $name)) {
+                throw new DeployError(sprintf('Cannot create symlink %s -> %s', $name, $target));
+            }
+        }
+    }
+
+    private static function systemTarAvailable(): bool
+    {
+        try {
+            [$code] = Proc::capture(['tar', '--version']);
+        } catch (DeployError) {
+            return false;
+        }
+
+        return $code === 0;
+    }
+
+    /** @param resource $fh */
+    private static function read($fh, int $length): string
+    {
+        $data = '';
+        while (\strlen($data) < $length && !feof($fh)) {
+            $chunk = fread($fh, $length - \strlen($data));
+            if ($chunk === false) {
+                throw new DeployError('Cannot read package (corrupt gzip stream?)');
+            }
+            if ($chunk === '') {
+                if (feof($fh)) {
+                    break;
+                }
+                continue;
+            }
+            $data .= $chunk;
+        }
+
+        return $data;
+    }
+
+    /** @param resource $fh */
+    private static function readData($fh, int $size): string
+    {
+        $padded = (int) (ceil($size / 512) * 512);
+        $data = self::read($fh, $padded);
+        if (\strlen($data) < $padded) {
+            throw new DeployError('Package is truncated');
+        }
+
+        return substr($data, 0, $size);
+    }
+
+    /** @param resource $fh */
+    private static function skipData($fh, int $size): void
+    {
+        $remaining = (int) (ceil($size / 512) * 512);
+        while ($remaining > 0) {
+            $chunk = self::read($fh, min($remaining, 1048576));
+            if ($chunk === '') {
+                throw new DeployError('Package is truncated');
+            }
+            $remaining -= \strlen($chunk);
+        }
+    }
+
+    private static function verifyChecksum(string $header): void
+    {
+        $stored = trim(substr($header, 148, 8), " \0");
+        if ($stored === '' || preg_match('/^[0-7]+$/', $stored) !== 1) {
+            throw new DeployError('Package is not a valid tar archive (bad header)');
+        }
+        $sum = 0;
+        for ($i = 0; $i < 512; ++$i) {
+            $sum += ($i >= 148 && $i < 156) ? 32 : \ord($header[$i]);
+        }
+        if ($sum !== (int) octdec($stored)) {
+            throw new DeployError('Package is not a valid tar archive (header checksum mismatch)');
+        }
+    }
+
+    private static function parseSize(string $field): int
+    {
+        if ((\ord($field[0]) & 0x80) !== 0) {
+            $value = \ord($field[0]) & 0x7F;
+            for ($i = 1; $i < 12; ++$i) {
+                $value = ($value << 8) | \ord($field[$i]);
+            }
+
+            return $value;
+        }
+
+        return (int) octdec(trim($field, " \0"));
+    }
+
+    /** @return array<string, string> */
+    private static function parsePax(string $data): array
+    {
+        $out = [];
+        $offset = 0;
+        $len = \strlen($data);
+        while ($offset < $len) {
+            $space = strpos($data, ' ', $offset);
+            if ($space === false) {
+                break;
+            }
+            $recordLen = (int) substr($data, $offset, $space - $offset);
+            if ($recordLen <= 0) {
+                break;
+            }
+            $record = substr($data, $space + 1, $recordLen - ($space - $offset) - 2);
+            $eq = strpos($record, '=');
+            if ($eq !== false) {
+                $out[substr($record, 0, $eq)] = substr($record, $eq + 1);
+            }
+            $offset += $recordLen;
+        }
+
+        return $out;
+    }
+}
+
+final class Manifest
+{
+    /** @param list<string> $extensions @param list<string> $migrations */
+    public function __construct(
+        public readonly string $version,
+        public readonly string $commit,
+        public readonly string $commitDate,
+        public readonly string $builtAt,
+        public readonly string $php,
+        public readonly array $extensions,
+        public readonly array $migrations,
+    ) {
+    }
+
+    /** Reads BUILD_INFO.json from a release directory; null when unreadable. */
+    public static function fromDir(string $dir): ?self
+    {
+        try {
+            return self::parse((string) @file_get_contents($dir . '/BUILD_INFO.json'));
+        } catch (DeployError) {
+            return null;
+        }
+    }
+
+    public static function parse(string $json): self
+    {
+        try {
+            $data = json_decode($json, true, 16, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $e) {
+            throw new DeployError('BUILD_INFO.json is not valid JSON: ' . $e->getMessage());
+        }
+        if (!\is_array($data)) {
+            throw new DeployError('BUILD_INFO.json must contain a JSON object');
+        }
+        foreach (['name', 'version', 'commit', 'built_at', 'php'] as $key) {
+            if (!isset($data[$key]) || !\is_string($data[$key]) || $data[$key] === '') {
+                throw new DeployError(sprintf('BUILD_INFO.json: missing or invalid "%s"', $key));
+            }
+        }
+        if ($data['name'] !== 'analytics') {
+            throw new DeployError(sprintf('BUILD_INFO.json: name is "%s", expected "analytics"', $data['name']));
+        }
+        if (preg_match('/^[0-9a-f]{7,64}$/', $data['commit']) !== 1) {
+            throw new DeployError(sprintf('BUILD_INFO.json: commit "%s" is not a hex git object id', $data['commit']));
+        }
+        foreach (['extensions', 'migrations'] as $key) {
+            $list = $data[$key] ?? [];
+            if (!\is_array($list) || !array_is_list($list) || array_filter($list, static fn ($v): bool => !\is_string($v)) !== []) {
+                throw new DeployError(sprintf('BUILD_INFO.json: "%s" must be a list of strings', $key));
+            }
+        }
+
+        return new self(
+            $data['version'],
+            $data['commit'],
+            \is_string($data['commit_date'] ?? null) ? $data['commit_date'] : '',
+            $data['built_at'],
+            $data['php'],
+            $data['extensions'] ?? [],
+            $data['migrations'] ?? [],
+        );
+    }
+
+    /** Minimal Composer-style constraint check: >=, >, <=, <, =, !=, ^, ~, wildcards, AND (space/comma), OR (||). */
+    public static function satisfies(string $version, string $constraint): bool
+    {
+        if (preg_match('/^(\d+)(?:\.(\d+))?(?:\.(\d+))?/', $version, $m) !== 1) {
+            throw new DeployError(sprintf('Cannot parse PHP version "%s"', $version));
+        }
+        $v = sprintf('%d.%d.%d', $m[1], $m[2] ?? 0, $m[3] ?? 0);
+        foreach (preg_split('/\s*\|\|?\s*/', trim($constraint)) ?: [] as $group) {
+            $group = preg_replace('/(>=|<=|!=|==|>|<|=|\^|~)\s+/', '$1', trim($group)) ?? '';
+            $ok = true;
+            foreach (preg_split('/[\s,]+/', $group, -1, PREG_SPLIT_NO_EMPTY) ?: [] as $part) {
+                if (!self::satisfiesOne($v, $part)) {
+                    $ok = false;
+                    break;
+                }
+            }
+            if ($ok && $group !== '') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static function satisfiesOne(string $v, string $part): bool
+    {
+        if ($part === '*') {
+            return true;
+        }
+        if (preg_match('/^(>=|<=|!=|==|>|<|=|\^|~)?v?(\d+)(?:\.(\d+|\*))?(?:\.(\d+|\*))?$/', $part, $m) !== 1) {
+            throw new DeployError(sprintf('Unsupported PHP constraint "%s" in BUILD_INFO.json', $part));
+        }
+        $op = $m[1] ?? '';
+        $major = (int) $m[2];
+        $minorRaw = $m[3] ?? '';
+        $patchRaw = $m[4] ?? '';
+        $minor = ($minorRaw === '' || $minorRaw === '*') ? 0 : (int) $minorRaw;
+        $patch = ($patchRaw === '' || $patchRaw === '*') ? 0 : (int) $patchRaw;
+        $base = "$major.$minor.$patch";
+
+        if ($minorRaw === '*' || $patchRaw === '*') {
+            $upper = $minorRaw === '*' ? ($major + 1) . '.0.0' : "$major." . ($minor + 1) . '.0';
+
+            return version_compare($v, $base, '>=') && version_compare($v, $upper, '<');
+        }
+
+        return match ($op) {
+            '>=' => version_compare($v, $base, '>='),
+            '>' => version_compare($v, $base, '>'),
+            '<=' => version_compare($v, $base, '<='),
+            '<' => version_compare($v, $base, '<'),
+            '!=' => version_compare($v, $base, '!='),
+            '^' => version_compare($v, $base, '>=') && version_compare($v, ($major + 1) . '.0.0', '<'),
+            '~' => version_compare($v, $base, '>=') && version_compare($v, $patchRaw === '' ? ($major + 1) . '.0.0' : "$major." . ($minor + 1) . '.0', '<'),
+            default => version_compare($v, $base, '=='),
+        };
+    }
+}
+
+final class Console
+{
+    private string $root;
+    private string $self;
+    /** @var resource|null */
+    private $lock = null;
+
+    public function __construct(string $root, string $self)
+    {
+        $this->root = rtrim($root, '/');
+        $this->self = $self;
+    }
+
+    /** @param list<string> $argv */
+    public function run(array $argv): int
+    {
+        $command = $argv[0] ?? null;
+        $args = \array_slice($argv, 1);
+
+        try {
+            return match ($command) {
+                null => $this->usageError('No command given.'),
+                '--version', '-V', 'version' => $this->cmdVersion(),
+                'help', '--help', '-h' => $this->cmdHelp(),
+                'init' => $this->cmdInit($args),
+                'deploy' => $this->cmdDeploy($args),
+                'verify' => $this->cmdVerify($args),
+                'list' => $this->cmdList($args),
+                'status' => $this->cmdStatus($args),
+                'rollback' => $this->cmdRollback($args),
+                'cleanup' => $this->cmdCleanup($args),
+                'app' => $this->cmdApp($args),
+                'self-update' => $this->cmdSelfUpdate($args),
+                default => $this->usageError(sprintf('Unknown command "%s".', $command)),
+            };
+        } catch (UsageError $e) {
+            return $this->usageError($e->getMessage());
+        } catch (DeployError $e) {
+            Out::error($e->getMessage());
+
+            return 1;
+        }
+    }
+
+    // ------------------------------------------------------------------ commands
+
+    private function cmdVersion(): int
+    {
+        Out::line('analytics deploy console ' . VERSION);
+
+        return 0;
+    }
+
+    private function cmdHelp(): int
+    {
+        Out::line(<<<TXT
+analytics deploy console {$this->version()}
+
+Usage: ./console <command> [options]
+
+Commands:
+  init                          Create packages/, releases/, shared/, .deploy/ and deploy.ini (idempotent)
+  deploy [package] [options]    Verify, prepare and switch to a package (default: newest in packages/)
+      --no-migrate              Do not run database migrations
+      --backup                  Dump the database before migrating (also: backup_before_migrate)
+      --no-health               Skip the health check after switching
+      --dry-run                 Verify the package and print the plan without changing anything
+  verify <package>              Check checksum, archive safety and manifest without deploying
+  list                          List releases (current/previous marked) and packages
+  status [--no-health]          Show current release, health and recent history
+  rollback [release] [--force]  Point current to the previous (or given) release; --force when the
+                                current release has migrations the target does not know
+      --no-health               Skip the health check after switching
+  cleanup [--keep=N] [--packages]
+                                Remove old releases (never current or previous), and old packages
+  app <args...>                 Run current/bin/analytics <args...> with php_binary
+  self-update                   Replace this console with current/deploy/console
+  help                          Show this help
+  --version                     Print the console version
+
+A package is given as a file name in packages/ (analytics-YYYYMMDDTHHMMSSZ.tar.gz), its
+timestamp, or a path. Deploy root: {$this->root}
+Exit codes: 0 success, 1 failure, 2 usage error.
+TXT);
+
+        return 0;
+    }
+
+    /** @param list<string> $args */
+    private function cmdInit(array $args): int
+    {
+        $this->parseOptions($args, [], [], 0);
+        Out::step('Initialising deploy root ' . $this->root);
+
+        foreach (['packages', 'releases', 'shared', 'shared/var', 'shared/var/log', 'shared/var/storage', 'shared/var/storage/geo', 'shared/var/storage/locks', 'shared/var/storage/backups', '.deploy'] as $dir) {
+            if (Fs::mkdir($this->root . '/' . $dir)) {
+                Out::detail('created ' . $dir . '/');
+            }
+        }
+        $this->acquireLock();
+
+        $ini = $this->root . '/deploy.ini';
+        if (!is_file($ini)) {
+            file_put_contents($ini, self::defaultIni());
+            @chmod($ini, 0640);
+            Out::detail('created deploy.ini (review php_binary and health_url)');
+        } else {
+            Out::detail('kept existing deploy.ini');
+        }
+        $config = Config::load($ini);
+
+        foreach ($config->shared as $item) {
+            if ($item === '.env' || file_exists($this->root . '/shared/' . $item) || is_link($this->root . '/shared/' . $item)) {
+                continue;
+            }
+            if (str_contains(basename($item), '.')) {
+                continue;
+            }
+            Fs::mkdir($this->root . '/shared/' . $item);
+            Out::detail('created shared/' . $item . '/');
+        }
+
+        $env = $this->root . '/shared/.env';
+        if (!file_exists($env)) {
+            $template = $this->envTemplate();
+            file_put_contents($env, $template ?? '');
+            Out::detail($template !== null ? 'created shared/.env from the newest package .env.example (edit it before deploying)' : 'created empty shared/.env (fill it in before deploying)');
+        } else {
+            Out::detail('kept existing shared/.env');
+        }
+        @chmod($env, 0600);
+
+        $history = $this->root . '/.deploy/history.jsonl';
+        if (!file_exists($history)) {
+            touch($history);
+            @chmod($history, 0640);
+        }
+        if (is_file($this->self) && realpath(\dirname($this->self)) === realpath($this->root)) {
+            @chmod($this->self, 0750);
+        }
+
+        Out::line('Deploy root is ready. Next: edit shared/.env and deploy.ini, copy a package into packages/, run ./console deploy');
+
+        return 0;
+    }
+
+    /** @param list<string> $args */
+    private function cmdVerify(array $args): int
+    {
+        [$pos] = $this->parseOptions($args, [], [], 1, 1);
+        $config = Config::load($this->root . '/deploy.ini');
+        $pkg = $this->resolvePackage($pos[0]);
+        Out::step('Verifying ' . $pkg['name']);
+        $tmp = $this->systemTempDir('verify');
+        try {
+            $manifest = $this->verifyInto($pkg, $tmp, $config);
+        } finally {
+            Fs::rmTree($tmp);
+        }
+        Out::line(sprintf('Package %s is valid (commit %s, built %s)', $pkg['name'], $manifest->commit, $manifest->builtAt));
+
+        return 0;
+    }
+
+    /** @param list<string> $args */
+    private function cmdDeploy(array $args): int
+    {
+        [$pos, $opts] = $this->parseOptions($args, ['no-migrate', 'backup', 'no-health', 'dry-run'], [], 1);
+        $this->requireInitialised();
+        $config = Config::load($this->root . '/deploy.ini');
+        $pkg = $this->resolvePackage($pos[0] ?? null);
+        $ts = $pkg['ts'];
+        $dryRun = isset($opts['dry-run']);
+        $backup = !isset($opts['no-migrate']) && (isset($opts['backup']) || $config->backupBeforeMigrate);
+        $health = !isset($opts['no-health']) && $config->healthUrl !== '';
+
+        if ($dryRun) {
+            return $this->dryRun($pkg, $config, !isset($opts['no-migrate']), $backup, $health);
+        }
+
+        $this->acquireLock();
+        if (file_exists($this->root . '/current') && !is_link($this->root . '/current')) {
+            throw new DeployError('current exists but is not a symlink; move it away first');
+        }
+        $previous = $this->currentRelease();
+        $releaseDir = $this->root . '/releases/' . $ts;
+        Out::line(sprintf('Deploying %s (current: %s)', $pkg['name'], $previous ?? 'none'));
+
+        if (file_exists($releaseDir) || is_link($releaseDir)) {
+            if ($previous === $ts) {
+                Out::line(sprintf('Release %s is already current; nothing to do.', $ts));
+
+                return 0;
+            }
+            throw new DeployError(sprintf('Release %s already exists in releases/. Use "./console rollback %s" to switch to it, or remove the directory to redeploy.', $ts, $ts));
+        }
+
+        $this->removeStaleTmp();
+        $tmp = $this->root . '/releases/.tmp-' . $ts;
+        $started = microtime(true);
+        $manifest = null;
+        try {
+            $manifest = $this->verifyInto($pkg, $tmp, $config);
+
+            Out::step('Linking shared items');
+            $this->linkShared($tmp, $config);
+
+            Out::step('Running bin/analytics app:preflight');
+            $this->runApp($config, $tmp, ['app:preflight']);
+            Out::step('Running bin/analytics cache:warmup');
+            $this->runApp($config, $tmp, ['cache:warmup']);
+
+            if ($backup) {
+                Out::step('Backing up the database');
+                $this->backupDatabase($config, $ts);
+            }
+
+            if (isset($opts['no-migrate'])) {
+                Out::step('Skipping migrations (--no-migrate)');
+            } else {
+                Out::step('Running bin/analytics migrations:migrate');
+                $this->runApp($config, $tmp, ['migrations:migrate', '--no-interaction', '--allow-no-migration']);
+            }
+
+            if (!@rename($tmp, $releaseDir)) {
+                throw new DeployError(sprintf('Cannot rename %s to %s', $tmp, $releaseDir));
+            }
+        } catch (DeployError $e) {
+            try {
+                Fs::rmTree($tmp);
+            } catch (DeployError) {
+                Out::warn('Could not fully remove ' . $tmp);
+            }
+            $this->history('deploy', $ts, $manifest?->commit, $previous, 'failed', $e->getMessage());
+            Out::error($e->getMessage());
+            Out::line(sprintf('Deploy of %s failed; current is unchanged (%s).', $ts, $previous ?? 'none'));
+
+            return 1;
+        }
+
+        Out::step(sprintf('Switching current -> releases/%s', $ts));
+        $this->switchTo($ts);
+
+        if ($health) {
+            Out::step('Checking health at ' . $config->healthUrl);
+            [$ok, $reason] = $this->checkHealth($config, $manifest->commit);
+            if (!$ok) {
+                Out::error('Health check failed: ' . $reason);
+                if ($config->autoRollback && $previous !== null && is_dir($this->root . '/releases/' . $previous)) {
+                    Out::step(sprintf('Rolling back current -> releases/%s (auto_rollback)', $previous));
+                    $this->switchTo($previous);
+                    $this->history('deploy', $ts, $manifest->commit, $previous, 'rolled_back', 'health check failed: ' . $reason);
+                    Out::line(sprintf('Deploy of %s failed its health check; current restored to %s. Migrations are not rolled back.', $ts, $previous));
+                } else {
+                    $why = $config->autoRollback ? 'no previous release to roll back to' : 'auto_rollback is off';
+                    $this->history('deploy', $ts, $manifest->commit, $previous, 'failed', 'health check failed: ' . $reason);
+                    Out::line(sprintf('Deploy of %s failed its health check; current stays on %s (%s).', $ts, $ts, $why));
+                }
+
+                return 1;
+            }
+            Out::detail($reason);
+        } else {
+            Out::step($config->healthUrl === '' ? 'Skipping health check (health_url not set)' : 'Skipping health check (--no-health)');
+        }
+
+        $this->history('deploy', $ts, $manifest->commit, $previous, 'success', '', ['duration_s' => round(microtime(true) - $started, 1)]);
+        Out::step('Cleaning up');
+        $this->cleanupReleases($config->keepReleases);
+        $this->cleanupPackages($config->keepPackages);
+        Out::line(sprintf('Deployed %s (commit %s).', $ts, $manifest->commit));
+
+        return 0;
+    }
+
+    /** @param list<string> $args */
+    private function cmdList(array $args): int
+    {
+        $this->parseOptions($args, [], [], 0);
+        $this->requireInitialised();
+        $current = $this->currentRelease();
+        $previous = $this->previousRelease();
+
+        Out::line('Releases (releases/):');
+        $releases = $this->releases();
+        if ($releases === []) {
+            Out::line('  (none)');
+        }
+        foreach (array_reverse($releases) as $ts) {
+            $m = Manifest::fromDir($this->root . '/releases/' . $ts);
+            $mark = $ts === $current ? '  [current]' : ($ts === $previous ? '  [previous]' : '');
+            Out::line(sprintf('  %s  %s  built %s%s', $ts, $m !== null ? substr($m->commit, 0, 12) : '(no BUILD_INFO)', $m?->builtAt ?? '?', $mark));
+        }
+
+        Out::line('Packages (packages/):');
+        $packages = $this->packages();
+        if ($packages === []) {
+            Out::line('  (none)');
+        }
+        foreach (array_reverse($packages) as $name) {
+            $path = $this->root . '/packages/' . $name;
+            preg_match(PACKAGE_REGEX, $name, $m);
+            $notes = [];
+            if (!is_file($path . '.sha256')) {
+                $notes[] = 'missing .sha256';
+            }
+            if (is_dir($this->root . '/releases/' . $m[1])) {
+                $notes[] = 'extracted';
+            }
+            Out::line(sprintf('  %s  %s%s', $name, self::size((int) filesize($path)), $notes !== [] ? '  [' . implode(', ', $notes) . ']' : ''));
+        }
+
+        return 0;
+    }
+
+    /** @param list<string> $args */
+    private function cmdStatus(array $args): int
+    {
+        [, $opts] = $this->parseOptions($args, ['no-health'], [], 0);
+        $this->requireInitialised();
+        $config = Config::load($this->root . '/deploy.ini');
+        $current = $this->currentRelease();
+        $previous = $this->previousRelease();
+        $exit = 0;
+
+        Out::line('Deploy root: ' . $this->root);
+        Out::line('Console:     ' . VERSION);
+        $manifest = null;
+        if ($current === null) {
+            Out::line('Current:     none (nothing deployed yet)');
+            $exit = 1;
+        } else {
+            $manifest = Manifest::fromDir($this->root . '/releases/' . $current);
+            if ($manifest === null || !is_dir($this->root . '/current/')) {
+                Out::line(sprintf('Current:     %s (BROKEN: release directory or BUILD_INFO.json missing)', $current));
+                $exit = 1;
+            } else {
+                Out::line(sprintf('Current:     %s', $current));
+                Out::line(sprintf('Commit:      %s', $manifest->commit));
+                Out::line(sprintf('Built at:    %s', $manifest->builtAt));
+            }
+        }
+        Out::line('Previous:    ' . ($previous ?? 'none'));
+        Out::line(sprintf('Releases:    %d', \count($this->releases())));
+        Out::line(sprintf('Packages:    %d', \count($this->packages())));
+
+        if ($config->healthUrl === '') {
+            Out::line('Health:      not configured (health_url)');
+        } elseif (isset($opts['no-health'])) {
+            Out::line('Health:      skipped (--no-health)');
+        } elseif ($manifest !== null) {
+            [$ok, $reason] = $this->probeHealth($config, $manifest->commit);
+            Out::line('Health:      ' . ($ok ? 'ok' : 'FAILED') . ' (' . $reason . ')');
+            if (!$ok) {
+                $exit = 1;
+            }
+        }
+
+        Out::line('Recent history:');
+        $entries = \array_slice($this->readHistory(), -5);
+        if ($entries === []) {
+            Out::line('  (none)');
+        }
+        foreach ($entries as $e) {
+            Out::line(sprintf(
+                '  %s  %-8s %-16s %-11s previous=%s user=%s%s',
+                $e['ts'] ?? '?',
+                $e['action'] ?? '?',
+                $e['release'] ?? '-',
+                $e['result'] ?? '?',
+                $e['previous'] ?? '-',
+                $e['user'] ?? '?',
+                isset($e['message']) && $e['message'] !== '' ? '  ' . $e['message'] : '',
+            ));
+        }
+
+        return $exit;
+    }
+
+    /** @param list<string> $args */
+    private function cmdRollback(array $args): int
+    {
+        [$pos, $opts] = $this->parseOptions($args, ['force', 'no-health'], [], 1);
+        $this->requireInitialised();
+        $config = Config::load($this->root . '/deploy.ini');
+        $this->acquireLock();
+
+        $current = $this->currentRelease();
+        if ($current === null) {
+            throw new DeployError('Nothing is deployed (no current symlink); nothing to roll back.');
+        }
+        if (isset($pos[0])) {
+            $target = basename(rtrim($pos[0], '/'));
+            if (preg_match(TS_REGEX, $target) !== 1) {
+                throw new UsageError(sprintf('Invalid release "%s": expected a timestamp like 20260917T142501Z', $pos[0]));
+            }
+        } else {
+            $target = $this->previousRelease();
+            if ($target === null) {
+                throw new DeployError('No previous release to roll back to.');
+            }
+        }
+        $targetDir = $this->root . '/releases/' . $target;
+        if (!is_dir($targetDir) || is_link($targetDir)) {
+            throw new DeployError(sprintf('Release %s does not exist in releases/.', $target));
+        }
+        if ($target === $current) {
+            throw new DeployError(sprintf('Release %s is already current.', $target));
+        }
+        $targetManifest = Manifest::fromDir($targetDir);
+        if ($targetManifest === null) {
+            throw new DeployError(sprintf('Release %s has no readable BUILD_INFO.json; refusing to switch to it.', $target));
+        }
+
+        // The DB is assumed to have run every migration shipped by the current
+        // release (deploy runs migrations before switching). Migrations present
+        // in the current manifest but absent from the target's are therefore
+        // "unknown to the target release".
+        $currentManifest = Manifest::fromDir($this->root . '/releases/' . $current);
+        if ($currentManifest === null) {
+            $unknown = null;
+        } else {
+            $unknown = array_values(array_diff($currentManifest->migrations, $targetManifest->migrations));
+        }
+        if ($unknown === null || $unknown !== []) {
+            $what = $unknown === null
+                ? sprintf('the current release %s has no readable BUILD_INFO.json, so the database schema version is unknown', $current)
+                : sprintf('the database has migrations unknown to %s: %s', $target, implode(', ', $unknown));
+            if (!isset($opts['force'])) {
+                Out::error(sprintf('Refusing to roll back: %s. Migrations are never reverted; make sure release %s works with the newer schema, then re-run with --force.', $what, $target));
+
+                return 1;
+            }
+            Out::warn(sprintf('Rolling back although %s (--force).', $what));
+        }
+
+        Out::step(sprintf('Switching current -> releases/%s (was %s)', $target, $current));
+        $this->switchTo($target);
+
+        $result = 'success';
+        $message = '';
+        $exit = 0;
+        if (!isset($opts['no-health']) && $config->healthUrl !== '') {
+            Out::step('Checking health at ' . $config->healthUrl);
+            [$ok, $reason] = $this->checkHealth($config, $targetManifest->commit);
+            if ($ok) {
+                Out::detail($reason);
+            } else {
+                Out::error('Health check failed after rollback: ' . $reason);
+                $result = 'unhealthy';
+                $message = $reason;
+                $exit = 1;
+            }
+        }
+        $this->history('rollback', $target, $targetManifest->commit, $current, $result, $message);
+        Out::line(sprintf('Current is now %s (commit %s).', $target, $targetManifest->commit));
+
+        return $exit;
+    }
+
+    /** @param list<string> $args */
+    private function cmdCleanup(array $args): int
+    {
+        [, $opts] = $this->parseOptions($args, ['packages'], ['keep'], 0);
+        $this->requireInitialised();
+        $config = Config::load($this->root . '/deploy.ini');
+        $keep = $config->keepReleases;
+        if (isset($opts['keep'])) {
+            if (preg_match('/^\d+$/', (string) $opts['keep']) !== 1 || (int) $opts['keep'] < 1) {
+                throw new UsageError('--keep must be an integer >= 1');
+            }
+            $keep = (int) $opts['keep'];
+        }
+        $this->acquireLock();
+        $this->removeStaleTmp();
+        $removed = $this->cleanupReleases($keep);
+        if (isset($opts['packages'])) {
+            $removed += $this->cleanupPackages($config->keepPackages);
+        }
+        Out::line($removed === 0 ? 'Nothing to clean up.' : sprintf('Removed %d item(s).', $removed));
+
+        return 0;
+    }
+
+    /** @param list<string> $args */
+    private function cmdApp(array $args): int
+    {
+        $config = Config::load($this->root . '/deploy.ini');
+        $bin = $this->root . '/current/bin/analytics';
+        if (!is_file($bin)) {
+            throw new DeployError('No current release with bin/analytics (deploy first).');
+        }
+
+        return Proc::passthru(array_merge([$config->phpBinary, $bin], $args), $this->root . '/current');
+    }
+
+    /** @param list<string> $args */
+    private function cmdSelfUpdate(array $args): int
+    {
+        $this->parseOptions($args, [], [], 0);
+        $this->requireInitialised();
+        $config = Config::load($this->root . '/deploy.ini');
+        $this->acquireLock();
+
+        $source = $this->root . '/current/deploy/console';
+        if (!is_file($source)) {
+            throw new DeployError('current/deploy/console not found (deploy a release first).');
+        }
+        $new = (string) file_get_contents($source);
+        $old = is_file($this->self) ? (string) file_get_contents($this->self) : '';
+        if ($new === $old) {
+            Out::line('Console is already up to date (' . VERSION . ').');
+
+            return 0;
+        }
+
+        $candidate = $this->root . '/.deploy/console.new';
+        file_put_contents($candidate, $new);
+        @chmod($candidate, 0750);
+        [$code, $out, $err] = Proc::capture([$config->phpBinary, $candidate, '--version'], null, $this->childEnv(['ANALYTICS_DEPLOY_ROOT' => $this->root]));
+        if ($code !== 0 || preg_match('/^analytics deploy console (\S+)/', trim($out), $m) !== 1) {
+            @unlink($candidate);
+            throw new DeployError(sprintf('current/deploy/console failed validation (exit %d): %s', $code, trim($err . ' ' . $out)));
+        }
+
+        if ($old !== '') {
+            file_put_contents($this->root . '/.deploy/console.previous', $old);
+            @chmod($this->root . '/.deploy/console.previous', 0640);
+        }
+        if (!@rename($candidate, $this->self)) {
+            @unlink($candidate);
+            throw new DeployError('Cannot replace ' . $this->self);
+        }
+        @chmod($this->self, 0750);
+        $this->history('self-update', null, null, null, 'success', VERSION . ' -> ' . $m[1]);
+        Out::line(sprintf('Console updated %s -> %s (previous copy in .deploy/console.previous).', VERSION, $m[1]));
+
+        return 0;
+    }
+
+    // ------------------------------------------------------------------ deploy steps
+
+    /**
+     * Checksum, archive safety, extraction into $dest and manifest/runtime
+     * checks. Returns the manifest.
+     *
+     * @param array{path: string, name: string, ts: string} $pkg
+     */
+    private function verifyInto(array $pkg, string $dest, Config $config): Manifest
+    {
+        Out::step('Verifying SHA-256 checksum');
+        $this->verifyChecksum($pkg['path']);
+        Out::detail('checksum ok');
+
+        Out::step('Inspecting archive members');
+        $inspection = Tar::inspect($pkg['path']);
+        foreach (['BUILD_INFO.json' => 'file', 'REVISION' => 'file', 'bin/analytics' => 'file', 'public' => 'dir'] as $required => $type) {
+            if (($inspection['entries'][$required] ?? null) !== $type) {
+                throw new DeployError(sprintf('Package is missing required %s "%s"', $type === 'dir' ? 'directory' : 'file', $required));
+            }
+        }
+        Out::detail(sprintf('%d members, all safe', \count($inspection['entries'])));
+
+        Out::step('Extracting to ' . $this->relative($dest));
+        Tar::extract($pkg['path'], $dest, $inspection);
+        Fs::normalisePermissions($dest);
+
+        Out::step('Checking BUILD_INFO.json and REVISION');
+        $manifest = Manifest::parse((string) file_get_contents($dest . '/BUILD_INFO.json'));
+        if ($manifest->version !== $pkg['ts']) {
+            throw new DeployError(sprintf('BUILD_INFO.json version "%s" does not match the package timestamp %s', $manifest->version, $pkg['ts']));
+        }
+        $revision = trim((string) @file_get_contents($dest . '/REVISION'));
+        if ($revision !== $manifest->commit) {
+            throw new DeployError(sprintf('REVISION "%s" does not match BUILD_INFO.json commit %s', $revision, $manifest->commit));
+        }
+        Out::detail(sprintf('version %s, commit %s, built %s', $manifest->version, $manifest->commit, $manifest->builtAt));
+
+        Out::step('Checking PHP runtime ' . $config->phpBinary);
+        // Names are compared case-insensitively without a "Zend " prefix, so "opcache"
+        // matches the "Zend OPcache" zend_extension (extension_loaded("opcache") is false).
+        $code = '$n = fn ($e) => strtolower(preg_replace("/^zend\\s+/i", "", trim($e)));'
+            . '$have = array_map($n, array_merge(get_loaded_extensions(), get_loaded_extensions(true)));'
+            . 'echo json_encode(["version" => PHP_VERSION, "missing" => array_values(array_filter(json_decode($argv[1], true), fn ($e) => !in_array($n($e), $have, true)))]);';
+        [$exit, $out, $err] = Proc::capture([$config->phpBinary, '-r', $code, '--', json_encode($manifest->extensions)]);
+        $info = json_decode($out, true);
+        if ($exit !== 0 || !\is_array($info) || !isset($info['version'], $info['missing'])) {
+            throw new DeployError(sprintf('Cannot run php_binary "%s" (exit %d): %s', $config->phpBinary, $exit, trim($err . ' ' . $out)));
+        }
+        if (!Manifest::satisfies($info['version'], $manifest->php)) {
+            throw new DeployError(sprintf('PHP %s (%s) does not satisfy the package requirement "%s"', $info['version'], $config->phpBinary, $manifest->php));
+        }
+        if ($info['missing'] !== []) {
+            throw new DeployError(sprintf('PHP %s is missing required extension(s): %s', $info['version'], implode(', ', $info['missing'])));
+        }
+        Out::detail(sprintf('PHP %s satisfies %s; extensions ok (%s)', $info['version'], $manifest->php, $manifest->extensions === [] ? 'none required' : implode(', ', $manifest->extensions)));
+
+        return $manifest;
+    }
+
+    private function verifyChecksum(string $package): void
+    {
+        $shaFile = $package . '.sha256';
+        if (!is_file($shaFile)) {
+            throw new DeployError(sprintf('Checksum file %s not found', basename($shaFile)));
+        }
+        $line = strtok((string) file_get_contents($shaFile), "\r\n");
+        if ($line === false || preg_match('/^([0-9a-fA-F]{64})(?:\s+\*?(.+))?$/', trim($line), $m) !== 1) {
+            throw new DeployError(sprintf('%s is not in sha256sum format', basename($shaFile)));
+        }
+        if (isset($m[2]) && basename(trim($m[2])) !== basename($package)) {
+            throw new DeployError(sprintf('%s refers to "%s", not %s', basename($shaFile), trim($m[2]), basename($package)));
+        }
+        $actual = hash_file('sha256', $package);
+        if ($actual === false || !hash_equals(strtolower($m[1]), $actual)) {
+            throw new DeployError(sprintf('Checksum mismatch for %s (expected %s, got %s)', basename($package), strtolower($m[1]), (string) $actual));
+        }
+    }
+
+    private function linkShared(string $release, Config $config): void
+    {
+        foreach ($config->shared as $item) {
+            $sharedPath = $this->root . '/shared/' . $item;
+            $releasePath = $release . '/' . $item;
+            if (!file_exists($sharedPath)) {
+                if (is_dir($releasePath) && !is_link($releasePath)) {
+                    Fs::mkdir($sharedPath);
+                    Out::warn(sprintf('shared/%s did not exist; created it empty', $item));
+                } else {
+                    throw new DeployError(sprintf('Shared item shared/%s does not exist (create it or run ./console init)', $item));
+                }
+            }
+            if (file_exists($releasePath) || is_link($releasePath)) {
+                Fs::rmTree($releasePath);
+            }
+            Fs::mkdir(\dirname($releasePath));
+            $target = str_repeat('../', 2 + substr_count($item, '/')) . 'shared/' . $item;
+            if (!@symlink($target, $releasePath)) {
+                throw new DeployError(sprintf('Cannot create symlink %s -> %s', $item, $target));
+            }
+            Out::detail(sprintf('%s -> %s', $item, $target));
+        }
+    }
+
+    /** @param list<string> $args */
+    private function runApp(Config $config, string $release, array $args): void
+    {
+        $code = Proc::passthru(array_merge([$config->phpBinary, 'bin/analytics'], $args), $release);
+        if ($code !== 0) {
+            throw new DeployError(sprintf('bin/analytics %s failed with exit code %d', $args[0], $code));
+        }
+    }
+
+    private function backupDatabase(Config $config, string $ts): void
+    {
+        $env = self::parseEnv((string) @file_get_contents($this->root . '/shared/.env'));
+        $db = ['host' => '127.0.0.1', 'port' => '3306', 'user' => '', 'password' => '', 'name' => ''];
+        if (($env['DATABASE_URL'] ?? '') !== '') {
+            $u = parse_url($env['DATABASE_URL']);
+            if ($u === false || !isset($u['host'])) {
+                throw new DeployError('Cannot parse DATABASE_URL in shared/.env');
+            }
+            $db = [
+                'host' => $u['host'],
+                'port' => isset($u['port']) ? (string) $u['port'] : '3306',
+                'user' => rawurldecode($u['user'] ?? ''),
+                'password' => rawurldecode($u['pass'] ?? ''),
+                'name' => rawurldecode(ltrim($u['path'] ?? '', '/')),
+            ];
+        } else {
+            $db['host'] = ($env['DB_HOST'] ?? '') !== '' ? $env['DB_HOST'] : $db['host'];
+            $db['port'] = ($env['DB_PORT'] ?? '') !== '' ? $env['DB_PORT'] : $db['port'];
+            $db['user'] = $env['DB_USER'] ?? '';
+            $db['password'] = $env['DB_PASSWORD'] ?? '';
+            $db['name'] = $env['DB_NAME'] ?? '';
+        }
+        if ($db['name'] === '' || $db['user'] === '') {
+            throw new DeployError('Database name/user not found in shared/.env (DATABASE_URL or DB_NAME/DB_USER) for the backup');
+        }
+
+        $dir = $this->root . '/shared/var/storage/backups';
+        Fs::mkdir($dir);
+        $gzip = \function_exists('gzopen');
+        $ext = $gzip ? '.sql.gz' : '.sql';
+        $file = $dir . '/' . $ts . $ext;
+        if (file_exists($file)) {
+            $file = $dir . '/' . $ts . '-' . gmdate('Ymd\THis\Z') . $ext;
+        }
+        $partial = $file . '.partial';
+        $cnf = $dir . '/.client-' . bin2hex(random_bytes(6)) . '.cnf';
+        $quote = static fn (string $v): string => '"' . addcslashes($v, "\\\"") . '"';
+        $old = umask(0077);
+        file_put_contents($cnf, "[client]\nuser=" . $quote($db['user']) . "\npassword=" . $quote($db['password']) . "\nhost=" . $quote($db['host']) . "\nport=" . (int) $db['port'] . "\n");
+        umask($old);
+        @chmod($cnf, 0600);
+        $errFile = $dir . '/.mysqldump-' . bin2hex(random_bytes(6)) . '.err';
+
+        try {
+            $cmd = [
+                $config->mysqldumpBinary,
+                '--defaults-extra-file=' . $cnf,
+                '--single-transaction',
+                '--quick',
+                '--no-tablespaces',
+                '--ignore-table=' . $db['name'] . '.daily_salts',
+                $db['name'],
+            ];
+            $pipes = [];
+            $proc = @proc_open($cmd, [0 => ['file', '/dev/null', 'r'], 1 => ['pipe', 'w'], 2 => ['file', $errFile, 'w']], $pipes);
+            if (!\is_resource($proc)) {
+                throw new DeployError('Cannot start ' . $config->mysqldumpBinary);
+            }
+            $outFh = $gzip ? gzopen($partial, 'wb6') : fopen($partial, 'wb');
+            if ($outFh === false) {
+                fclose($pipes[1]);
+                proc_close($proc);
+                throw new DeployError('Cannot write ' . $partial);
+            }
+            while (!feof($pipes[1])) {
+                $chunk = fread($pipes[1], 262144);
+                if ($chunk === false) {
+                    break;
+                }
+                if ($chunk !== '') {
+                    $gzip ? gzwrite($outFh, $chunk) : fwrite($outFh, $chunk);
+                }
+            }
+            fclose($pipes[1]);
+            $gzip ? gzclose($outFh) : fclose($outFh);
+            $code = proc_close($proc);
+            if ($code !== 0) {
+                @unlink($partial);
+                throw new DeployError(sprintf('mysqldump failed with exit code %d: %s', $code, trim((string) @file_get_contents($errFile))));
+            }
+            rename($partial, $file);
+            @chmod($file, 0640);
+            Out::detail(sprintf('wrote %s (%s)', $this->relative($file), self::size((int) filesize($file))));
+        } finally {
+            @unlink($cnf);
+            @unlink($errFile);
+            if (file_exists($partial)) {
+                @unlink($partial);
+            }
+        }
+    }
+
+    private function switchTo(string $ts): void
+    {
+        $link = $this->root . '/current';
+        $tmp = $this->root . '/current.tmp';
+        if (is_link($tmp) || file_exists($tmp)) {
+            @unlink($tmp);
+        }
+        if (file_exists($link) && !is_link($link)) {
+            throw new DeployError('current exists but is not a symlink; move it away first');
+        }
+        if (!@symlink('releases/' . $ts, $tmp)) {
+            throw new DeployError('Cannot create symlink current.tmp');
+        }
+        if (!@rename($tmp, $link)) {
+            @unlink($tmp);
+            throw new DeployError('Cannot rename current.tmp over current');
+        }
+    }
+
+    /**
+     * Retries the health check according to deploy.ini.
+     *
+     * @return array{0: bool, 1: string}
+     */
+    private function checkHealth(Config $config, string $commit): array
+    {
+        $reason = '';
+        for ($i = 1; $i <= $config->healthTries; ++$i) {
+            [$ok, $reason] = $this->probeHealth($config, $commit);
+            if ($ok) {
+                return [true, $reason];
+            }
+            Out::detail(sprintf('attempt %d/%d: %s', $i, $config->healthTries, $reason));
+            if ($i < $config->healthTries && $config->healthInterval > 0) {
+                usleep((int) ($config->healthInterval * 1000000));
+            }
+        }
+
+        return [false, sprintf('%s after %d attempt(s)', $reason, $config->healthTries)];
+    }
+
+    /** @return array{0: bool, 1: string} */
+    private function probeHealth(Config $config, string $commit): array
+    {
+        [$status, $body, $error] = self::httpGet($config->healthUrl, $config->healthTimeout);
+        if ($error !== null) {
+            return [false, 'request failed: ' . $error];
+        }
+        if ($status !== 200) {
+            return [false, 'HTTP ' . $status];
+        }
+        $data = json_decode($body, true);
+        if (!\is_array($data)) {
+            return [false, 'response is not a JSON object'];
+        }
+        if (($data['commit'] ?? null) !== $commit) {
+            return [false, sprintf('commit is "%s", expected %s', \is_string($data['commit'] ?? null) ? $data['commit'] : '', $commit)];
+        }
+
+        return [true, sprintf('HTTP 200, commit %s', $commit)];
+    }
+
+    /** @return array{0: int, 1: string, 2: ?string} */
+    private static function httpGet(string $url, float $timeout): array
+    {
+        $headers = ['Accept: application/json', 'User-Agent: analytics-deploy-console/' . VERSION];
+        if (\function_exists('curl_init')) {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => false,
+                CURLOPT_TIMEOUT_MS => (int) ($timeout * 1000),
+                CURLOPT_CONNECTTIMEOUT_MS => (int) ($timeout * 1000),
+                CURLOPT_HTTPHEADER => $headers,
+                CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+            ]);
+            $body = curl_exec($ch);
+            if ($body === false) {
+                return [0, '', curl_error($ch)];
+            }
+
+            return [(int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE), (string) $body, null];
+        }
+
+        if (preg_match('#^https?://#i', $url) !== 1) {
+            return [0, '', 'health_url must be http(s)'];
+        }
+        $ctx = stream_context_create(['http' => [
+            'method' => 'GET',
+            'header' => implode("\r\n", $headers),
+            'timeout' => $timeout,
+            'ignore_errors' => true,
+            'follow_location' => 0,
+        ]]);
+        $body = @file_get_contents($url, false, $ctx);
+        $responseHeaders = \function_exists('http_get_last_response_headers') ? (http_get_last_response_headers() ?? []) : [];
+        if ($body === false && $responseHeaders === []) {
+            $e = error_get_last();
+
+            return [0, '', $e['message'] ?? 'unknown error'];
+        }
+        $status = 0;
+        foreach ($responseHeaders as $h) {
+            if (preg_match('#^HTTP/\S+\s+(\d{3})#', $h, $m) === 1) {
+                $status = (int) $m[1];
+            }
+        }
+
+        return [$status, (string) $body, null];
+    }
+
+    /**
+     * @param array{path: string, name: string, ts: string} $pkg
+     */
+    private function dryRun(array $pkg, Config $config, bool $migrate, bool $backup, bool $health): int
+    {
+        Out::line(sprintf('Dry run for %s: nothing in %s will be changed.', $pkg['name'], $this->root));
+        $tmp = $this->systemTempDir('dryrun');
+        try {
+            $manifest = $this->verifyInto($pkg, $tmp, $config);
+        } finally {
+            Fs::rmTree($tmp);
+        }
+        $current = $this->currentRelease();
+        $ts = $pkg['ts'];
+        if (file_exists($this->root . '/releases/' . $ts)) {
+            Out::line($current === $ts ? sprintf('Release %s is already current; deploy would do nothing.', $ts) : sprintf('Release %s already exists; deploy would refuse (use rollback %s).', $ts, $ts));
+
+            return $current === $ts ? 0 : 1;
+        }
+        Out::line('Plan:');
+        Out::detail('extract to releases/.tmp-' . $ts);
+        foreach ($config->shared as $item) {
+            $exists = file_exists($this->root . '/shared/' . $item);
+            Out::detail(sprintf('link %s -> shared/%s%s', $item, $item, $exists ? '' : ' (MISSING in shared/)'));
+        }
+        Out::detail('run bin/analytics app:preflight, cache:warmup');
+        if ($backup) {
+            Out::detail('back up the database into shared/var/storage/backups/');
+        }
+        Out::detail($migrate ? sprintf('run bin/analytics migrations:migrate (%d migration(s) in the package)', \count($manifest->migrations)) : 'skip migrations');
+        Out::detail(sprintf('switch current: %s -> %s', $current ?? 'none', $ts));
+        Out::detail($health ? sprintf('health check %s (%d tries, %ss apart), auto_rollback %s', $config->healthUrl, $config->healthTries, $config->healthInterval, $config->autoRollback ? 'on' : 'off') : 'skip health check');
+        Out::detail(sprintf('clean up keeping %d release(s) and %d package(s)', $config->keepReleases, $config->keepPackages));
+
+        return 0;
+    }
+
+    // ------------------------------------------------------------------ state
+
+    private function currentRelease(): ?string
+    {
+        $link = $this->root . '/current';
+        if (!is_link($link)) {
+            return null;
+        }
+        $name = basename(rtrim((string) readlink($link), '/'));
+
+        return preg_match(TS_REGEX, $name) === 1 ? $name : null;
+    }
+
+    private function previousRelease(): ?string
+    {
+        $current = $this->currentRelease();
+        if ($current === null) {
+            return null;
+        }
+        foreach (array_reverse($this->readHistory()) as $e) {
+            if (\in_array($e['action'] ?? '', ['deploy', 'rollback'], true)
+                && \in_array($e['result'] ?? '', ['success', 'unhealthy'], true)
+                && ($e['release'] ?? null) === $current) {
+                $prev = $e['previous'] ?? null;
+                if (\is_string($prev) && $prev !== $current && preg_match(TS_REGEX, $prev) === 1 && is_dir($this->root . '/releases/' . $prev)) {
+                    return $prev;
+                }
+                break;
+            }
+        }
+        $older = array_filter($this->releases(), static fn (string $r): bool => strcmp($r, $current) < 0);
+
+        return $older === [] ? null : end($older);
+    }
+
+    /** @return list<string> release timestamps, oldest first */
+    private function releases(): array
+    {
+        $out = [];
+        foreach (scandir($this->root . '/releases') ?: [] as $e) {
+            if (preg_match(TS_REGEX, $e) === 1 && is_dir($this->root . '/releases/' . $e) && !is_link($this->root . '/releases/' . $e)) {
+                $out[] = $e;
+            }
+        }
+        sort($out, SORT_STRING);
+
+        return $out;
+    }
+
+    /** @return list<string> package file names, oldest first */
+    private function packages(): array
+    {
+        $out = [];
+        foreach (scandir($this->root . '/packages') ?: [] as $e) {
+            if (preg_match(PACKAGE_REGEX, $e) === 1 && is_file($this->root . '/packages/' . $e)) {
+                $out[] = $e;
+            }
+        }
+        sort($out, SORT_STRING);
+
+        return $out;
+    }
+
+    private function cleanupReleases(int $keep): int
+    {
+        $current = $this->currentRelease();
+        $previous = $this->previousRelease();
+        $releases = array_reverse($this->releases());
+        $protected = array_filter([$current, $previous]);
+        $removed = 0;
+        foreach ($releases as $i => $ts) {
+            if ($i < $keep || \in_array($ts, $protected, true)) {
+                continue;
+            }
+            Fs::rmTree($this->root . '/releases/' . $ts);
+            Out::detail('removed releases/' . $ts);
+            ++$removed;
+        }
+
+        return $removed;
+    }
+
+    private function cleanupPackages(int $keep): int
+    {
+        $protected = array_map(static fn (string $ts): string => 'analytics-' . $ts . '.tar.gz', array_filter([$this->currentRelease(), $this->previousRelease()]));
+        $removed = 0;
+        foreach (array_reverse($this->packages()) as $i => $name) {
+            if ($i < $keep || \in_array($name, $protected, true)) {
+                continue;
+            }
+            @unlink($this->root . '/packages/' . $name);
+            @unlink($this->root . '/packages/' . $name . '.sha256');
+            Out::detail('removed packages/' . $name);
+            ++$removed;
+        }
+
+        return $removed;
+    }
+
+    private function removeStaleTmp(): void
+    {
+        foreach (scandir($this->root . '/releases') ?: [] as $e) {
+            if (str_starts_with($e, '.tmp-')) {
+                Fs::rmTree($this->root . '/releases/' . $e);
+                Out::detail('removed stale releases/' . $e);
+            }
+        }
+    }
+
+    /** @return array{path: string, name: string, ts: string} */
+    private function resolvePackage(?string $arg): array
+    {
+        if ($arg === null) {
+            $packages = is_dir($this->root . '/packages') ? $this->packages() : [];
+            if ($packages === []) {
+                throw new DeployError('No package found in packages/ (expected analytics-YYYYMMDDTHHMMSSZ.tar.gz)');
+            }
+            $path = $this->root . '/packages/' . end($packages);
+        } elseif (preg_match(TS_REGEX, $arg) === 1) {
+            $path = $this->root . '/packages/analytics-' . $arg . '.tar.gz';
+        } elseif (str_contains($arg, '/')) {
+            $path = $arg;
+        } else {
+            $path = $this->root . '/packages/' . $arg;
+        }
+        $name = basename($path);
+        if (preg_match(PACKAGE_REGEX, $name, $m) !== 1) {
+            throw new UsageError(sprintf('Invalid package name "%s": expected analytics-YYYYMMDDTHHMMSSZ.tar.gz', $name));
+        }
+        if (!is_file($path)) {
+            throw new DeployError(sprintf('Package %s not found', $path));
+        }
+
+        return ['path' => $path, 'name' => $name, 'ts' => $m[1]];
+    }
+
+    private function requireInitialised(): void
+    {
+        foreach (['releases', 'packages', 'shared', '.deploy'] as $dir) {
+            if (!is_dir($this->root . '/' . $dir)) {
+                throw new DeployError(sprintf('Deploy root %s is not initialised (%s/ missing). Run ./console init first.', $this->root, $dir));
+            }
+        }
+    }
+
+    private function acquireLock(): void
+    {
+        if ($this->lock !== null) {
+            return;
+        }
+        $file = $this->root . '/.deploy/lock';
+        $fh = @fopen($file, 'c+');
+        if ($fh === false) {
+            throw new DeployError('Cannot open lock file ' . $file);
+        }
+        @chmod($file, 0640);
+        if (!flock($fh, LOCK_EX | LOCK_NB)) {
+            $holder = trim((string) stream_get_contents($fh));
+            fclose($fh);
+            throw new DeployError('Another deploy console operation is running (lock .deploy/lock is held' . ($holder !== '' ? ': ' . $holder : '') . '). Try again when it has finished.');
+        }
+        ftruncate($fh, 0);
+        fwrite($fh, sprintf('pid %d, %s, since %s', getmypid(), implode(' ', \array_slice($_SERVER['argv'] ?? [], 1)), gmdate('Y-m-d\TH:i:s\Z')));
+        fflush($fh);
+        $this->lock = $fh;
+    }
+
+    /** @param array<string, scalar> $extra */
+    private function history(string $action, ?string $release, ?string $commit, ?string $previous, string $result, string $message = '', array $extra = []): void
+    {
+        $entry = [
+            'ts' => gmdate('Y-m-d\TH:i:s\Z'),
+            'action' => $action,
+            'release' => $release,
+            'commit' => $commit,
+            'previous' => $previous,
+            'result' => $result,
+            'user' => self::user(),
+        ];
+        if ($message !== '') {
+            $entry['message'] = $message;
+        }
+        $entry += $extra;
+        $file = $this->root . '/.deploy/history.jsonl';
+        file_put_contents($file, json_encode($entry, JSON_UNESCAPED_SLASHES) . "\n", FILE_APPEND | LOCK_EX);
+        @chmod($file, 0640);
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function readHistory(): array
+    {
+        $file = $this->root . '/.deploy/history.jsonl';
+        if (!is_file($file)) {
+            return [];
+        }
+        $out = [];
+        foreach (file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
+            $e = json_decode($line, true);
+            if (\is_array($e)) {
+                $out[] = $e;
+            }
+        }
+
+        return $out;
+    }
+
+    private function envTemplate(): ?string
+    {
+        $packages = $this->packages();
+        if ($packages === []) {
+            return null;
+        }
+        $path = $this->root . '/packages/' . end($packages);
+        try {
+            $this->verifyChecksum($path);
+            $inspection = Tar::inspect($path, ['.env.example']);
+        } catch (DeployError $e) {
+            Out::warn(sprintf('Not using %s as .env template: %s', basename($path), $e->getMessage()));
+
+            return null;
+        }
+
+        return $inspection['contents']['.env.example'] ?? null;
+    }
+
+    // ------------------------------------------------------------------ helpers
+
+    /**
+     * @param list<string> $args
+     * @param list<string> $flags
+     * @param list<string> $valued
+     * @return array{0: list<string>, 1: array<string, string|true>}
+     */
+    private function parseOptions(array $args, array $flags, array $valued, int $maxPositional, int $minPositional = 0): array
+    {
+        $positional = [];
+        $options = [];
+        $onlyPositional = false;
+        foreach ($args as $arg) {
+            if (!$onlyPositional && $arg === '--') {
+                $onlyPositional = true;
+                continue;
+            }
+            if (!$onlyPositional && str_starts_with($arg, '--')) {
+                $eq = strpos($arg, '=');
+                $name = substr($arg, 2, $eq === false ? null : $eq - 2);
+                if (\in_array($name, $flags, true) && $eq === false) {
+                    $options[$name] = true;
+                } elseif (\in_array($name, $valued, true) && $eq !== false) {
+                    $options[$name] = substr($arg, $eq + 1);
+                } else {
+                    throw new UsageError(sprintf('Unknown or malformed option "%s".', $arg));
+                }
+                continue;
+            }
+            if (!$onlyPositional && str_starts_with($arg, '-') && $arg !== '-') {
+                throw new UsageError(sprintf('Unknown option "%s".', $arg));
+            }
+            $positional[] = $arg;
+        }
+        if (\count($positional) > $maxPositional) {
+            throw new UsageError(sprintf('Unexpected argument "%s".', $positional[$maxPositional]));
+        }
+        if (\count($positional) < $minPositional) {
+            throw new UsageError('Missing required argument.');
+        }
+
+        return [$positional, $options];
+    }
+
+    private function usageError(string $message): int
+    {
+        Out::error($message);
+        fwrite(STDERR, "Run ./console help for usage.\n");
+
+        return 2;
+    }
+
+    private function version(): string
+    {
+        return VERSION;
+    }
+
+    /** @param array<string, string> $extra @return array<string, string> */
+    private function childEnv(array $extra): array
+    {
+        $env = getenv();
+
+        return array_merge(\is_array($env) ? $env : [], $extra);
+    }
+
+    private function systemTempDir(string $purpose): string
+    {
+        $dir = rtrim(sys_get_temp_dir(), '/') . '/analytics-' . $purpose . '-' . bin2hex(random_bytes(6));
+        Fs::mkdir($dir, 0700);
+
+        return $dir;
+    }
+
+    private function relative(string $path): string
+    {
+        return str_starts_with($path, $this->root . '/') ? substr($path, \strlen($this->root) + 1) : $path;
+    }
+
+    private static function size(int $bytes): string
+    {
+        return $bytes >= 1048576 ? sprintf('%.1f MiB', $bytes / 1048576) : sprintf('%.1f KiB', $bytes / 1024);
+    }
+
+    private static function user(): string
+    {
+        if (\function_exists('posix_geteuid') && \function_exists('posix_getpwuid')) {
+            $pw = posix_getpwuid(posix_geteuid());
+            if (\is_array($pw) && isset($pw['name'])) {
+                return $pw['name'];
+            }
+        }
+
+        return (string) (getenv('USER') ?: get_current_user());
+    }
+
+    /** @return array<string, string> */
+    public static function parseEnv(string $content): array
+    {
+        $out = [];
+        foreach (preg_split('/\r\n|\r|\n/', $content) ?: [] as $line) {
+            $line = trim($line);
+            if ($line === '' || $line[0] === '#') {
+                continue;
+            }
+            if (str_starts_with($line, 'export ')) {
+                $line = ltrim(substr($line, 7));
+            }
+            $eq = strpos($line, '=');
+            if ($eq === false) {
+                continue;
+            }
+            $key = trim(substr($line, 0, $eq));
+            $value = trim(substr($line, $eq + 1));
+            if ($value !== '' && ($value[0] === '"' || $value[0] === "'")) {
+                $q = $value[0];
+                $end = strrpos($value, $q);
+                $value = $end > 0 ? substr($value, 1, $end - 1) : substr($value, 1);
+                if ($q === '"') {
+                    $value = stripcslashes($value);
+                }
+            } else {
+                $value = trim((string) preg_replace('/\s+#.*$/', '', $value));
+            }
+            $out[$key] = $value;
+        }
+
+        return $out;
+    }
+
+    private static function defaultIni(): string
+    {
+        return <<<'INI'
+; analytics deploy console configuration (see deploy.ini.example for details)
+
+; PHP CLI binary used for bin/analytics and runtime checks (empty = the PHP running ./console)
+php_binary = ""
+
+; releases/ and packages/ retention (current and previous are never removed)
+keep_releases = 5
+keep_packages = 3
+
+; health check after switching: must answer HTTP 200 with JSON {"commit": "<deployed commit>"}
+; e.g. health_url = "https://stats.example.net/api/v1/health"
+health_url = ""
+health_tries = 5
+health_interval = 10
+health_timeout = 10
+
+; switch back to the previous release when the health check fails
+auto_rollback = true
+
+; mysqldump before migrations (same as deploy --backup)
+backup_before_migrate = false
+mysqldump_binary = "mysqldump"
+
+; files/directories kept across releases (symlinked from shared/)
+shared[] = ".env"
+shared[] = "var/log"
+shared[] = "var/storage"
+
+INI;
+    }
+}
+
+if (PHP_VERSION_ID < 80400) {
+    fwrite(STDERR, 'ERROR: the analytics deploy console requires PHP >= 8.4 (running ' . PHP_VERSION . ")\n");
+    exit(1);
+}
+if (PHP_SAPI !== 'cli') {
+    fwrite(STDERR, "ERROR: the analytics deploy console must be run from the command line\n");
+    exit(1);
+}
+
+$root = getenv('ANALYTICS_DEPLOY_ROOT');
+$root = \is_string($root) && $root !== '' ? $root : __DIR__;
+if (!is_dir($root)) {
+    fwrite(STDERR, 'ERROR: deploy root ' . $root . " does not exist\n");
+    exit(1);
+}
+$realRoot = realpath($root);
+exit((new Console($realRoot !== false ? $realRoot : $root, __FILE__))->run(\array_slice($argv, 1)));

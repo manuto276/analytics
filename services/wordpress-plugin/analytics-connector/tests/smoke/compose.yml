@@ -1,0 +1,51 @@
+# WordPress smoke test stack for the analytics-connector plugin (see smoke.sh).
+name: analytics-wp-smoke
+
+x-wp-env: &wp-env
+  WORDPRESS_DB_HOST: db
+  WORDPRESS_DB_USER: wordpress
+  WORDPRESS_DB_PASSWORD: wordpress
+  WORDPRESS_DB_NAME: wordpress
+  WORDPRESS_DEBUG: "1"
+
+x-plugin-volumes: &plugin-volumes
+  - wp-data:/var/www/html
+  - ../..:/var/www/html/wp-content/plugins/analytics-connector:ro
+
+services:
+  db:
+    image: ${WP_SMOKE_DB_IMAGE:-mariadb:11}
+    environment:
+      MARIADB_DATABASE: wordpress
+      MARIADB_USER: wordpress
+      MARIADB_PASSWORD: wordpress
+      MARIADB_RANDOM_ROOT_PASSWORD: "1"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 2s
+      timeout: 5s
+      retries: 60
+    tmpfs:
+      - /var/lib/mysql
+
+  wordpress:
+    image: ${WP_SMOKE_WP_IMAGE:-wordpress:php8.4-apache}
+    depends_on:
+      db:
+        condition: service_healthy
+    environment: *wp-env
+    ports:
+      - "127.0.0.1:${WP_SMOKE_PORT:-8089}:80"
+    volumes: *plugin-volumes
+
+  cli:
+    image: ${WP_SMOKE_CLI_IMAGE:-wordpress:cli-php8.4}
+    profiles: ["cli"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment: *wp-env
+    volumes: *plugin-volumes
+
+volumes:
+  wp-data:

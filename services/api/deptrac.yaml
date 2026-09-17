@@ -1,0 +1,41 @@
+deptrac:
+  paths:
+    - ./src
+  layers:
+    - name: Kernel
+      collectors:
+        - { type: classNameRegex, value: '#^Analytics\\Kernel\\#' }
+    - name: Shared
+      collectors:
+        - { type: classNameRegex, value: '#^Analytics\\Shared\\#' }
+    - name: Domain
+      collectors:
+        - { type: classNameRegex, value: '#^Analytics\\(?!Shared|Kernel)\w+\\Domain\\#' }
+    - name: Application
+      collectors:
+        - { type: classNameRegex, value: '#^Analytics\\(?!Shared|Kernel)\w+\\Application\\#' }
+    - name: Infrastructure
+      collectors:
+        - { type: classNameRegex, value: '#^Analytics\\(?!Shared|Kernel)\w+\\Infrastructure\\#' }
+    - name: Http
+      collectors:
+        - { type: classNameRegex, value: '#^Analytics\\(?!Shared|Kernel)\w+\\Http\\#' }
+    - name: Console
+      collectors:
+        - { type: classNameRegex, value: '#^Analytics\\(?!Shared|Kernel)\w+\\Console\\#' }
+    - name: ModuleRoot
+      collectors:
+        - { type: classNameRegex, value: '#^Analytics\\(?!Shared|Kernel|Health)\w+\\\w+Module$#' }
+    - name: Health
+      collectors:
+        - { type: classNameRegex, value: '#^Analytics\\Health\\#' }
+  ruleset:
+    Domain: [Shared]
+    Application: [Domain, Shared, Kernel]
+    Infrastructure: [Application, Domain, Shared, Kernel]
+    Http: [Application, Domain, Shared, Kernel]
+    Console: [Application, Domain, Shared, Kernel, Infrastructure]
+    ModuleRoot: [Application, Domain, Shared, Kernel, Infrastructure, Http, Console]
+    Health: [Shared, Kernel, Application]
+    Shared: [Kernel, Domain]
+    Kernel: [Shared, Application, Http, Domain, Infrastructure, Console, ModuleRoot, Health]
