@@ -1,0 +1,741 @@
+{
+  "app": {
+    "name": "Analytics"
+  },
+  "nav": {
+    "overview": "Overview",
+    "pages": "Pages",
+    "sources": "Sources",
+    "campaigns": "Campaigns",
+    "audience": "Audience",
+    "events": "Events",
+    "goals": "Goals & Conversions",
+    "funnels": "Funnels",
+    "attribution": "Attribution",
+    "retention": "Retention",
+    "realtime": "Realtime",
+    "settings": "Settings",
+    "admin": "Administration",
+    "users": "Users",
+    "sites": "Sites",
+    "audit": "Audit log",
+    "goTo": "Go to"
+  },
+  "common": {
+    "add": "Add",
+    "cancel": "Cancel",
+    "copied": "Copied to clipboard",
+    "copy": "Copy",
+    "create": "Create",
+    "delete": "Delete",
+    "deleted": "Deleted",
+    "done": "Done",
+    "edit": "Edit",
+    "email": "Email",
+    "loading": "Loading…",
+    "moveDown": "Move down",
+    "moveUp": "Move up",
+    "name": "Name",
+    "off": "Off",
+    "on": "On",
+    "password": "Password",
+    "remove": "Remove",
+    "role": "Role",
+    "save": "Save",
+    "unknown": "Unknown",
+    "saveChanges": "Save changes",
+    "saved": "Changes saved",
+    "update": "Update"
+  },
+  "errors": {
+    "adminOnly": "Only site administrators can manage this section.",
+    "backHome": "Back to the dashboard",
+    "csv": "CSV export failed",
+    "forbidden": "You do not have permission to do this",
+    "generic": "Something went wrong",
+    "notFound": "Page not found",
+    "validation": "Please check the highlighted fields"
+  },
+  "validation": {
+    "amount": "Enter a valid amount",
+    "domainRequired": "Add at least one domain",
+    "passwordDifferent": "The new password must be different",
+    "passwordLength": "Use at least 12 characters",
+    "passwordMatch": "Passwords do not match",
+    "required": "Required"
+  },
+  "periods": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "7d": "Last 7 days",
+    "30d": "Last 30 days",
+    "90d": "Last 90 days",
+    "month": "This month",
+    "last_month": "Last month",
+    "12mo": "Last 12 months",
+    "year": "This year",
+    "custom": "Custom range"
+  },
+  "intervals": {
+    "label": "Interval",
+    "hour": "Hourly",
+    "day": "Daily",
+    "week": "Weekly",
+    "month": "Monthly"
+  },
+  "compare": {
+    "label": "Comparison",
+    "none": "No comparison",
+    "previous_period": "Previous period",
+    "previous_year": "Previous year",
+    "current": "Current",
+    "previous": "Comparison"
+  },
+  "metrics": {
+    "visitors": "Visitors",
+    "visits": "Visits",
+    "pageviews": "Pageviews",
+    "bounce_rate": "Bounce rate",
+    "avg_duration_ms": "Avg. duration",
+    "conversions": "Conversions",
+    "revenue_minor": "Revenue",
+    "entries": "Entries",
+    "exits": "Exits",
+    "bounces": "Bounces",
+    "occurrences": "Occurrences",
+    "contacts": "Contacts",
+    "count": "Count",
+    "attributed": "Attributed",
+    "value_minor": "Value",
+    "avg_engagement_ms": "Avg. engagement",
+    "conversion_rate": "Conversion rate"
+  },
+  "columns": {
+    "page": "Page",
+    "entryPage": "Entry page",
+    "exitPage": "Exit page",
+    "landingPage": "Landing page",
+    "channel": "Channel",
+    "source": "Source",
+    "referrer": "Referrer",
+    "utm_campaign": "Campaign",
+    "utm_source": "UTM source",
+    "utm_medium": "UTM medium",
+    "device": "Device",
+    "browser": "Browser",
+    "os": "Operating system",
+    "country": "Country",
+    "event": "Event",
+    "utm_content": "UTM content",
+    "contentKey": "Content",
+    "channels": "Channels",
+    "propKey": "Property",
+    "propValue": "Value",
+    "goal": "Goal",
+    "conversion": "Conversion"
+  },
+  "filters": {
+    "add": "Filter by this value",
+    "clear": "Clear filters",
+    "remove": "Remove filter",
+    "dims": {
+      "page": "Page",
+      "entry_page": "Entry page",
+      "exit_page": "Exit page",
+      "host": "Host",
+      "channel": "Channel",
+      "source": "Source",
+      "referrer": "Referrer",
+      "utm_source": "UTM source",
+      "utm_medium": "UTM medium",
+      "utm_campaign": "Campaign",
+      "utm_content": "UTM content",
+      "utm_term": "UTM term",
+      "device": "Device",
+      "browser": "Browser",
+      "os": "OS",
+      "country": "Country",
+      "event": "Event",
+      "content": "Content",
+      "level": "Level"
+    },
+    "ops": {
+      "is": "is",
+      "is_not": "is not",
+      "contains": "contains",
+      "prefix": "starts with",
+      "glob": "matches"
+    }
+  },
+  "availability": {
+    "title": "Some metrics are not available for this range",
+    "short": "Not available for this range",
+    "visitors": "Unique visitors are not counted when visitor hashing is disabled or the range crosses a salt rotation.",
+    "bounce": "Bounce rate needs visit data that is not available for this range.",
+    "duration": "Visit duration needs visit data that is not available for this range."
+  },
+  "report": {
+    "csv": "CSV",
+    "empty": "No data for this period",
+    "loadMore": "Load more",
+    "showing": "Showing {shown} of {total}"
+  },
+  "overview": {
+    "topPages": "Top pages",
+    "topSources": "Top channels"
+  },
+  "pages": {
+    "landing": "Landing pages",
+    "content": "Content groups",
+    "contentPrefix": "Filter by content key prefix",
+    "kinds": {
+      "top": "Top pages",
+      "entry": "Entry pages",
+      "exit": "Exit pages"
+    }
+  },
+  "sources": {
+    "campaignsLink": "Campaigns",
+    "groups": {
+      "channel": "Channels",
+      "source": "Sources",
+      "referrer": "Referrers"
+    }
+  },
+  "campaigns": {
+    "title": "UTM campaigns"
+  },
+  "audience": {
+    "countries": "Countries",
+    "groups": {
+      "device": "Devices",
+      "browser": "Browsers",
+      "os": "Operating systems"
+    },
+    "geoAttribution": "Country data: IP geolocation by",
+    "geoProvider": "DB-IP (CC BY 4.0)"
+  },
+  "events": {
+    "title": "Custom events",
+    "hint": "Select an event to see its property breakdown.",
+    "propsTitle": "Properties of {name}"
+  },
+  "goals": {
+    "completions": "Goal completions",
+    "conversions": "Conversions",
+    "manage": "Manage goals"
+  },
+  "funnels": {
+    "breakdown": "Breakdown",
+    "completed": "Completed",
+    "entered": "Entered",
+    "dropOff": "{n} dropped off",
+    "emptyTitle": "No funnels yet",
+    "emptyDescription": "Create goals and combine them into a funnel in the settings.",
+    "manage": "Manage funnels",
+    "select": "Select a funnel",
+    "breakdowns": {
+      "none": "No breakdown",
+      "channel": "Channel",
+      "device": "Device"
+    }
+  },
+  "attribution": {
+    "anyConversion": "Any conversion",
+    "base": "Base conversion",
+    "target": "Target conversion",
+    "baseConversions": "Base conversions",
+    "targetConversions": "Target conversions",
+    "cac": "CAC",
+    "cost": "Cost",
+    "roas": "ROAS",
+    "group": "Group by",
+    "model": "Model",
+    "window": "Lookback window",
+    "windowDays": "{n} days",
+    "unattributed": "Unattributed",
+    "unattributedShare": "Unattributed share",
+    "hint": "CAC is cost divided by target conversions; ROAS is revenue divided by cost.",
+    "models": {
+      "first_touch": "First touch",
+      "last_non_direct": "Last non-direct",
+      "declared": "Declared source"
+    },
+    "groups": {
+      "channel": "Channel",
+      "source": "Source",
+      "campaign": "Campaign"
+    }
+  },
+  "retention": {
+    "title": "Returning visitors by cohort",
+    "description": "Share of consented visitors who came back after their first visit.",
+    "consentOnly": "Cohorts only include visitors who accepted cookies.",
+    "cohort": "Cohort",
+    "periods": "Periods",
+    "size": "Visitors",
+    "cohorts": {
+      "week": "Weekly cohorts",
+      "month": "Monthly cohorts"
+    },
+    "offset": {
+      "week": "Week {n}",
+      "month": "Month {n}"
+    },
+    "consentTitle": "Consent banner",
+    "consent": {
+      "shown": "Shown",
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "dismissed": "Dismissed",
+      "reopened": "Reopened",
+      "acceptance_rate": "Acceptance rate",
+      "day": "Day",
+      "version": "Version"
+    }
+  },
+  "realtime": {
+    "live": "Live",
+    "active": "Active visitors",
+    "activeHint": "In the last 5 minutes",
+    "perMinute": "Pageviews per minute (last 30 minutes)"
+  },
+  "sites": {
+    "add": "Add site",
+    "addDescription": "Create a site and install the tracking snippet.",
+    "created": "Site created",
+    "manage": "Manage sites",
+    "none": "No site",
+    "emptyTitle": "No sites yet",
+    "emptyAdmin": "Add your first site to start collecting statistics.",
+    "emptyMember": "You do not have access to any site yet. Ask an administrator."
+  },
+  "site": {
+    "name": "Site name",
+    "domains": "Domains",
+    "domainsHint": "Hostnames allowed to send data, e.g. example.com.",
+    "domainPlaceholder": "example.com",
+    "timezone": "Time zone",
+    "currency": "Currency"
+  },
+  "settings": {
+    "nav": {
+      "site": "Site",
+      "members": "Members",
+      "consent": "Consent",
+      "goals": "Goals",
+      "funnels": "Funnels",
+      "costs": "Costs",
+      "apiKeys": "API keys",
+      "security": "Security"
+    },
+    "site": {
+      "title": "Site settings",
+      "description": "Name, domains and regional settings.",
+      "addDomain": "Add domain",
+      "subdomains": "Subdomains",
+      "timezoneHint": "Reports use days in this time zone.",
+      "timezoneChanged": "Time zone changed: the rollups must be rebuilt.",
+      "timezoneChangedHint": "An operator has to run the rollup rebuild command; historical reports change once it completes.",
+      "currencyHint": "ISO 4217 code used for revenue and costs.",
+      "trackingTitle": "Tracking",
+      "trackingDescription": "Choose what is collected and how visitors are counted.",
+      "baseTracking": "Base-level tracking",
+      "baseTrackingHint": "Cookieless statistics collected before any consent choice.",
+      "hashMode": "Visitor counting",
+      "hashModeHint": "How unique visitors are estimated without cookies.",
+      "hashModes": {
+        "daily_hash": "Daily rotating hash",
+        "pageviews_only": "Pageviews only (no visitors)"
+      },
+      "legalTitle": "Legal review required",
+      "legalNotice": "The daily hash combines the site, a shortened IP address and the user agent with a secret salt destroyed every day. Depending on your jurisdiction this may count as fingerprinting: have it reviewed before enabling it without consent.",
+      "cookieLevel": "Cookie level",
+      "cookieLevelHint": "After consent, a first-party visitor cookie enables retention and attribution.",
+      "cookieDomain": "Cookie domain",
+      "cookieDomainHint": "Share the visitor across subdomains, e.g. example.com.",
+      "cookieDomainPlaceholder": "Automatic",
+      "cookieDays": "Visitor cookie lifetime (days)",
+      "campaignSplit": "Start a new visit when the campaign changes",
+      "dnt": "Do Not Track",
+      "dntModes": {
+        "ignore": "Ignore",
+        "no_cookie": "Never set cookies",
+        "no_tracking": "Do not track"
+      },
+      "gpc": "Respect Global Privacy Control",
+      "hashRouting": "Track hash-based routes",
+      "allowLocalhost": "Accept data from localhost",
+      "autoEvents": "Automatic events",
+      "outbound": "Outbound links",
+      "downloads": "File downloads",
+      "forms": "Form submissions",
+      "dataTitle": "Data hygiene",
+      "dataDescription": "Keep URLs clean and exclude internal traffic.",
+      "queryParams": "Allowed query parameters",
+      "queryParamsHint": "All other parameters are stripped from URLs.",
+      "excludedPaths": "Excluded paths",
+      "excludedPathsHint": "Glob patterns such as /admin/*.",
+      "excludedIps": "Excluded IP prefixes",
+      "excludedIpsHint": "CIDR prefixes, matched on the shortened address.",
+      "contactEvents": "Contact events",
+      "contactEventsHint": "Event names counted as contacts in content reports.",
+      "snippetTitle": "Installation",
+      "snippetDescription": "Add this snippet to every page of the site.",
+      "snippet": "Tracking snippet",
+      "proxySnippet": "First-party proxy snippet",
+      "proxySnippetHint": "Use it when the script is served through your own domain.",
+      "publicKey": "Public key",
+      "archiveTitle": "Archive site",
+      "archiveDescription": "Stop collecting data. Existing data stays until retention removes it.",
+      "archiveConfirm": "The tracker will stop accepting data for this site.",
+      "archive": "Archive",
+      "archived": "Site archived"
+    },
+    "members": {
+      "title": "Members",
+      "description": "People with access to this site.",
+      "invite": "Invite people",
+      "inviteDescription": "An invitation link is created; send it to the person.",
+      "addExisting": "Add existing user",
+      "addExistingDescription": "Grant access to someone who already has an account.",
+      "added": "Member added",
+      "removed": "Member removed",
+      "remove": "Remove member",
+      "inherited": "Global admin",
+      "search": "Search members",
+      "sendInvite": "Create invitation",
+      "link": "Invitation link",
+      "linkReady": "Invitation created",
+      "pendingInvitations": "Pending invitations",
+      "invitationRevoked": "Invitation revoked",
+      "linkHint": "Copy the link and share it securely. It is shown only now."
+    },
+    "goals": {
+      "title": "Goals",
+      "description": "Pageviews, events or conversions that count as goal completions.",
+      "add": "Add goal",
+      "edit": "Edit goal",
+      "empty": "No goals yet",
+      "type": "Type",
+      "types": {
+        "pageview": "Pageview",
+        "event": "Event",
+        "conversion": "Conversion"
+      },
+      "path": "Path",
+      "pathHint": "Glob pattern, e.g. /checkout/thank-you*",
+      "eventName": "Event name",
+      "conversionName": "Conversion name",
+      "props": "Required properties",
+      "addProp": "Add property",
+      "inUse": "This goal is used by a funnel."
+    },
+    "funnels": {
+      "title": "Funnels",
+      "description": "Ordered sequences of goals.",
+      "add": "Add funnel",
+      "edit": "Edit funnel",
+      "empty": "No funnels yet",
+      "needGoals": "Create at least two goals first.",
+      "scope": "Scope",
+      "scopes": {
+        "visit": "Same visit",
+        "visitor": "Same visitor"
+      },
+      "window": "Window (days)",
+      "steps": "Steps",
+      "addStep": "Add step",
+      "selectGoal": "Select a goal"
+    },
+    "costs": {
+      "title": "Campaign costs",
+      "description": "Spend used to compute CAC and ROAS.",
+      "add": "Add cost",
+      "edit": "Edit cost",
+      "empty": "No costs yet",
+      "import": "Import CSV",
+      "importHint": "The first row must contain these columns. Amounts use major units (e.g. 123.45).",
+      "chooseFile": "Choose a CSV file",
+      "csv": "CSV content",
+      "preview": "Preview",
+      "confirmImport": "Import",
+      "previewSummary": "{valid} valid rows, {invalid} invalid rows",
+      "imported": "{n} rows imported",
+      "line": "Line",
+      "days": "Days",
+      "target": "Target",
+      "amount": "Amount",
+      "errors": "Errors",
+      "note": "Note",
+      "dayFrom": "From",
+      "dayTo": "To"
+    },
+    "apiKeys": {
+      "title": "API keys",
+      "description": "Keys for server-side conversions and content statistics.",
+      "create": "Create key",
+      "empty": "No API keys",
+      "revoke": "Revoke",
+      "revoked": "Key revoked",
+      "revokedBadge": "Revoked",
+      "lastUsed": "last used {when}",
+      "expires": "expires {when}",
+      "expiresAt": "Expiry date",
+      "scopesLabel": "Scopes",
+      "secret": "Secret",
+      "secretOnce": "Copy the key now: it will not be shown again.",
+      "scopes": {
+        "conversions_write": "Write conversions",
+        "stats_read": "Read content statistics"
+      }
+    }
+  },
+  "consent": {
+    "title": "Consent banner",
+    "description": "Texts, colours and behaviour of the cookie banner.",
+    "texts": "Texts",
+    "addLocale": "Add language",
+    "removeLocale": "Remove language",
+    "localeCode": "e.g. de",
+    "defaultLocale": "Default language",
+    "policyUrl": "Privacy policy URL",
+    "fields": {
+      "title": "Title",
+      "body": "Message",
+      "accept": "Accept button",
+      "reject": "Reject button",
+      "close": "Close label",
+      "policy": "Policy link",
+      "reopen": "Reopen button"
+    },
+    "theme": "Theme",
+    "colors": {
+      "bg": "Background",
+      "fg": "Text",
+      "ac": "Buttons",
+      "acf": "Button text"
+    },
+    "contrastText": "Text contrast {ratio}:1",
+    "contrastAction": "Button contrast {ratio}:1",
+    "contrastFail": "Contrast must be at least 4.5:1 (WCAG AA).",
+    "radius": "Corner radius",
+    "position": "Position",
+    "positions": {
+      "bottom": "Bottom bar",
+      "bottom-left": "Bottom left",
+      "bottom-right": "Bottom right"
+    },
+    "behaviour": "Behaviour",
+    "acceptedTtl": "Remember acceptance (days)",
+    "rejectedTtl": "Remember rejection (days)",
+    "floating": "Floating reopen button",
+    "floatingHint": "Lets visitors change their choice at any time.",
+    "preview": "Live preview",
+    "saveDraft": "Save draft",
+    "discard": "Discard draft",
+    "draftSaved": "Draft saved",
+    "publish": "Publish",
+    "published": "Banner published",
+    "publishTitle": "Publish consent banner",
+    "publishDescription": "The draft replaces the live banner on every site page.",
+    "materialChange": "Material change",
+    "materialChangeHint": "Purposes or data use changed: ask every visitor again.",
+    "materialWarning": "All previous choices will be invalidated and the banner shown again.",
+    "nextVersion": "Consent version after publishing: {n}",
+    "publishedVersion": "Published: version {n}, revision {revision}",
+    "notPublished": "Not published yet",
+    "hasDraft": "Unpublished draft",
+    "history": "History",
+    "noHistory": "No revisions yet",
+    "revision": "Revision {revision} · version {version}",
+    "status": {
+      "draft": "Draft",
+      "published": "Published",
+      "archived": "Archived"
+    }
+  },
+  "security": {
+    "title": "Security",
+    "password": "Password",
+    "passwordDescription": "Changing the password signs out your other sessions.",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "passwordChanged": "Password changed",
+    "totp": {
+      "title": "Two-factor authentication",
+      "description": "Use an authenticator app to protect your account.",
+      "enable": "Set up authenticator app",
+      "scan": "Scan the QR code with your authenticator app, then enter the 6-digit code.",
+      "qrAlt": "QR code for the authenticator app",
+      "secret": "Setup key",
+      "code": "Verification code",
+      "confirm": "Verify and enable",
+      "enabled": "Two-factor authentication enabled",
+      "disabled": "Two-factor authentication disabled",
+      "active": "Enabled",
+      "disable": "Disable",
+      "disableHint": "Confirm with your password.",
+      "regenerate": "New recovery codes",
+      "recoveryTitle": "Recovery codes",
+      "recoveryHint": "Store them safely: each code works once and they are shown only now."
+    },
+    "sessions": {
+      "title": "Sessions",
+      "description": "Devices currently signed in to your account.",
+      "current": "This device",
+      "lastSeen": "last active {when}",
+      "revoke": "Sign out",
+      "revokeOthers": "Sign out other sessions",
+      "revokedOthers": "{n} sessions signed out",
+      "unknownDevice": "Unknown device"
+    }
+  },
+  "auth": {
+    "backToLogin": "Back to sign in",
+    "tooManyAttempts": "Too many attempts. Try again later.",
+    "login": {
+      "title": "Sign in",
+      "subtitle": "Welcome back",
+      "submit": "Sign in",
+      "forgot": "Forgot your password?",
+      "invalid": "Invalid email or password"
+    },
+    "mfa": {
+      "title": "Two-factor authentication",
+      "subtitle": "Enter the code from your authenticator app.",
+      "recoverySubtitle": "Enter one of your recovery codes.",
+      "recoveryCode": "Recovery code",
+      "submit": "Verify",
+      "useRecovery": "Use a recovery code",
+      "useApp": "Use the authenticator app",
+      "invalid": "Invalid code",
+      "expired": "The sign-in attempt expired. Sign in again."
+    },
+    "invite": {
+      "title": "Accept invitation",
+      "for": "Invitation for {email}",
+      "role": "Role: {role}",
+      "expires": "Expires {when}",
+      "accept": "Create account",
+      "expired": "This invitation has expired or was revoked.",
+      "notFound": "Invitation not found."
+    },
+    "forgot": {
+      "title": "Reset password",
+      "subtitle": "We will email you a reset link if the account exists.",
+      "submit": "Send reset link",
+      "sent": "Check your inbox for the reset link.",
+      "unavailable": "Email is not configured on this server.",
+      "askAdmin": "Ask an administrator to reset your password."
+    },
+    "reset": {
+      "title": "Choose a new password",
+      "submit": "Set password",
+      "done": "Password changed. You can now sign in.",
+      "expired": "This reset link has expired."
+    }
+  },
+  "user": {
+    "appearance": "Appearance",
+    "language": "Language",
+    "logout": "Log out",
+    "security": "Account security",
+    "source": "Source code",
+    "sourceLicense": "AGPL-3.0-or-later",
+    "version": "Version {version} ({commit})",
+    "mode": {
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
+    }
+  },
+  "roles": {
+    "global": {
+      "admin": "Global admin",
+      "member": "Member"
+    },
+    "site": {
+      "admin": "Admin",
+      "viewer": "Viewer"
+    }
+  },
+  "users": {
+    "status": {
+      "active": "Active",
+      "disabled": "Disabled"
+    }
+  },
+  "jobs": {
+    "title": "System status",
+    "description": "Background jobs and data freshness.",
+    "rollupLag": "Rollup lag",
+    "minutes": "{n} min",
+    "dirtyDays": "{n} days waiting",
+    "geoDb": "Geo database age",
+    "days": "{n} days",
+    "geoMissing": "Missing",
+    "pendingDrafts": "Unpublished consent drafts",
+    "jobs": "Scheduled jobs",
+    "never": "never",
+    "unknown": "unknown",
+    "unavailable": "Status unavailable"
+  },
+  "admin": {
+    "users": {
+      "invite": "Invite user",
+      "inviteDescription": "Create an invitation link with roles.",
+      "globalRole": "Global role",
+      "status": "Status",
+      "sites": "Sites",
+      "allSites": "All sites",
+      "mfa": "2FA",
+      "lastLogin": "Last sign-in",
+      "resetTotp": "Reset 2FA",
+      "totpReset": "Two-factor authentication reset",
+      "search": "Search users",
+      "invitations": "Invitations",
+      "noInvitations": "No invitations",
+      "revoke": "Revoke",
+      "expires": "expires {when}",
+      "pendingCount": "{n} pending",
+      "siteAccess": "Site access",
+      "addSiteAccess": "Add site",
+      "selectSite": "Select a site",
+      "invitationStatus": {
+        "pending": "Pending",
+        "accepted": "Accepted",
+        "revoked": "Revoked",
+        "expired": "Expired"
+      }
+    },
+    "sites": {
+      "active": "Active",
+      "archived": "Archived",
+      "created": "Created",
+      "restore": "Restore",
+      "restored": "Site restored"
+    },
+    "health": {
+      "title": "Service health",
+      "refresh": "Refresh",
+      "status": {
+        "ok": "Healthy",
+        "warn": "Degraded",
+        "fail": "Failing"
+      }
+    },
+    "audit": {
+      "when": "When",
+      "actor": "Actor",
+      "action": "Action",
+      "site": "Site",
+      "target": "Target",
+      "details": "Details",
+      "ip": "IP prefix",
+      "allSites": "All sites",
+      "actionFilter": "Filter by action"
+    }
+  }
+}

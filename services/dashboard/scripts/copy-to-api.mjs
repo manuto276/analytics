@@ -1,0 +1,20 @@
+// Copies the generated SPA into services/api/public without touching the API front controller.
+import { cpSync, existsSync, readdirSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const source = join(root, '.output/public')
+const target = resolve(root, '../api/public')
+const PROTECTED = new Set(['index.php', '.htaccess'])
+
+if (!existsSync(source)) {
+  console.error('Missing .output/public; run "pnpm generate" first.')
+  process.exit(1)
+}
+
+for (const entry of readdirSync(source)) {
+  if (PROTECTED.has(entry)) continue
+  cpSync(join(source, entry), join(target, entry), { recursive: true, force: true, dereference: true })
+}
+console.log(`Copied ${source} -> ${target}`)

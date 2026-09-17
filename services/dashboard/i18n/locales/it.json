@@ -1,0 +1,741 @@
+{
+  "app": {
+    "name": "Analytics"
+  },
+  "nav": {
+    "overview": "Panoramica",
+    "pages": "Pagine",
+    "sources": "Sorgenti",
+    "campaigns": "Campagne",
+    "audience": "Pubblico",
+    "events": "Eventi",
+    "goals": "Obiettivi e conversioni",
+    "funnels": "Funnel",
+    "attribution": "Attribuzione",
+    "retention": "Fidelizzazione",
+    "realtime": "Tempo reale",
+    "settings": "Impostazioni",
+    "admin": "Amministrazione",
+    "users": "Utenti",
+    "sites": "Siti",
+    "audit": "Registro attività",
+    "goTo": "Vai a"
+  },
+  "common": {
+    "add": "Aggiungi",
+    "cancel": "Annulla",
+    "copied": "Copiato negli appunti",
+    "copy": "Copia",
+    "create": "Crea",
+    "delete": "Elimina",
+    "deleted": "Eliminato",
+    "done": "Fatto",
+    "edit": "Modifica",
+    "email": "Email",
+    "loading": "Caricamento…",
+    "moveDown": "Sposta giù",
+    "moveUp": "Sposta su",
+    "name": "Nome",
+    "off": "Disattivo",
+    "on": "Attivo",
+    "password": "Password",
+    "remove": "Rimuovi",
+    "role": "Ruolo",
+    "save": "Salva",
+    "unknown": "Sconosciuto",
+    "saveChanges": "Salva modifiche",
+    "saved": "Modifiche salvate",
+    "update": "Aggiorna"
+  },
+  "errors": {
+    "adminOnly": "Solo gli amministratori del sito possono gestire questa sezione.",
+    "backHome": "Torna alla dashboard",
+    "csv": "Esportazione CSV non riuscita",
+    "forbidden": "Non hai i permessi per questa operazione",
+    "generic": "Si è verificato un errore",
+    "notFound": "Pagina non trovata",
+    "validation": "Controlla i campi evidenziati"
+  },
+  "validation": {
+    "amount": "Inserisci un importo valido",
+    "domainRequired": "Aggiungi almeno un dominio",
+    "passwordDifferent": "La nuova password deve essere diversa",
+    "passwordLength": "Usa almeno 12 caratteri",
+    "passwordMatch": "Le password non coincidono",
+    "required": "Obbligatorio"
+  },
+  "periods": {
+    "today": "Oggi",
+    "yesterday": "Ieri",
+    "7d": "Ultimi 7 giorni",
+    "30d": "Ultimi 30 giorni",
+    "90d": "Ultimi 90 giorni",
+    "month": "Questo mese",
+    "last_month": "Mese scorso",
+    "12mo": "Ultimi 12 mesi",
+    "year": "Quest'anno",
+    "custom": "Intervallo personalizzato"
+  },
+  "intervals": {
+    "label": "Intervallo",
+    "hour": "Orario",
+    "day": "Giornaliero",
+    "week": "Settimanale",
+    "month": "Mensile"
+  },
+  "compare": {
+    "label": "Confronto",
+    "none": "Nessun confronto",
+    "previous_period": "Periodo precedente",
+    "previous_year": "Anno precedente",
+    "current": "Attuale",
+    "previous": "Confronto"
+  },
+  "metrics": {
+    "visitors": "Visitatori",
+    "visits": "Visite",
+    "pageviews": "Visualizzazioni",
+    "bounce_rate": "Frequenza di rimbalzo",
+    "avg_duration_ms": "Durata media",
+    "conversions": "Conversioni",
+    "revenue_minor": "Ricavi",
+    "entries": "Ingressi",
+    "exits": "Uscite",
+    "bounces": "Rimbalzi",
+    "occurrences": "Occorrenze",
+    "contacts": "Contatti",
+    "count": "Numero",
+    "attributed": "Attribuite",
+    "value_minor": "Valore",
+    "avg_engagement_ms": "Coinvolgimento medio",
+    "conversion_rate": "Tasso di conversione"
+  },
+  "columns": {
+    "page": "Pagina",
+    "entryPage": "Pagina di ingresso",
+    "exitPage": "Pagina di uscita",
+    "landingPage": "Pagina di destinazione",
+    "channel": "Canale",
+    "source": "Sorgente",
+    "referrer": "Referrer",
+    "utm_campaign": "Campagna",
+    "utm_source": "Sorgente UTM",
+    "utm_medium": "Mezzo UTM",
+    "device": "Dispositivo",
+    "browser": "Browser",
+    "os": "Sistema operativo",
+    "country": "Paese",
+    "event": "Evento",
+    "utm_content": "Contenuto UTM",
+    "contentKey": "Contenuto",
+    "channels": "Canali",
+    "propKey": "Proprietà",
+    "propValue": "Valore",
+    "goal": "Obiettivo",
+    "conversion": "Conversione"
+  },
+  "filters": {
+    "add": "Filtra per questo valore",
+    "clear": "Rimuovi filtri",
+    "remove": "Rimuovi filtro",
+    "dims": {
+      "page": "Pagina",
+      "entry_page": "Pagina di ingresso",
+      "exit_page": "Pagina di uscita",
+      "host": "Host",
+      "channel": "Canale",
+      "source": "Sorgente",
+      "referrer": "Referrer",
+      "utm_source": "Sorgente UTM",
+      "utm_medium": "Mezzo UTM",
+      "utm_campaign": "Campagna",
+      "utm_content": "Contenuto UTM",
+      "utm_term": "Termine UTM",
+      "device": "Dispositivo",
+      "browser": "Browser",
+      "os": "Sistema operativo",
+      "country": "Paese",
+      "event": "Evento",
+      "content": "Contenuto",
+      "level": "Livello"
+    },
+    "ops": {
+      "is": "è",
+      "is_not": "non è",
+      "contains": "contiene",
+      "prefix": "inizia con",
+      "glob": "corrisponde a"
+    }
+  },
+  "availability": {
+    "title": "Alcune metriche non sono disponibili per questo periodo",
+    "short": "Non disponibile per questo periodo",
+    "visitors": "I visitatori unici non vengono conteggiati se l'hash dei visitatori è disattivato o il periodo attraversa una rotazione del salt.",
+    "bounce": "La frequenza di rimbalzo richiede dati di visita non disponibili per questo periodo.",
+    "duration": "La durata delle visite richiede dati di visita non disponibili per questo periodo."
+  },
+  "report": {
+    "csv": "CSV",
+    "empty": "Nessun dato per questo periodo",
+    "loadMore": "Carica altri",
+    "showing": "{shown} di {total}"
+  },
+  "overview": {
+    "topPages": "Pagine principali",
+    "topSources": "Canali principali"
+  },
+  "pages": {
+    "landing": "Pagine di destinazione",
+    "content": "Gruppi di contenuti",
+    "contentPrefix": "Filtra per prefisso della chiave",
+    "kinds": {
+      "top": "Più viste",
+      "entry": "Di ingresso",
+      "exit": "Di uscita"
+    }
+  },
+  "sources": {
+    "campaignsLink": "Campagne",
+    "groups": {
+      "channel": "Canali",
+      "source": "Sorgenti",
+      "referrer": "Referrer"
+    }
+  },
+  "campaigns": {
+    "title": "Campagne UTM"
+  },
+  "audience": {
+    "countries": "Paesi",
+    "groups": {
+      "device": "Dispositivi",
+      "browser": "Browser",
+      "os": "Sistemi operativi"
+    },
+    "geoAttribution": "Dati sui paesi: geolocalizzazione IP di",
+    "geoProvider": "DB-IP (CC BY 4.0)"
+  },
+  "events": {
+    "title": "Eventi personalizzati",
+    "hint": "Seleziona un evento per vedere il dettaglio delle proprietà.",
+    "propsTitle": "Proprietà di {name}"
+  },
+  "goals": {
+    "completions": "Obiettivi completati",
+    "conversions": "Conversioni",
+    "manage": "Gestisci obiettivi"
+  },
+  "funnels": {
+    "breakdown": "Suddivisione",
+    "completed": "Completati",
+    "entered": "Entrati",
+    "dropOff": "{n} abbandoni",
+    "emptyTitle": "Nessun funnel",
+    "emptyDescription": "Crea degli obiettivi e combinali in un funnel nelle impostazioni.",
+    "manage": "Gestisci funnel",
+    "select": "Seleziona un funnel",
+    "breakdowns": {
+      "none": "Nessuna suddivisione",
+      "channel": "Canale",
+      "device": "Dispositivo"
+    }
+  },
+  "attribution": {
+    "anyConversion": "Qualsiasi conversione",
+    "base": "Conversione base",
+    "target": "Conversione obiettivo",
+    "baseConversions": "Conversioni base",
+    "targetConversions": "Conversioni obiettivo",
+    "cac": "CAC",
+    "cost": "Costo",
+    "roas": "ROAS",
+    "group": "Raggruppa per",
+    "model": "Modello",
+    "window": "Finestra di attribuzione",
+    "windowDays": "{n} giorni",
+    "unattributed": "Non attribuito",
+    "unattributedShare": "Quota non attribuita",
+    "hint": "Il CAC è il costo diviso per le conversioni obiettivo; il ROAS è il ricavo diviso per il costo.",
+    "models": {
+      "first_touch": "Primo contatto",
+      "last_non_direct": "Ultimo non diretto",
+      "declared": "Sorgente dichiarata"
+    },
+    "groups": {
+      "channel": "Canale",
+      "source": "Sorgente",
+      "campaign": "Campagna"
+    }
+  },
+  "retention": {
+    "title": "Visitatori di ritorno per coorte",
+    "description": "Quota di visitatori con consenso tornati dopo la prima visita.",
+    "consentOnly": "Le coorti includono solo i visitatori che hanno accettato i cookie.",
+    "cohort": "Coorte",
+    "periods": "Periodi",
+    "size": "Visitatori",
+    "cohorts": {
+      "week": "Coorti settimanali",
+      "month": "Coorti mensili"
+    },
+    "offset": {
+      "week": "Settimana {n}",
+      "month": "Mese {n}"
+    },
+    "consentTitle": "Banner dei consensi",
+    "consent": {
+      "shown": "Mostrato",
+      "accepted": "Accettato",
+      "rejected": "Rifiutato",
+      "dismissed": "Chiuso",
+      "reopened": "Riaperto",
+      "acceptance_rate": "Tasso di accettazione",
+      "day": "Giorno",
+      "version": "Versione"
+    }
+  },
+  "realtime": {
+    "live": "In diretta",
+    "active": "Visitatori attivi",
+    "activeHint": "Negli ultimi 5 minuti",
+    "perMinute": "Visualizzazioni al minuto (ultimi 30 minuti)"
+  },
+  "sites": {
+    "add": "Aggiungi sito",
+    "addDescription": "Crea un sito e installa lo snippet di tracciamento.",
+    "created": "Sito creato",
+    "manage": "Gestisci siti",
+    "none": "Nessun sito",
+    "emptyTitle": "Nessun sito",
+    "emptyAdmin": "Aggiungi il primo sito per iniziare a raccogliere statistiche.",
+    "emptyMember": "Non hai ancora accesso a nessun sito. Chiedi a un amministratore."
+  },
+  "site": {
+    "name": "Nome del sito",
+    "domains": "Domini",
+    "domainsHint": "Host autorizzati a inviare dati, ad es. example.com.",
+    "domainPlaceholder": "example.com",
+    "timezone": "Fuso orario",
+    "currency": "Valuta"
+  },
+  "settings": {
+    "nav": {
+      "site": "Sito",
+      "members": "Membri",
+      "consent": "Consenso",
+      "goals": "Obiettivi",
+      "funnels": "Funnel",
+      "costs": "Costi",
+      "apiKeys": "Chiavi API",
+      "security": "Sicurezza"
+    },
+    "site": {
+      "title": "Impostazioni del sito",
+      "description": "Nome, domini e impostazioni regionali.",
+      "addDomain": "Aggiungi dominio",
+      "subdomains": "Sottodomini",
+      "timezoneHint": "I report usano i giorni in questo fuso orario.",
+      "timezoneChanged": "Fuso orario modificato: gli aggregati devono essere ricalcolati.",
+      "timezoneChangedHint": "Un operatore deve eseguire il comando di ricalcolo degli aggregati; i report storici cambieranno al termine.",
+      "currencyHint": "Codice ISO 4217 usato per ricavi e costi.",
+      "trackingTitle": "Tracciamento",
+      "trackingDescription": "Scegli cosa raccogliere e come contare i visitatori.",
+      "baseTracking": "Tracciamento di base",
+      "baseTrackingHint": "Statistiche senza cookie raccolte prima di qualsiasi scelta di consenso.",
+      "hashMode": "Conteggio visitatori",
+      "hashModeHint": "Come vengono stimati i visitatori unici senza cookie.",
+      "hashModes": {
+        "daily_hash": "Hash a rotazione giornaliera",
+        "pageviews_only": "Solo visualizzazioni (senza visitatori)"
+      },
+      "legalTitle": "Richiesta verifica legale",
+      "legalNotice": "L'hash giornaliero combina il sito, un indirizzo IP abbreviato e lo user agent con un salt segreto distrutto ogni giorno. A seconda della giurisdizione può essere considerato fingerprinting: fallo verificare prima di attivarlo senza consenso.",
+      "cookieLevel": "Livello cookie",
+      "cookieLevelHint": "Dopo il consenso, un cookie visitatore di prima parte abilita fidelizzazione e attribuzione.",
+      "cookieDomain": "Dominio del cookie",
+      "cookieDomainHint": "Condividi il visitatore tra sottodomini, ad es. example.com.",
+      "cookieDomainPlaceholder": "Automatico",
+      "cookieDays": "Durata del cookie visitatore (giorni)",
+      "campaignSplit": "Inizia una nuova visita quando cambia la campagna",
+      "dnt": "Do Not Track",
+      "dntModes": {
+        "ignore": "Ignora",
+        "no_cookie": "Non impostare cookie",
+        "no_tracking": "Non tracciare"
+      },
+      "gpc": "Rispetta Global Privacy Control",
+      "hashRouting": "Traccia le rotte basate su hash",
+      "allowLocalhost": "Accetta dati da localhost",
+      "autoEvents": "Eventi automatici",
+      "outbound": "Link in uscita",
+      "downloads": "Download di file",
+      "forms": "Invio di moduli",
+      "dataTitle": "Pulizia dei dati",
+      "dataDescription": "Mantieni puliti gli URL ed escludi il traffico interno.",
+      "queryParams": "Parametri di query consentiti",
+      "queryParamsHint": "Tutti gli altri parametri vengono rimossi dagli URL.",
+      "excludedPaths": "Percorsi esclusi",
+      "excludedPathsHint": "Pattern glob come /admin/*.",
+      "excludedIps": "Prefissi IP esclusi",
+      "excludedIpsHint": "Prefissi CIDR, confrontati con l'indirizzo abbreviato.",
+      "contactEvents": "Eventi di contatto",
+      "contactEventsHint": "Nomi di eventi conteggiati come contatti nei report dei contenuti.",
+      "snippetTitle": "Installazione",
+      "snippetDescription": "Aggiungi questo snippet a tutte le pagine del sito.",
+      "snippet": "Snippet di tracciamento",
+      "proxySnippet": "Snippet con proxy di prima parte",
+      "proxySnippetHint": "Usalo quando lo script è servito tramite il tuo dominio.",
+      "publicKey": "Chiave pubblica",
+      "archiveTitle": "Archivia sito",
+      "archiveDescription": "Interrompe la raccolta dei dati. I dati esistenti restano fino alla scadenza della conservazione.",
+      "archiveConfirm": "Il tracker smetterà di accettare dati per questo sito.",
+      "archive": "Archivia",
+      "archived": "Sito archiviato"
+    },
+    "members": {
+      "title": "Membri",
+      "description": "Persone con accesso a questo sito.",
+      "invite": "Invita persone",
+      "inviteDescription": "Viene creato un link di invito da inviare alla persona.",
+      "addExisting": "Aggiungi utente esistente",
+      "addExistingDescription": "Concedi l'accesso a chi ha già un account.",
+      "added": "Membro aggiunto",
+      "removed": "Membro rimosso",
+      "remove": "Rimuovi membro",
+      "inherited": "Admin globale",
+      "search": "Cerca membri",
+      "sendInvite": "Crea invito",
+      "link": "Link di invito",
+      "linkReady": "Invito creato",
+      "pendingInvitations": "Inviti in attesa",
+      "invitationRevoked": "Invito revocato",
+      "linkHint": "Copia il link e condividilo in modo sicuro. Viene mostrato solo ora."
+    },
+    "goals": {
+      "title": "Obiettivi",
+      "description": "Visualizzazioni, eventi o conversioni che contano come obiettivi completati.",
+      "add": "Aggiungi obiettivo",
+      "edit": "Modifica obiettivo",
+      "empty": "Nessun obiettivo",
+      "type": "Tipo",
+      "types": {
+        "pageview": "Visualizzazione",
+        "event": "Evento",
+        "conversion": "Conversione"
+      },
+      "path": "Percorso",
+      "pathHint": "Pattern glob, ad es. /checkout/grazie*",
+      "eventName": "Nome evento",
+      "conversionName": "Nome conversione",
+      "props": "Proprietà richieste",
+      "addProp": "Aggiungi proprietà",
+      "inUse": "Questo obiettivo è usato da un funnel."
+    },
+    "funnels": {
+      "title": "Funnel",
+      "description": "Sequenze ordinate di obiettivi.",
+      "add": "Aggiungi funnel",
+      "edit": "Modifica funnel",
+      "empty": "Nessun funnel",
+      "needGoals": "Crea prima almeno due obiettivi.",
+      "scope": "Ambito",
+      "scopes": {
+        "visit": "Stessa visita",
+        "visitor": "Stesso visitatore"
+      },
+      "window": "Finestra (giorni)",
+      "steps": "Passaggi",
+      "addStep": "Aggiungi passaggio",
+      "selectGoal": "Seleziona un obiettivo"
+    },
+    "costs": {
+      "title": "Costi delle campagne",
+      "description": "Spesa usata per calcolare CAC e ROAS.",
+      "add": "Aggiungi costo",
+      "edit": "Modifica costo",
+      "empty": "Nessun costo",
+      "import": "Importa CSV",
+      "importHint": "La prima riga deve contenere queste colonne. Gli importi sono in unità intere (ad es. 123.45).",
+      "chooseFile": "Scegli un file CSV",
+      "csv": "Contenuto CSV",
+      "preview": "Anteprima",
+      "confirmImport": "Importa",
+      "previewSummary": "{valid} righe valide, {invalid} righe non valide",
+      "imported": "{n} righe importate",
+      "line": "Riga",
+      "days": "Giorni",
+      "target": "Destinazione",
+      "amount": "Importo",
+      "errors": "Errori",
+      "note": "Nota",
+      "dayFrom": "Dal",
+      "dayTo": "Al"
+    },
+    "apiKeys": {
+      "title": "Chiavi API",
+      "description": "Chiavi per conversioni lato server e statistiche dei contenuti.",
+      "create": "Crea chiave",
+      "empty": "Nessuna chiave API",
+      "revoke": "Revoca",
+      "revoked": "Chiave revocata",
+      "revokedBadge": "Revocata",
+      "lastUsed": "ultimo uso {when}",
+      "expires": "scade {when}",
+      "expiresAt": "Data di scadenza",
+      "scopesLabel": "Permessi",
+      "secret": "Segreto",
+      "secretOnce": "Copia la chiave ora: non verrà mostrata di nuovo.",
+      "scopes": {
+        "conversions_write": "Scrittura conversioni",
+        "stats_read": "Lettura statistiche dei contenuti"
+      }
+    }
+  },
+  "consent": {
+    "title": "Banner dei consensi",
+    "description": "Testi, colori e comportamento del banner dei cookie.",
+    "texts": "Testi",
+    "addLocale": "Aggiungi lingua",
+    "removeLocale": "Rimuovi lingua",
+    "localeCode": "es. de",
+    "defaultLocale": "Lingua predefinita",
+    "policyUrl": "URL dell'informativa privacy",
+    "fields": {
+      "title": "Titolo",
+      "body": "Messaggio",
+      "accept": "Pulsante accetta",
+      "reject": "Pulsante rifiuta",
+      "close": "Etichetta chiudi",
+      "policy": "Link informativa",
+      "reopen": "Pulsante riapri"
+    },
+    "theme": "Tema",
+    "colors": {
+      "bg": "Sfondo",
+      "fg": "Testo",
+      "ac": "Pulsanti",
+      "acf": "Testo pulsanti"
+    },
+    "contrastText": "Contrasto del testo {ratio}:1",
+    "contrastAction": "Contrasto dei pulsanti {ratio}:1",
+    "contrastFail": "Il contrasto deve essere almeno 4.5:1 (WCAG AA).",
+    "radius": "Raggio degli angoli",
+    "position": "Posizione",
+    "positions": {
+      "bottom": "Barra in basso",
+      "bottom-left": "In basso a sinistra",
+      "bottom-right": "In basso a destra"
+    },
+    "behaviour": "Comportamento",
+    "acceptedTtl": "Ricorda l'accettazione (giorni)",
+    "rejectedTtl": "Ricorda il rifiuto (giorni)",
+    "floating": "Pulsante flottante per riaprire",
+    "floatingHint": "Permette ai visitatori di cambiare scelta in qualsiasi momento.",
+    "preview": "Anteprima",
+    "saveDraft": "Salva bozza",
+    "discard": "Elimina bozza",
+    "draftSaved": "Bozza salvata",
+    "publish": "Pubblica",
+    "published": "Banner pubblicato",
+    "publishTitle": "Pubblica il banner dei consensi",
+    "publishDescription": "La bozza sostituisce il banner attivo su tutte le pagine del sito.",
+    "materialChange": "Modifica sostanziale",
+    "materialChangeHint": "Le finalità o l'uso dei dati sono cambiati: chiedi di nuovo a tutti i visitatori.",
+    "materialWarning": "Tutte le scelte precedenti saranno invalidate e il banner verrà mostrato di nuovo.",
+    "nextVersion": "Versione del consenso dopo la pubblicazione: {n}",
+    "publishedVersion": "Pubblicato: versione {n}, revisione {revision}",
+    "notPublished": "Non ancora pubblicato",
+    "hasDraft": "Bozza non pubblicata",
+    "history": "Cronologia",
+    "noHistory": "Nessuna revisione",
+    "revision": "Revisione {revision} · versione {version}",
+    "status": {
+      "draft": "Bozza",
+      "published": "Pubblicato",
+      "archived": "Archiviato"
+    }
+  },
+  "security": {
+    "title": "Sicurezza",
+    "password": "Password",
+    "passwordDescription": "Cambiare la password disconnette le altre sessioni.",
+    "currentPassword": "Password attuale",
+    "newPassword": "Nuova password",
+    "confirmPassword": "Conferma password",
+    "passwordChanged": "Password modificata",
+    "totp": {
+      "title": "Autenticazione a due fattori",
+      "description": "Usa un'app di autenticazione per proteggere il tuo account.",
+      "enable": "Configura app di autenticazione",
+      "scan": "Scansiona il codice QR con l'app di autenticazione, poi inserisci il codice a 6 cifre.",
+      "qrAlt": "Codice QR per l'app di autenticazione",
+      "secret": "Chiave di configurazione",
+      "code": "Codice di verifica",
+      "confirm": "Verifica e attiva",
+      "enabled": "Autenticazione a due fattori attivata",
+      "disabled": "Autenticazione a due fattori disattivata",
+      "active": "Attiva",
+      "disable": "Disattiva",
+      "disableHint": "Conferma con la tua password.",
+      "regenerate": "Nuovi codici di recupero",
+      "recoveryTitle": "Codici di recupero",
+      "recoveryHint": "Conservali al sicuro: ogni codice funziona una sola volta e vengono mostrati solo ora."
+    },
+    "sessions": {
+      "title": "Sessioni",
+      "description": "Dispositivi attualmente connessi al tuo account.",
+      "current": "Questo dispositivo",
+      "lastSeen": "ultima attività {when}",
+      "revoke": "Disconnetti",
+      "revokeOthers": "Disconnetti le altre sessioni",
+      "revokedOthers": "{n} sessioni disconnesse",
+      "unknownDevice": "Dispositivo sconosciuto"
+    }
+  },
+  "auth": {
+    "backToLogin": "Torna all'accesso",
+    "tooManyAttempts": "Troppi tentativi. Riprova più tardi.",
+    "login": {
+      "title": "Accedi",
+      "subtitle": "Bentornato",
+      "submit": "Accedi",
+      "forgot": "Password dimenticata?",
+      "invalid": "Email o password non validi"
+    },
+    "mfa": {
+      "title": "Autenticazione a due fattori",
+      "subtitle": "Inserisci il codice dell'app di autenticazione.",
+      "recoverySubtitle": "Inserisci uno dei tuoi codici di recupero.",
+      "recoveryCode": "Codice di recupero",
+      "submit": "Verifica",
+      "useRecovery": "Usa un codice di recupero",
+      "useApp": "Usa l'app di autenticazione",
+      "invalid": "Codice non valido",
+      "expired": "Il tentativo di accesso è scaduto. Accedi di nuovo."
+    },
+    "invite": {
+      "title": "Accetta invito",
+      "for": "Invito per {email}",
+      "role": "Ruolo: {role}",
+      "expires": "Scade {when}",
+      "accept": "Crea account",
+      "expired": "Questo invito è scaduto o è stato revocato.",
+      "notFound": "Invito non trovato."
+    },
+    "forgot": {
+      "title": "Reimposta password",
+      "subtitle": "Ti invieremo un link di reimpostazione se l'account esiste.",
+      "submit": "Invia link",
+      "sent": "Controlla la posta per il link di reimpostazione.",
+      "unavailable": "L'email non è configurata su questo server.",
+      "askAdmin": "Chiedi a un amministratore di reimpostare la password."
+    },
+    "reset": {
+      "title": "Scegli una nuova password",
+      "submit": "Imposta password",
+      "done": "Password modificata. Ora puoi accedere.",
+      "expired": "Questo link di reimpostazione è scaduto."
+    }
+  },
+  "user": {
+    "appearance": "Aspetto",
+    "language": "Lingua",
+    "logout": "Esci",
+    "security": "Sicurezza account",
+    "source": "Codice sorgente",
+    "sourceLicense": "AGPL-3.0-or-later",
+    "version": "Versione {version} ({commit})",
+    "mode": {
+      "system": "Sistema",
+      "light": "Chiaro",
+      "dark": "Scuro"
+    }
+  },
+  "roles": {
+    "global": {
+      "admin": "Admin globale",
+      "member": "Membro"
+    },
+    "site": {
+      "admin": "Amministratore",
+      "viewer": "Lettore"
+    }
+  },
+  "users": {
+    "status": {
+      "active": "Attivo",
+      "disabled": "Disattivato"
+    }
+  },
+  "jobs": {
+    "title": "Stato del sistema",
+    "description": "Processi in background e aggiornamento dei dati.",
+    "rollupLag": "Ritardo aggregati",
+    "minutes": "{n} min",
+    "dirtyDays": "{n} giorni in attesa",
+    "geoDb": "Età database geografico",
+    "days": "{n} giorni",
+    "geoMissing": "Mancante",
+    "pendingDrafts": "Bozze di consenso non pubblicate",
+    "jobs": "Processi pianificati",
+    "never": "mai",
+    "unknown": "sconosciuto",
+    "unavailable": "Stato non disponibile"
+  },
+  "admin": {
+    "users": {
+      "invite": "Invita utente",
+      "inviteDescription": "Crea un link di invito con i ruoli.",
+      "globalRole": "Ruolo globale",
+      "status": "Stato",
+      "sites": "Siti",
+      "allSites": "Tutti i siti",
+      "mfa": "2FA",
+      "lastLogin": "Ultimo accesso",
+      "resetTotp": "Reimposta 2FA",
+      "totpReset": "Autenticazione a due fattori reimpostata",
+      "search": "Cerca utenti",
+      "invitations": "Inviti",
+      "noInvitations": "Nessun invito",
+      "revoke": "Revoca",
+      "expires": "scade {when}",
+      "pendingCount": "{n} in attesa",
+      "siteAccess": "Accesso ai siti",
+      "addSiteAccess": "Aggiungi sito",
+      "selectSite": "Seleziona un sito",
+      "invitationStatus": {
+        "pending": "In attesa",
+        "accepted": "Accettato",
+        "revoked": "Revocato",
+        "expired": "Scaduto"
+      }
+    },
+    "sites": {
+      "active": "Attivo",
+      "archived": "Archiviato",
+      "created": "Creato",
+      "restore": "Ripristina",
+      "restored": "Sito ripristinato"
+    },
+    "health": {
+      "title": "Stato del servizio",
+      "refresh": "Aggiorna",
+      "status": {
+        "ok": "Integro",
+        "warn": "Degradato",
+        "fail": "Non funzionante"
+      }
+    },
+    "audit": {
+      "when": "Quando",
+      "actor": "Autore",
+      "action": "Azione",
+      "site": "Sito",
+      "target": "Oggetto",
+      "details": "Dettagli",
+      "ip": "Prefisso IP",
+      "allSites": "Tutti i siti",
+      "actionFilter": "Filtra per azione"
+    }
+  }
+}
