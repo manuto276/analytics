@@ -577,13 +577,13 @@ Each milestone ends with a green `make ci` and a verifiable result.
 
 ## 15. Verification checklist (release gate)
 - [x] Coverage gates met (overall 92.7%; Tracking 96.4%, Consent 96.8%, Identity 95.3%, Shared Net 95.6%, Shared Crypto 97.9%). Mutation testing (MSI) is not run: infection/infection cannot be installed next to PHPUnit 13 — see docs/development/testing.md
-- [ ] `make ci` green
+- [x] `make ci` green (2026-09-18, ~12 min: PHP 358 tests, PHPStan/Deptrac/CS/Rector clean, tracker 107 + 4.87 kB, dashboard 187, deploy console 63, package + deploy smoke, images, e2e 110 passed on chromium/firefox/webkit)
 - [x] PrivacyInvariantsTest, NoSetCookie, tracker no-storage-before-choice green
 - [x] Tracker ≤ 5.0 KB gzip; axe no serious violations (banner, dashboard)
 - [x] OpenAPI types fresh; i18n parity
 - [x] Upgrade migration from previous release green; contract lint clean
 - [x] Deploy smoke (deploy, rollback) green; checksum matches tarball
-- [ ] `docs/privacy/garante-2021-mapping.md` and `cookies.md` updated for any behaviour change
+- [x] `docs/privacy/garante-2021-mapping.md` and `cookies.md` updated for any behaviour change (B5 now records the per-event-uid idempotency of the consent counters; no cookie or storage behaviour changed, so `cookies.md` needed nothing)
 
 ## 16. Risks and open decisions
 
