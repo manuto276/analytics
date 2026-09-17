@@ -57,7 +57,8 @@ reports. The cost is that cross-subdomain journeys are no longer visible.
 day of their decision; `consent_stats_daily` counts `shown`, `accepted`, `rejected`, `dismissed`,
 `reopened` per day and version. There is **no** per-person consent log by default. Setting
 `consent_receipts_enabled` writes one `consent_receipts` row (`visitor_id`, version, decision,
-timestamp) per acceptance; nothing reads them back yet.
+timestamp) per acceptance, and a site admin can look one visitor up by the id the visitor supplies
+(`GET /api/v1/sites/{siteId}/consent/receipts?visitor_id=…`, audited as `consent.receipts_read`).
 
 **The question.** Whether an immutable versioned notice plus aggregate counters plus the visitor's own
 cookie amount to being able to demonstrate consent, or whether a per-person record is required.
@@ -65,9 +66,9 @@ cookie amount to being able to demonstrate consent, or whether a per-person reco
 **Trade-off.** A per-person record is itself personal data, kept for as long as the proof must last,
 about people who consented to analytics — arguably more intrusive than the processing it documents.
 
-**If the answer is unfavourable.** Enable `consent_receipts_enabled` per site and add the receipt
-retrieval the product does not have today (**not implemented**: there is no lookup or export
-endpoint for receipts).
+**If the answer is unfavourable.** Enable `consent_receipts_enabled` per site; the per-visitor
+lookup then documents each acceptance. There is deliberately no bulk export, so a receipt can only be
+retrieved by someone who already knows the visitor id.
 
 ---
 
