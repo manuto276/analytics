@@ -75,6 +75,10 @@ describe('pageviews and events', () => {
       obj: { a: 1 },
       nul: null,
       ['k'.repeat(33)]: 'long key',
+      'a"b': 'quote',
+      'caf\u00e9': 'accent',
+      'a b': 'space',
+      'Plan.2:x-y_z': 'allowed',
     };
     for (let i = 0; i < 12; i++) props['p' + i] = i;
     api().track('signup_click:v1.2-a', props);
@@ -91,6 +95,11 @@ describe('pageviews and events', () => {
     expect(p).not.toHaveProperty('nan');
     expect(p).not.toHaveProperty('obj');
     expect(p).not.toHaveProperty('k'.repeat(33));
+    // A key the collector would refuse costs the whole event server side, so the key is dropped here.
+    expect(p).not.toHaveProperty('a"b');
+    expect(p).not.toHaveProperty('caf\u00e9');
+    expect(p).not.toHaveProperty('a b');
+    expect(p['Plan.2:x-y_z']).toBe('allowed');
     expect(ev[1].p).toBeUndefined();
   });
 

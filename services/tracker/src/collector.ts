@@ -112,7 +112,8 @@ export const track = (name: string, props: Record<string, unknown> | undefined, 
   for (const k in props) {
     const v = props[k];
     const ty = typeof v;
-    if (c < 10 && k.length < 33 && (ty == 'string' || ty == 'boolean' || (ty == 'number' && isFinite(v as number)))) {
+    // Same key contract as the collector: a key it would refuse costs the whole event, so drop it here.
+    if (c < 10 && /^[\w:.-]{1,32}$/.test(k) && (ty == 'string' || ty == 'boolean' || (ty == 'number' && isFinite(v as number)))) {
       p[k] = ty == 'string' ? (v as string).slice(0, 100) : (v as number | boolean);
       c++;
     }

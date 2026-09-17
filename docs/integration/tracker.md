@@ -58,7 +58,7 @@ Available as `window.analytics` (or the name configured per site; see *Global na
 
 | Call | Effect |
 |---|---|
-| `analytics.track(name, props?)` | custom event. `name` must match `^[a-z0-9_:.-]{1,64}$` or the call is ignored. Up to 10 scalar props, keys < 33 characters, strings truncated at 100 |
+| `analytics.track(name, props?)` | custom event. `name` must match `^[a-z0-9_:.-]{1,64}$` or the call is ignored. Up to 10 scalar props, keys matching `^[A-Za-z0-9_:.-]{1,32}$` (others are dropped, the event is still sent), strings truncated at 100 |
 | `analytics.pageview({url?})` | extra pageview. `url` may be relative; it is resolved against the current location. Without it, the current URL is used |
 | `analytics.setContent(key)` | sets the content key for later events; `null` falls back to the `<meta>` tag |
 | `analytics.getVisitorId()` | the `an_vid` value, or `null` without consent |
