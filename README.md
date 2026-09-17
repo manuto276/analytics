@@ -1,3 +1,8 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/brand/banner-dark.png">
+  <img src="docs/assets/brand/banner-light.png" alt="analytics — self-hosted, privacy-first, multi-site web analytics" width="100%">
+</picture>
+
 # analytics
 
 Self-hosted, privacy-first, multi-site web analytics.
