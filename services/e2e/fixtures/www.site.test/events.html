@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Example shop — events</title>
+  <meta name="analytics:content" content="events">
+  <script src="/site-key.js"></script>
+  <script src="/loader.js" defer></script>
+</head>
+<body>
+  <h1>Declarative events</h1>
+
+  <!-- Declarative custom event: no page code, only data attributes. -->
+  <button id="signup"
+          data-analytics-event="signup_click"
+          data-analytics-prop-plan="pro"
+          data-analytics-prop-position="hero">
+    Sign up
+  </button>
+
+  <!-- Filled with the visitor id once the cookie level is accepted. -->
+  <form action="/thanks.html" method="get">
+    <input type="hidden" name="visitor" data-analytics-visitor>
+    <button type="submit">Send</button>
+  </form>
+
+  <footer>
+    <a id="consent-link" href="#analytics-consent" data-analytics-consent>Cookie preferences</a>
+  </footer>
+</body>
+</html>

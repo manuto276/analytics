@@ -1,0 +1,69 @@
+# Dependency updates (plan §13.4). Weekly, grouped, so review stays manageable.
+version: 2
+
+updates:
+  - package-ecosystem: composer
+    directory: /services/api
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      php-dev:
+        dependency-type: development
+      php-runtime:
+        dependency-type: production
+        update-types: [minor, patch]
+    labels: [dependencies, backend]
+
+  - package-ecosystem: composer
+    directory: /deploy/manual/tests
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 2
+    labels: [dependencies, deploy]
+
+  - package-ecosystem: npm
+    directory: /services/tracker
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      tracker:
+        patterns: ['*']
+        update-types: [minor, patch]
+    labels: [dependencies, tracker]
+
+  - package-ecosystem: npm
+    directory: /services/dashboard
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      dashboard:
+        patterns: ['*']
+        update-types: [minor, patch]
+    labels: [dependencies, dashboard]
+
+  - package-ecosystem: npm
+    directory: /services/e2e
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 2
+    labels: [dependencies, e2e]
+
+  - package-ecosystem: docker
+    directory: /deploy/docker
+    schedule:
+      interval: weekly
+      day: monday
+    labels: [dependencies, docker]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    labels: [dependencies, ci]

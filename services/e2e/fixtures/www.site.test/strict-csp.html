@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Example shop — strict CSP</title>
+  <!--
+    No 'unsafe-inline' for scripts: the tracker and its consent banner must work
+    with a strict policy (the banner styles live in a shadow root, which is why
+    style-src still needs 'unsafe-inline' here).
+  -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' https://analytics.test; connect-src 'self' https://analytics.test; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+  <script src="/site-key.js"></script>
+  <script src="/loader.js" defer></script>
+</head>
+<body>
+  <h1>Strict CSP page</h1>
+  <p>The banner and the tracker must behave exactly as on the other pages.</p>
+  <footer><a href="#analytics-consent" data-analytics-consent>Cookie preferences</a></footer>
+</body>
+</html>

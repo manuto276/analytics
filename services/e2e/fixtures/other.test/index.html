@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Unregistered origin</title>
+  <script src="/site-key.js"></script>
+  <script src="/loader.js" defer></script>
+</head>
+<body>
+  <h1>other.test</h1>
+  <p>
+    This origin is deliberately NOT one of the site's domains: the collect
+    endpoint must refuse its events and the browser must not receive
+    permissive CORS headers.
+  </p>
+</body>
+</html>

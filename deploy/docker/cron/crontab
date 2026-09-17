@@ -1,0 +1,22 @@
+# analytics — scheduled jobs (plan §9), run by supercronic in the `scheduler`
+# service of compose.prod.yml (image target php-cron).
+#
+# Every command takes a symfony/lock and records a row in `job_runs`, so an
+# overlapping run is a no-op and `bin/analytics jobs:status` shows the lag.
+# The equivalent crontab for a tarball deployment is deploy/examples/crontab.example.
+
+# Rollups of the days marked dirty by ingestion.
+*/5 * * * *   nice -n 10 php /app/bin/analytics rollup:run -q
+
+# Today's visitor-hash salt exists, older salts are destroyed.
+*/15 * * * *  nice -n 10 php /app/bin/analytics salt:rotate -q
+
+# Queue mode only (INGEST_MODE=queue with REDIS_DSN). In Docker the `queue`
+# profile runs a long-lived worker instead, so this line stays disabled.
+#* * * * *    nice -n 10 php /app/bin/analytics queue:work --max-time=55 -q
+
+# Future partitions, then retention (raw data older than RETENTION_MONTHS).
+20 3 * * *    nice -n 10 php /app/bin/analytics partitions:maintain -q && nice -n 10 php /app/bin/analytics retention:purge -q
+
+# Monthly DB-IP Lite Country database (CC BY 4.0).
+40 4 5 * *    nice -n 10 php /app/bin/analytics geo:update -q

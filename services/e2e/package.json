@@ -1,0 +1,20 @@
+{
+  "name": "@analytics/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "description": "End-to-end suite (Playwright) and the static fixture sites it drives",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "playwright test",
+    "test:smoke": "playwright test tests/smoke.spec.ts",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.10.2",
+    "@playwright/test": "1.55.0"
+  }
+}

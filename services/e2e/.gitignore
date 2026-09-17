@@ -1,0 +1,8 @@
+# Generated per run by deploy/docker/scripts/e2e-setup.sh / global-setup.ts
+fixtures/site-key.js
+
+# Playwright output (also listed in the repository .gitignore)
+node_modules/
+test-results/
+playwright-report/
+blob-report/

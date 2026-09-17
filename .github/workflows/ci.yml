@@ -1,0 +1,358 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  COMPOSE_FILES: -f deploy/docker/compose.base.yml -f deploy/docker/compose.test.yml
+  COMPOSE_PROJECT: analytics-test
+
+jobs:
+  # --------------------------------------------------------------- static ---
+  php-quality:
+    name: PHP quality (PHPStan, Deptrac, CS, Rector)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql, intl, mbstring, sodium, zip
+          coverage: none
+          tools: composer:v2
+
+      - name: Cache composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-8.4-${{ hashFiles('services/api/composer.lock') }}
+          restore-keys: composer-8.4-
+
+      - name: Validate and install
+        working-directory: services/api
+        run: |
+          composer validate --strict --no-check-publish
+          composer install --no-interaction --no-progress
+
+      - name: PHPStan
+        working-directory: services/api
+        run: |
+          vendor/bin/phpstan analyse --no-progress --error-format=github
+          vendor/bin/phpstan analyse -c phpstan-tests.neon.dist --no-progress --error-format=github
+
+      - name: Deptrac
+        working-directory: services/api
+        run: vendor/bin/deptrac analyse --no-progress
+
+      - name: PHP-CS-Fixer
+        working-directory: services/api
+        run: vendor/bin/php-cs-fixer fix --dry-run --diff
+        env:
+          PHP_CS_FIXER_IGNORE_ENV: '1'
+
+      - name: Rector
+        working-directory: services/api
+        run: vendor/bin/rector process --dry-run --no-progress-bar
+
+      - name: Composer audit
+        working-directory: services/api
+        run: composer audit --no-interaction
+
+  lint-infra:
+    name: Lint workflows, Dockerfile and shell scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: actionlint
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:latest -color
+
+      - name: hadolint
+        run: docker run --rm -i hadolint/hadolint hadolint --failure-threshold warning - < deploy/docker/Dockerfile
+
+      - name: shellcheck
+        run: |
+          docker run --rm -v "$PWD:/repo" -w /repo koalaman/shellcheck:stable \
+            deploy/docker/certs/gen-certs.sh \
+            deploy/docker/scripts/fpm-healthcheck.sh \
+            deploy/docker/scripts/test-image.sh \
+            deploy/docker/scripts/e2e-setup.sh \
+            deploy/manual/build.sh \
+            deploy/manual/publish.sh \
+            deploy/manual/smoke/smoke.sh \
+            deploy/manual/smoke/repack.sh \
+            services/wordpress-plugin/analytics-connector/tests/smoke/smoke.sh
+
+      - name: compose configuration
+        run: |
+          docker compose -f deploy/docker/compose.base.yml -f deploy/docker/compose.dev.yml config --quiet
+          docker compose -f deploy/docker/compose.base.yml -f deploy/docker/compose.test.yml config --quiet
+          ANALYTICS_ENV_FILE=env.example MYSQL_ROOT_PASSWORD=x MYSQL_PASSWORD=x \
+            docker compose -f deploy/docker/compose.prod.yml config --quiet
+
+  # ---------------------------------------------------------------- tests ---
+  php-tests:
+    name: PHP tests (${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.4', '8.5']
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: analytics_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      TEST_DATABASE_URL: mysql://root:root@127.0.0.1:3306/analytics_test
+      APP_ENV: test
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: pdo_mysql, intl, mbstring, sodium, zip
+          coverage: pcov
+          ini-values: memory_limit=1G
+
+      - name: Cache composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ matrix.php }}-${{ hashFiles('services/api/composer.lock') }}
+          restore-keys: composer-${{ matrix.php }}-
+
+      - name: Install
+        working-directory: services/api
+        run: composer install --no-interaction --no-progress ${{ matrix.php == '8.5' && '--ignore-platform-req=php+' || '' }}
+
+      - name: Unit
+        working-directory: services/api
+        run: vendor/bin/phpunit --testsuite unit
+
+      - name: Integration
+        working-directory: services/api
+        run: vendor/bin/phpunit --testsuite integration
+
+      - name: Functional
+        working-directory: services/api
+        run: vendor/bin/phpunit --testsuite functional
+
+      - name: Migrations
+        working-directory: services/api
+        run: vendor/bin/phpunit --testsuite migrations
+
+      - name: Coverage (8.4 only)
+        if: matrix.php == '8.4'
+        working-directory: services/api
+        run: vendor/bin/phpunit --coverage-clover=coverage/clover.xml --coverage-text
+
+      - name: Upload coverage
+        if: matrix.php == '8.4'
+        uses: actions/upload-artifact@v4
+        with:
+          name: php-coverage
+          path: services/api/coverage/
+          retention-days: 7
+
+  tracker:
+    name: Tracker (lint, test, size)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+      - name: Enable pnpm
+        run: corepack enable
+      - name: Install
+        working-directory: services/tracker
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        working-directory: services/tracker
+        run: pnpm lint
+      - name: Typecheck
+        working-directory: services/tracker
+        run: pnpm typecheck
+      - name: Test
+        working-directory: services/tracker
+        run: pnpm test
+      - name: Build
+        working-directory: services/tracker
+        run: pnpm build
+      - name: Size budget
+        working-directory: services/tracker
+        run: pnpm size
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tracker-dist
+          path: services/tracker/dist/
+          retention-days: 7
+
+  dashboard:
+    name: Dashboard (lint, typecheck, test, generate)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+      - name: Enable pnpm
+        run: corepack enable
+      - name: Install
+        working-directory: services/dashboard
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        working-directory: services/dashboard
+        run: pnpm lint
+      - name: Typecheck
+        working-directory: services/dashboard
+        run: pnpm typecheck
+      - name: OpenAPI types are up to date
+        working-directory: services/dashboard
+        run: pnpm openapi-types:check
+      - name: Test
+        working-directory: services/dashboard
+        run: pnpm test
+      - name: Generate
+        working-directory: services/dashboard
+        run: pnpm generate
+
+  deploy-console:
+    name: Deploy console tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+          tools: composer:v2
+      - name: Install
+        working-directory: deploy/manual/tests
+        run: composer install --no-interaction --no-progress
+      - name: PHPUnit
+        working-directory: deploy/manual/tests
+        run: vendor/bin/phpunit
+      - name: Console syntax
+        run: php -l deploy/manual/console
+
+  # ------------------------------------------------------------------ e2e ---
+  e2e:
+    name: End-to-end
+    runs-on: ubuntu-latest
+    needs: [php-tests, tracker, dashboard]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Certificates
+        run: ./deploy/docker/certs/gen-certs.sh
+
+      - name: Tracker and dashboard artefacts
+        run: |
+          corepack enable
+          (cd services/tracker && pnpm install --frozen-lockfile && pnpm build:api)
+          (cd services/dashboard && pnpm install --frozen-lockfile && pnpm generate:api)
+
+      - name: Stack and fixtures
+        run: make e2e-setup
+
+      - name: Run the suite
+        run: make test-e2e
+        env:
+          # Screenshot baselines are compared, never rewritten, in CI.
+          CI: '1'
+
+      - name: Upload the report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            services/e2e/playwright-report/
+            services/e2e/test-results/
+          retention-days: 7
+
+      - name: Stack logs
+        if: failure()
+        run: |
+          # shellcheck disable=SC2086 # COMPOSE_FILES is a list of flags on purpose
+          docker compose -p "$COMPOSE_PROJECT" $COMPOSE_FILES logs --tail=200
+
+      - name: Tear down
+        if: always()
+        run: |
+          # shellcheck disable=SC2086 # COMPOSE_FILES is a list of flags on purpose
+          docker compose -p "$COMPOSE_PROJECT" $COMPOSE_FILES down -v --remove-orphans
+
+  # -------------------------------------------------------------- package ---
+  package:
+    name: Package and deploy smoke
+    runs-on: ubuntu-latest
+    needs: [php-quality, deploy-console]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build the tarball
+        run: ./deploy/manual/build.sh --allow-dirty
+
+      - name: Checksum matches
+        run: (cd dist && sha256sum -c ./*.sha256)
+
+      - name: Package contents
+        run: |
+          pkg=$(ls dist/analytics-*.tar.gz)
+          tar -xzOf "$pkg" ./BUILD_INFO.json
+          test "$(tar -xzOf "$pkg" ./REVISION | tr -d '[:space:]')" = "$GITHUB_SHA"
+          for entry in ./bin/analytics ./public/index.php ./public/index.html ./vendor/autoload.php \
+                       ./resources/tracker/tracker.js ./deploy/console ./.env.example ./config/csp.php; do
+            tar -tzf "$pkg" "$entry" > /dev/null || { echo "missing $entry"; exit 1; }
+          done
+
+      - name: Deploy smoke test
+        run: make test-smoke
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package
+          path: |
+            dist/analytics-*.tar.gz
+            dist/analytics-*.tar.gz.sha256
+          retention-days: 7
+
+  image:
+    name: Production images
+    runs-on: ubuntu-latest
+    needs: [php-quality, deploy-console]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - name: Build and check the images
+        run: make test-image

@@ -1,0 +1,136 @@
+# analytics — production stack (plan §10.3). Self-contained: use it alone.
+#
+#   cp deploy/docker/env.example deploy/docker/.env   # fill in secrets and DATABASE_URL
+#   (env_file paths are relative to this file; override with ANALYTICS_ENV_FILE)
+#   docker compose -f deploy/docker/compose.prod.yml up -d
+#   docker compose -f deploy/docker/compose.prod.yml --profile bundled-db up -d
+#
+# Profiles
+#   bundled-db  run MySQL 8.4 here instead of using a managed database
+#   redis       run Redis (cache, rate limits, locks, queue)
+#   queue       run a queue worker (requires INGEST_MODE=queue and REDIS_DSN)
+#
+# Images are built from deploy/docker/Dockerfile (targets php-runtime, php-cron and
+# nginx-runtime) and published as ghcr.io/manuto276/analytics-php, -cron and -web.
+# Upgrade:  docker compose pull && docker compose up -d
+#
+# TLS terminates in front of `web` (reverse proxy or ingress); set
+# TRUSTED_PROXIES in .env so the forwarded client IP is shortened correctly.
+
+name: analytics
+
+x-app-common: &app-common
+  image: ghcr.io/manuto276/analytics-php:${ANALYTICS_VERSION:-latest}
+  build:
+    context: ../..
+    dockerfile: deploy/docker/Dockerfile
+    target: php-runtime
+  env_file:
+    - ${ANALYTICS_ENV_FILE:-.env}
+  volumes:
+    - storage:/app/var/storage
+    - logs:/app/var/log
+  restart: unless-stopped
+
+services:
+  # One-shot: brings the schema to the current release before the app starts.
+  migrate:
+    <<: *app-common
+    command: ["php", "bin/analytics", "migrations:migrate", "--no-interaction", "--allow-no-migration"]
+    restart: "no"
+    depends_on:
+      # Only relevant with the bundled-db profile; an external database is
+      # simply expected to be reachable.
+      mysql:
+        condition: service_healthy
+        required: false
+
+  app:
+    <<: *app-common
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "fpm-healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  web:
+    image: ghcr.io/manuto276/analytics-web:${ANALYTICS_VERSION:-latest}
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      target: nginx-runtime
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "${ANALYTICS_HTTP_BIND:-127.0.0.1:8080}:80"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # Scheduled jobs (plan §9) through supercronic, so cron output reaches docker logs.
+  scheduler:
+    <<: *app-common
+    image: ghcr.io/manuto276/analytics-cron:${ANALYTICS_VERSION:-latest}
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      target: php-cron
+    depends_on:
+      app:
+        condition: service_healthy
+    profiles: ["scheduler"]
+
+  worker:
+    <<: *app-common
+    depends_on:
+      app:
+        condition: service_healthy
+    command: ["php", "bin/analytics", "queue:work", "--max-time=3600"]
+    profiles: ["queue"]
+
+  mysql:
+    image: mysql:8.4
+    profiles: ["bundled-db"]
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --innodb-buffer-pool-size=512M
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD when using the bundled-db profile}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-analytics}
+      MYSQL_USER: ${MYSQL_USER:-analytics}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD when using the bundled-db profile}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-}"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    profiles: ["redis"]
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory-policy", "allkeys-lru"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
+  storage:
+  logs:

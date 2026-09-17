@@ -1,0 +1,177 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Commit or tag to release
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/analytics
+
+jobs:
+  tarball:
+    name: Tarball and checksum
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      package: ${{ steps.build.outputs.package }}
+      version: ${{ steps.build.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+          fetch-depth: 0
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build
+        id: build
+        run: |
+          ./deploy/manual/build.sh
+          package=$(ls dist/analytics-*.tar.gz)
+          version=$(basename "$package" .tar.gz | sed 's/^analytics-//')
+          echo "package=$package" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Verify the checksum and the manifest
+        run: |
+          (cd dist && sha256sum -c ./*.sha256)
+          tar -xzOf "${{ steps.build.outputs.package }}" ./BUILD_INFO.json
+
+      - name: Deploy smoke test
+        run: make test-smoke
+
+      - name: SBOM of the release tree
+        uses: anchore/sbom-action@v0
+        with:
+          file: ${{ steps.build.outputs.package }}
+          artifact-name: analytics-${{ steps.build.outputs.version }}.spdx.json
+          output-file: dist/analytics-${{ steps.build.outputs.version }}.spdx.json
+
+      - name: Publish the release assets
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/analytics-*.tar.gz
+            dist/analytics-*.tar.gz.sha256
+            dist/analytics-*.spdx.json
+          generate_release_notes: true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-package
+          path: dist/
+          retention-days: 30
+
+  images:
+    name: GHCR images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+          fetch-depth: 0
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build metadata
+        id: meta
+        run: |
+          {
+            echo "build_ts=$(date -u +%Y%m%dT%H%M%SZ)"
+            echo "commit=$(git rev-parse HEAD)"
+            echo "commit_date=$(git show -s --format=%cI HEAD)"
+            echo "commit_time=$(git show -s --format=%ct HEAD)"
+            echo "version=${GITHUB_REF_NAME#v}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: php-runtime
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/docker/Dockerfile
+          target: php-runtime
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: true
+          sbom: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-php:${{ steps.meta.outputs.version }}
+            ${{ env.IMAGE_PREFIX }}-php:latest
+          build-args: |
+            BUILD_TS=${{ steps.meta.outputs.build_ts }}
+            COMMIT=${{ steps.meta.outputs.commit }}
+            COMMIT_DATE=${{ steps.meta.outputs.commit_date }}
+            COMMIT_TIME=${{ steps.meta.outputs.commit_time }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: php-cron
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/docker/Dockerfile
+          target: php-cron
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: true
+          sbom: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-cron:${{ steps.meta.outputs.version }}
+            ${{ env.IMAGE_PREFIX }}-cron:latest
+          build-args: |
+            BUILD_TS=${{ steps.meta.outputs.build_ts }}
+            COMMIT=${{ steps.meta.outputs.commit }}
+            COMMIT_DATE=${{ steps.meta.outputs.commit_date }}
+            COMMIT_TIME=${{ steps.meta.outputs.commit_time }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: nginx-runtime
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/docker/Dockerfile
+          target: nginx-runtime
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: true
+          sbom: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-web:${{ steps.meta.outputs.version }}
+            ${{ env.IMAGE_PREFIX }}-web:latest
+          build-args: |
+            BUILD_TS=${{ steps.meta.outputs.build_ts }}
+            COMMIT=${{ steps.meta.outputs.commit }}
+            COMMIT_DATE=${{ steps.meta.outputs.commit_date }}
+            COMMIT_TIME=${{ steps.meta.outputs.commit_time }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: SBOM of the application image
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.IMAGE_PREFIX }}-php:${{ steps.meta.outputs.version }}
+          artifact-name: analytics-php-image.spdx.json
