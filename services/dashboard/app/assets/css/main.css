@@ -16,3 +16,18 @@
   --color-green-900: #0A5331;
   --color-green-950: #052E16;
 }
+
+/*
+ * Accessibility: Nuxt UI paints solid primary surfaces (buttons, badges, the
+ * active tab pill) with --ui-primary and writes on them with --ui-text-inverted,
+ * which is white in light mode. White on green-500 is 2.38:1, far below the WCAG
+ * AA 4.5:1 minimum, so light mode uses green-700 (5.1:1). Dark mode keeps
+ * green-400, where the inverted text is near-black (9.75:1).
+ * The selector is more specific than the :root rule Nuxt UI injects at runtime.
+ */
+@layer components {
+  :root:not(.dark),
+  .light {
+    --ui-primary: var(--ui-color-primary-700);
+  }
+}

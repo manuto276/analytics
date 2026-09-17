@@ -1,5 +1,5 @@
 // Copies the generated SPA into services/api/public without touching the API front controller.
-import { cpSync, existsSync, readdirSync } from 'node:fs'
+import { cpSync, existsSync, readdirSync, rmSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -11,6 +11,13 @@ const PROTECTED = new Set(['index.php', '.htaccess'])
 if (!existsSync(source)) {
   console.error('Missing .output/public; run "pnpm generate" first.')
   process.exit(1)
+}
+
+// Remove the previous build first, so hashed assets and routes that no longer
+// exist do not pile up next to the front controller.
+for (const entry of readdirSync(target)) {
+  if (PROTECTED.has(entry)) continue
+  rmSync(join(target, entry), { recursive: true, force: true })
 }
 
 for (const entry of readdirSync(source)) {

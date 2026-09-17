@@ -161,6 +161,8 @@ async function publish(materialChange: boolean) {
           <ConsentBannerPreview :config="editing" :locale="locale" />
         </div>
 
+        <ConsentReceipts v-if="canManage && currentSite?.consent_receipts_enabled && currentSiteId" :site-id="currentSiteId" />
+
         <UPageCard variant="subtle" :title="t('consent.history')" :ui="{ container: 'gap-y-2' }">
           <ul class="divide-y divide-default text-sm">
             <li v-for="rev in history" :key="rev.id" class="py-2 flex items-center justify-between gap-2">

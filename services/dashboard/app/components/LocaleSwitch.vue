@@ -19,5 +19,16 @@ const model = computed({
     variant="ghost"
     icon="i-lucide-languages"
     :aria-label="t('user.language')"
+    data-testid="locale-switch"
+    :ui="{
+      base: 'text-highlighted',
+      value: 'text-highlighted',
+      placeholder: 'text-toned',
+      label: 'text-highlighted',
+      item: 'text-default',
+      itemLabel: 'text-highlighted',
+      leadingIcon: 'text-toned',
+      trailingIcon: 'text-toned'
+    }"
   />
 </template>

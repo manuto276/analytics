@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
 import SitesMenu from '~/components/SitesMenu.vue'
-import { seedState } from '../support/api'
+import { seedState, waitFor } from '../support/api'
 import { makeSite, makeUser } from '../support/fixtures'
 
 const sites = [makeSite({ id: 1, name: 'Alpha' }), makeSite({ id: 2, name: 'Beta' }), makeSite({ id: 3, name: 'Archived', archived: true })]
@@ -42,8 +42,7 @@ describe('SitesMenu', () => {
     const [siteGroup] = wrapper.findComponent({ name: 'UDropdownMenu' }).props('items') as { label: string, onSelect: () => void }[][]
 
     siteGroup![1]!.onSelect()
-    await nextTick()
-    await new Promise(resolve => setTimeout(resolve, 10))
+    await waitFor(() => useRouter().currentRoute.value.query.site === '2')
 
     expect(readStorage('analytics:site')).toBe('2')
     expect(useRouter().currentRoute.value.query.site).toBe('2')

@@ -9,11 +9,16 @@ const fmt = useFormatters()
 const { currentSite } = useSites()
 useHead({ title: () => t('nav.attribution') })
 
-const model = ref<'first_touch' | 'last_non_direct' | 'declared'>('first_touch')
-const group = ref<'channel' | 'source' | 'campaign'>('channel')
-const windowDays = ref<7 | 30 | 90>(30)
-const base = ref<string | undefined>()
-const target = ref<string | undefined>()
+// Every selector lives in the URL so the view can be shared or bookmarked.
+const MODELS = ['first_touch', 'last_non_direct', 'declared'] as const
+const GROUPS = ['channel', 'source', 'campaign'] as const
+const WINDOWS = [7, 30, 90] as const
+
+const model = useQueryParam<(typeof MODELS)[number]>('model', 'first_touch', MODELS)
+const group = useQueryParam<(typeof GROUPS)[number]>('group', 'channel', GROUPS)
+const windowDays = useNumericQueryParam<(typeof WINDOWS)[number]>('window', 30, WINDOWS)
+const base = useOptionalQueryParam('base')
+const target = useOptionalQueryParam('target')
 
 const conversions = useReport('conversions', { limit: 100 }, { compare: false, filters: false })
 const conversionNames = computed(() => conversions.rows.value.map(r => String(r.name ?? '')).filter(Boolean))
@@ -28,9 +33,9 @@ const report = useReport<{ data: AttributionReport }>('attribution', () => ({
 
 const result = computed(() => report.data.value?.data ?? null)
 
-const modelItems = computed(() => (['first_touch', 'last_non_direct', 'declared'] as const).map(value => ({ label: t(`attribution.models.${value}`), value })))
-const groupItems = computed(() => (['channel', 'source', 'campaign'] as const).map(value => ({ label: t(`attribution.groups.${value}`), value })))
-const windowItems = computed(() => ([7, 30, 90] as const).map(value => ({ label: t('attribution.windowDays', { n: value }), value })))
+const modelItems = computed(() => MODELS.map(value => ({ label: t(`attribution.models.${value}`), value })))
+const groupItems = computed(() => GROUPS.map(value => ({ label: t(`attribution.groups.${value}`), value })))
+const windowItems = computed(() => WINDOWS.map(value => ({ label: t('attribution.windowDays', { n: value }), value })))
 
 const columns = computed<TableColumn<AttributionRow>[]>(() => [
   { accessorKey: 'key', header: t(`attribution.groups.${group.value}`), cell: ({ row }) => row.original.key || t('attribution.unattributed') },

@@ -15,7 +15,7 @@ await loadConfig()
       <slot />
     </UCard>
 
-    <div class="flex items-center gap-3 text-xs text-muted">
+    <div class="flex items-center gap-3 text-xs text-toned">
       <LocaleSwitch />
       <ULink
         v-if="config?.source_url"

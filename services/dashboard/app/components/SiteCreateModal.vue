@@ -23,6 +23,15 @@ const timezones = timeZoneList()
 const form = useTemplateRef('form')
 const saving = ref(false)
 
+/**
+ * The form has no submit button on purpose: with several fields the browser then
+ * performs no implicit submission, so Enter in the domains field only adds a tag
+ * (in Firefox it used to submit the modal and swallow the next domain).
+ */
+async function submitForm() {
+  await form.value?.submit()
+}
+
 async function onSubmit(event: FormSubmitEvent<{ name: string, domains: string[], timezone: string }>) {
   saving.value = true
   try {
@@ -65,7 +74,12 @@ async function onSubmit(event: FormSubmitEvent<{ name: string, domains: string[]
           name="domains"
           required
         >
-          <UInputTags v-model="state.domains" :placeholder="t('site.domainPlaceholder')" class="w-full" />
+          <UInputTags
+            v-model="state.domains"
+            :placeholder="t('site.domainPlaceholder')"
+            class="w-full"
+            data-testid="domains-input"
+          />
         </UFormField>
         <UFormField :label="t('site.timezone')" name="timezone" required>
           <USelectMenu v-model="state.timezone" :items="timezones" class="w-full" />
@@ -77,7 +91,12 @@ async function onSubmit(event: FormSubmitEvent<{ name: string, domains: string[]
             variant="subtle"
             @click="isSiteModalOpen = false"
           />
-          <UButton :label="t('common.create')" type="submit" :loading="saving" />
+          <UButton
+            :label="t('common.create')"
+            :loading="saving"
+            data-testid="create-site"
+            @click="submitForm"
+          />
         </div>
       </UForm>
     </template>

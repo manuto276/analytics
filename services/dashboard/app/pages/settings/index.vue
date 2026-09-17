@@ -312,11 +312,28 @@ async function archive() {
           <USwitch v-model="state.allow_localhost" />
         </UFormField>
         <USeparator />
-        <UFormField :label="t('settings.site.autoEvents')" class="flex max-sm:flex-col justify-between items-start gap-4">
-          <div class="flex flex-wrap gap-4">
-            <UCheckbox v-model="state.auto_events.outbound" :label="t('settings.site.outbound')" />
-            <UCheckbox v-model="state.auto_events.downloads" :label="t('settings.site.downloads')" />
-            <UCheckbox v-model="state.auto_events.forms" :label="t('settings.site.forms')" />
+        <UFormField
+          :label="t('settings.site.autoEvents')"
+          :description="t('settings.site.autoEventsHint')"
+          class="flex max-sm:flex-col justify-between items-start gap-4"
+          :ui="{ container: 'w-full sm:max-w-sm' }"
+        >
+          <div class="flex flex-col gap-3">
+            <UCheckbox
+              v-model="state.auto_events.outbound"
+              :label="t('settings.site.outbound')"
+              :description="t('settings.site.outboundHint')"
+            />
+            <UCheckbox
+              v-model="state.auto_events.downloads"
+              :label="t('settings.site.downloads')"
+              :description="t('settings.site.downloadsHint')"
+            />
+            <UCheckbox
+              v-model="state.auto_events.forms"
+              :label="t('settings.site.forms')"
+              :description="t('settings.site.formsHint')"
+            />
           </div>
         </UFormField>
       </UPageCard>
