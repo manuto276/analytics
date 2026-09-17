@@ -179,6 +179,7 @@ Every runtime setting is an environment variable read by `Analytics\Kernel\Setti
 | `DB_HOST`/`DB_PORT`/`DB_NAME`/`DB_USER`/`DB_PASSWORD` | `127.0.0.1`/`3306`/`analytics`/`analytics`/empty | used when `DATABASE_URL` is empty |
 | `DB_PARTITIONING` | `true` | monthly partitions on `events_raw` and `visits` |
 | `REDIS_DSN` | empty | enables Redis cache, locks, rate limits, salt and queue |
+| `REDIS_PREFIX` | `an` | key namespace; give each installation its own when they share one Redis |
 | `INGEST_MODE` | `sync` | `sync` or `queue` |
 | `TRUSTED_PROXIES` | empty | CIDRs whose `X-Forwarded-For` is trusted |
 | `RETENTION_MONTHS` | `13` | raw-data retention |

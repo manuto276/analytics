@@ -93,11 +93,11 @@ final class SharedModule extends Module
                     return null;
                 }
 
-                return new \Predis\Client($s->redisDsn, ['prefix' => 'an:', 'exceptions' => true]);
+                return new \Predis\Client($s->redisDsn, ['prefix' => $s->redisPrefix, 'exceptions' => true]);
             }),
             AdapterInterface::class => factory(static function (Settings $s, Connection $c, ContainerInterface $container): AdapterInterface {
                 if ($s->redisDsn !== null) {
-                    return new RedisAdapter(RedisAdapter::createConnection($s->redisDsn, ['class' => \Predis\Client::class]), 'cache', 0);
+                    return new RedisAdapter(RedisAdapter::createConnection($s->redisDsn, ['class' => \Predis\Client::class]), $s->redisPrefix . 'cache', 0);
                 }
                 if ($s->isTest()) {
                     return new ArrayAdapter();

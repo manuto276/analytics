@@ -65,7 +65,15 @@ final readonly class ServerController
             $contacts += Types::int($row['contacts']);
             $channels[Types::string($row['channel'])] = Types::int($row['visits']);
         }
-        $suppressed = $visitors > 0 && $visitors < $site->minGroupSize;
+        // `visitors` is 0 on sites that store no visitor hash at all (pageviews_only, base level), so the
+        // suppression falls back to the strongest group measure the site does keep.
+        $visits = array_sum($channels);
+        $groupSize = match (true) {
+            $visitors > 0 => $visitors,
+            $visits > 0 => $visits,
+            default => $pageviews,
+        };
+        $suppressed = $groupSize > 0 && $groupSize < $site->minGroupSize;
 
         return $this->responder->data([
             'content_key' => $contentKey,

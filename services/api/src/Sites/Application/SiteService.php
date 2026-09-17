@@ -64,17 +64,27 @@ final readonly class SiteService
         return $site;
     }
 
-    /** @return array{timezone_changed: bool} */
+    /** @return array{timezone_changed: bool, reports_invalidated: bool} */
     public function update(Site $site, Input $input): array
     {
         $oldTimezone = $site->timezone;
+        $before = self::reportingSettings($site);
         $this->apply($site, $input, false);
         $input->assertValid();
         $site->updatedAt = $this->clock->now();
+        // These settings feed numbers that reports have already computed and cached, so the cache key
+        // has to move with them. Rollups keep the old numbers until the days are rebuilt.
+        $invalidated = $before !== self::reportingSettings($site);
         $this->em->flush();
+        if ($invalidated) {
+            // Rollup runs bump the same counter straight in SQL, so the loaded entity may be behind:
+            // increment in the database and resync rather than writing a stale value back.
+            $this->bumpRollupVersion($site->id());
+            $this->em->refresh($site);
+        }
         $this->sites->forgetSnapshot($site);
 
-        return ['timezone_changed' => $oldTimezone !== $site->timezone];
+        return ['timezone_changed' => $oldTimezone !== $site->timezone, 'reports_invalidated' => $invalidated];
     }
 
     public function archive(Site $site): void
@@ -88,6 +98,15 @@ final readonly class SiteService
     public function bumpRollupVersion(int $siteId): void
     {
         $this->connection->executeStatement('UPDATE sites SET rollup_version = rollup_version + 1 WHERE id = ?', [$siteId]);
+    }
+
+    /** Settings that change the numbers a stored report already holds. */
+    private static function reportingSettings(Site $site): string
+    {
+        $contacts = $site->contentContactEvents;
+        sort($contacts);
+
+        return implode('|', [$site->timezone, $site->currency, (string) $site->minGroupSize, ...$contacts]);
     }
 
     private function apply(Site $site, Input $input, bool $creating): void

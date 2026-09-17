@@ -241,6 +241,28 @@ repaired — the salt for those days is gone.
 
 ---
 
+## A site setting changed and historic numbers look wrong
+
+**Symptom.** After editing a site, recent days show the new numbers while older days still show the
+old ones — typically `contacts` after changing `content_contact_events`, or revenue after changing
+`currency`.
+
+**Cause.** Those settings are inputs to the stored daily rollups. Saving the site bumps the site's
+`rollup_version`, so every cached report is recomputed immediately, but the rollup rows themselves
+still hold the numbers that were correct under the old setting. Days that happen to be marked dirty
+afterwards are rebuilt; the rest are not.
+
+**Fix.** Rebuild the affected range once, oldest day you care about first:
+
+```bash
+./console app rollup:rebuild --site=pk_XXXXXXXXXXXXXXXXXXXXX --from=2025-09-01 --to=2026-09-17
+```
+
+The same applies after a time-zone change, where `--recompute-days` is also needed so rows move to
+the day they now belong to.
+
+---
+
 ## Reports are slow
 
 1. `meta.source` in the response: `raw` means the planner could not use a rollup (a filter the rollup

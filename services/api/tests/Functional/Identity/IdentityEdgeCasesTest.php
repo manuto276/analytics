@@ -155,7 +155,7 @@ final class IdentityEdgeCasesTest extends HttpTestCase
         $this->em->flush();
 
         $this->assertProblem($this->get('/api/v1/auth/me'), 401, 'unauthorized');
-        self::assertSame(0, \count($this->service(SessionManager::class)->activeSessions($user->id())), 'the session is revoked on the spot');
+        self::assertCount(0, $this->service(SessionManager::class)->activeSessions($user->id()), 'the session is revoked on the spot');
     }
 
     public function testSiteRolesAreReadableThroughTheMapping(): void

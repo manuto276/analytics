@@ -41,7 +41,8 @@ final readonly class ClientIpResolver
         return $chain === [] ? $remote : trim($chain[\count($chain) - 1], '[]');
     }
 
-    private function isTrusted(string $ip): bool
+    /** Whether a forwarded chain sent by this peer may be believed. */
+    public function isTrusted(string $ip): bool
     {
         $packed = @inet_pton(trim($ip, '[]'));
         if ($packed === false) {

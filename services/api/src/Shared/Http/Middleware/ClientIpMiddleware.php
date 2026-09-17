@@ -25,9 +25,31 @@ final readonly class ClientIpMiddleware implements MiddlewareInterface
         $ip = $this->resolver->resolve($request);
         $prefix = $ip === null ? null : IpTruncator::truncate($ip);
 
-        $request = self::scrub($request)->withAttribute(RequestAttributes::IP_PREFIX, $prefix);
+        $request = self::scrub($request)
+            ->withAttribute(RequestAttributes::IP_PREFIX, $prefix)
+            ->withAttribute(RequestAttributes::IP_UNVERIFIED_PROXY, $this->cameThroughAnUnverifiedProxy($request));
 
         return $handler->handle($request);
+    }
+
+    /**
+     * A forwarding header from a peer we do not trust means the request was relayed by something we
+     * cannot vouch for, so the peer address says nothing about where the request came from. Recorded
+     * before the headers are scrubbed, for the few endpoints that must answer only on this host.
+     */
+    private function cameThroughAnUnverifiedProxy(ServerRequestInterface $request): bool
+    {
+        $forwarded = false;
+        foreach (['X-Forwarded-For', 'X-Real-Ip', 'Forwarded', 'Client-Ip', 'True-Client-Ip', 'Cf-Connecting-Ip', 'X-Client-Ip'] as $header) {
+            $forwarded = $forwarded || $request->getHeaderLine($header) !== '';
+        }
+        if (!$forwarded) {
+            return false;
+        }
+        $server = $request->getServerParams();
+        $peer = \is_string($server['REMOTE_ADDR'] ?? null) ? $server['REMOTE_ADDR'] : '';
+
+        return !$this->resolver->isTrusted($peer);
     }
 
     public static function scrub(ServerRequestInterface $request): ServerRequestInterface

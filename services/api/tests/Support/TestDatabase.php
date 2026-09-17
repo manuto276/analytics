@@ -52,6 +52,9 @@ final class TestDatabase
             'LOG_DIR' => sys_get_temp_dir() . '/analytics-test-logs-' . (getenv('TEST_TOKEN') ?: '0'),
             'CACHE_DIR' => sys_get_temp_dir() . '/analytics-test-cache-' . (getenv('TEST_TOKEN') ?: '0'),
             'STORAGE_DIR' => sys_get_temp_dir() . '/analytics-test-storage-' . (getenv('TEST_TOKEN') ?: '0'),
+            // Redis has no per-worker database the way MySQL does, so the keys carry the worker name:
+            // the ingestion queue of one worker must not be drained by another.
+            'REDIS_PREFIX' => 'an_test_' . (getenv('TEST_TOKEN') ?: '0'),
         ], \dirname(__DIR__, 2));
     }
 

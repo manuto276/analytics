@@ -180,4 +180,38 @@ final class ServerConversionsTest extends HttpTestCase
 
         $this->assertProblem($this->request('GET', $url . '&days=0', null, $headers), 422);
     }
+
+    public function testContentStatsSuppressSmallGroupsWithoutAVisitorHash(): void
+    {
+        // pageviews_only stores no visitor hash at all, so `visitors` is always 0 and the suppression
+        // has to fall back to the strongest group measure the site does keep.
+        $site = $this->factory->site(['visitorHashMode' => \Analytics\Sites\Domain\VisitorHashMode::PageviewsOnly, 'minGroupSize' => 3, 'timezone' => 'Europe/Rome'], ['www.site.test']);
+        [, $secret] = $this->service(ApiKeyService::class)->create($site->id(), 'backend', ['stats:read'], null);
+        $url = '/api/v1/server/sites/' . $site->publicKey . '/content/author%3A4/stats?days=30';
+        $headers = ['Authorization' => 'Bearer ' . $secret];
+        $rollups = $this->service(\Analytics\Reporting\Application\Rollup\RollupRunner::class);
+
+        foreach (['203.0.113.11', '198.51.100.12'] as $ip) {
+            $this->collect(Payloads::batch($site->publicKey, [['ck' => 'author:4'] + Payloads::pageview('https://www.site.test/post')]), [], $ip);
+        }
+        $rollups->runDirty($site->id());
+        $data = $this->data($this->request('GET', $url, null, $headers));
+        self::assertSame(0, (int) $this->db->fetchOne('SELECT SUM(visitors) FROM rollup_content_daily WHERE site_id = ?', [$site->id()]), 'no visitor hash is stored');
+        self::assertTrue($data['suppressed'], 'two pageviews are still a group of two');
+        self::assertNull($data['pageviews']);
+        self::assertNull($data['contacts']);
+        self::assertSame([], (array) $data['channels']);
+
+        $this->collect(Payloads::batch($site->publicKey, [['ck' => 'author:4'] + Payloads::pageview('https://www.site.test/post')]), [], '192.0.2.13');
+        $rollups->runDirty($site->id());
+        $this->clearCaches();
+        $data = $this->data($this->request('GET', $url, null, $headers));
+        self::assertFalse($data['suppressed']);
+        self::assertSame(3, $data['pageviews']);
+
+        // A content key with no data at all reports zeroes rather than pretending to hide something.
+        $empty = $this->data($this->request('GET', '/api/v1/server/sites/' . $site->publicKey . '/content/author%3A404/stats?days=30', null, $headers));
+        self::assertFalse($empty['suppressed']);
+        self::assertSame(0, $empty['pageviews']);
+    }
 }

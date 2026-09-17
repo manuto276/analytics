@@ -77,7 +77,10 @@ that is deliberate ([architecture/ingestion.md](architecture/ingestion.md)).
 - **`/_ops/opcache-reset` trusts the loopback interface.** It requires `OPS_TOKEN` as a bearer token
   and refuses any non-loopback client, so anything able to make a request *from the server itself*
   and holding the token can clear the opcode cache. Leave `OPS_TOKEN` unset if you do not need it:
-  without it the endpoint answers `404`.
+  without it the endpoint answers `404`. Behind a reverse proxy `REMOTE_ADDR` is the proxy, so the
+  endpoint additionally refuses any request carrying a forwarding header (`X-Forwarded-For` and the
+  rest) from a peer that is not listed in `TRUSTED_PROXIES` — with `TRUSTED_PROXIES` set it is the
+  forwarded client address that has to be loopback. The vhost snippets also restrict `/_ops/`.
 
 ## Security features
 

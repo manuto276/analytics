@@ -44,6 +44,32 @@ final class AdminEndpointsTest extends HttpTestCase
         $this->assertProblem($this->get('/api/v1/admin/audit-log'), 403);
     }
 
+    public function testChangingASettingThatMovesTheNumbersInvalidatesCachedReports(): void
+    {
+        $site = $this->factory->site(['contentContactEvents' => ['contact_form']], ['www.site.test']);
+        $this->collect(Payloads::batch($site->publicKey, [
+            ['ck' => 'author:1'] + Payloads::pageview('https://www.site.test/post'),
+            ['ck' => 'author:1'] + Payloads::event('contact_form', [], 'https://www.site.test/post'),
+        ]));
+        $this->service(\Analytics\Reporting\Application\Rollup\RollupRunner::class)->runDirty($site->id());
+
+        $admin = $this->factory->admin();
+        $this->loginAs($admin);
+        $url = '/api/v1/sites/' . $site->id() . '/reports/content?period=7d';
+        self::assertSame(1, $this->data($this->get($url))['rows'][0]['contacts']);
+        self::assertSame('hit', $this->json($this->get($url))['meta']['cache']);
+
+        // `contacts` is computed from this setting, so the stored answer is no longer the right one.
+        $this->patch('/api/v1/sites/' . $site->id(), ['content_contact_events' => []]);
+        $after = $this->json($this->get($url));
+        self::assertSame('miss', $after['meta']['cache'], 'the cached report is unreachable after the setting changed');
+
+        // A change that cannot move any number leaves the cache alone.
+        self::assertSame('hit', $this->json($this->get($url))['meta']['cache']);
+        $this->patch('/api/v1/sites/' . $site->id(), ['name' => 'renamed']);
+        self::assertSame('hit', $this->json($this->get($url))['meta']['cache']);
+    }
+
     public function testJobsStatusReportsLagDraftsAndRuns(): void
     {
         $admin = $this->factory->admin();

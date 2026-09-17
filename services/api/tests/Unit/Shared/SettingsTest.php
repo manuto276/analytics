@@ -31,6 +31,7 @@ final class SettingsTest extends TestCase
             'INGEST_MODE' => 'queue',
             'DB_PARTITIONING' => 'false',
             'APP_TEST_CLOCK' => '2020-01-01T00:00:00Z',
+            'REDIS_PREFIX' => 'stats',
         ], '/app');
         self::assertSame('https://stats.example.net', $settings->appUrl);
         self::assertSame('https://stats.example.net', $settings->appOrigin());
@@ -42,6 +43,9 @@ final class SettingsTest extends TestCase
         self::assertFalse($settings->dbPartitioning);
         self::assertNull($settings->testClock, 'test clock is only honoured in APP_ENV=test');
         self::assertTrue($settings->usesHttps());
+        self::assertSame('stats:', $settings->redisPrefix, 'the separator is added once, whether or not it was given');
+        self::assertSame('an:', Settings::fromEnvironment(['APP_ENV' => 'dev'], '/app')->redisPrefix);
+        self::assertSame('an:', Settings::fromEnvironment(['APP_ENV' => 'dev', 'REDIS_PREFIX' => 'an:'], '/app')->redisPrefix);
     }
 
     public function testRejectsInvalidValues(): void

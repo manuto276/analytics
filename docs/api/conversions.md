@@ -231,9 +231,12 @@ Scope `stats:read`. `days` is 1–395, `contentKey` at most 128 characters. It r
 }
 ```
 
-When the visitor count is below the site's `min_group_size` (default 5) but above zero, `pageviews`,
-`visitors`, `contacts` and `channels` are `null`/`{}` and `suppressed` is `true`. `contacts` counts
-events whose name is in the site's `content_contact_events` list.
+When the group is smaller than the site's `min_group_size` (default 5) but not empty, `pageviews`,
+`visitors`, `contacts` and `channels` are `null`/`{}` and `suppressed` is `true`. The group size is
+the visitor count; on a site that stores no visitor hash at all (`visitor_hash_mode` is
+`pageviews_only`, or only base-level traffic) that count is always zero, so the visit count is used
+instead, and the pageview count when there are no visits either. `contacts` counts events whose name
+is in the site's `content_contact_events` list.
 
 The content key is set on a page by `<meta name="analytics:content" content="author:42">` or
 `analytics.setContent('author:42')`.
