@@ -2,7 +2,7 @@ import { api, install, pageview } from './api';
 import { cfg, d } from './config';
 import { href, initCollector } from './collector';
 import { initConsent, level } from './consent';
-import { initDom } from './dom';
+import { initAuto, initDom } from './dom';
 import { initSpa } from './spa';
 
 const init = (): void => {
@@ -12,6 +12,7 @@ const init = (): void => {
   initConsent();
   initSpa(pageview);
   initDom(api.track);
+  initAuto(api.track);
   replay();
   pageview(href(), d.referrer);
 };
