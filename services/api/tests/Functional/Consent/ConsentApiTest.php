@@ -79,7 +79,7 @@ final class ConsentApiTest extends HttpTestCase
         $base = '/api/v1/sites/' . $site->id() . '/consent/receipts';
         $vid = \Analytics\Tests\Support\Payloads::id22();
 
-        self::assertSame([], $this->data($this->get($base . '?visitor_id=' . $vid)));
+        self::assertSame(0, \count($this->data($this->get($base . '?visitor_id=' . $vid))), 'no decision recorded yet');
 
         $this->collect(\Analytics\Tests\Support\Payloads::batch($site->publicKey, [
             \Analytics\Tests\Support\Payloads::consentUpgrade('https://www.site.test/'),
@@ -88,7 +88,7 @@ final class ConsentApiTest extends HttpTestCase
         $receipts = $this->data($this->get($base . '?visitor_id=' . $vid));
         self::assertCount(1, $receipts);
         self::assertSame(['consent_version' => 2, 'decision' => 'accept', 'decided_at' => '2026-09-17T10:00:00+00:00'], $receipts[0]);
-        self::assertSame([], $this->data($this->get($base . '?visitor_id=' . \Analytics\Tests\Support\Payloads::id22())), 'other visitors are not exposed');
+        self::assertSame(0, \count($this->data($this->get($base . '?visitor_id=' . \Analytics\Tests\Support\Payloads::id22()))), 'other visitors are not exposed');
 
         $this->assertProblem($this->get($base . '?visitor_id=nope'), 422);
         self::assertSame(3, (int) $this->db->fetchOne("SELECT COUNT(*) FROM audit_log WHERE action = 'consent.receipts_read'"), "every lookup is audited");
