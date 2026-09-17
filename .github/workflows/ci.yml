@@ -33,7 +33,7 @@ jobs:
           tools: composer:v2
 
       - name: Cache composer
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.composer/cache
           key: composer-8.4-${{ hashFiles('services/api/composer.lock') }}
@@ -133,7 +133,7 @@ jobs:
           ini-values: memory_limit=1G
 
       - name: Cache composer
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.composer/cache
           key: composer-${{ matrix.php }}-${{ hashFiles('services/api/composer.lock') }}
