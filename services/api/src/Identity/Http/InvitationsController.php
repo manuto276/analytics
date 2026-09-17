@@ -40,6 +40,38 @@ final readonly class InvitationsController
         return $this->responder->data(array_map($this->invitations->toArray(...), $items));
     }
 
+    /** Invitations that grant access to this site (site admin). */
+    public function listForSite(ServerRequestInterface $request, string $siteId): ResponseInterface
+    {
+        /** @var list<Invitation> $items */
+        $items = $this->em->getRepository(Invitation::class)->findBy([], ['createdAt' => 'DESC'], 500);
+        $forSite = array_values(array_filter($items, static function (Invitation $invitation) use ($siteId): bool {
+            foreach ($invitation->siteRoles as $role) {
+                if ((int) $role['site_id'] === (int) $siteId) {
+                    return true;
+                }
+            }
+
+            return false;
+        }));
+
+        return $this->responder->data(array_map($this->invitations->toArray(...), $forSite));
+    }
+
+    public function revokeForSite(ServerRequestInterface $request, string $siteId, string $invitationId): ResponseInterface
+    {
+        $invitation = $this->em->find(Invitation::class, (int) $invitationId);
+        $belongs = false;
+        foreach ($invitation instanceof Invitation ? $invitation->siteRoles : [] as $role) {
+            $belongs = $belongs || (int) $role['site_id'] === (int) $siteId;
+        }
+        if (!$invitation instanceof Invitation || !$belongs) {
+            throw \Analytics\Shared\Http\ApiProblem::notFound('Invitation not found.');
+        }
+
+        return $this->revoke($request, $invitationId);
+    }
+
     public function create(ServerRequestInterface $request): ResponseInterface
     {
         $input = RequestContext::body($request);

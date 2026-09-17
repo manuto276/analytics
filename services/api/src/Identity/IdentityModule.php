@@ -73,7 +73,9 @@ final class IdentityModule extends Module
         $routes->get('/invitations', [InvitationsController::class, 'list'], $admin);
         $routes->post('/invitations', [InvitationsController::class, 'create'], $admin);
         $routes->delete('/invitations/{invitationId:[0-9]+}', [InvitationsController::class, 'revoke'], $admin);
+        $routes->get('/sites/{siteId:[0-9]+}/invitations', [InvitationsController::class, 'listForSite'], Permission::SITE_MANAGE);
         $routes->post('/sites/{siteId:[0-9]+}/invitations', [InvitationsController::class, 'createForSite'], Permission::SITE_MANAGE);
+        $routes->delete('/sites/{siteId:[0-9]+}/invitations/{invitationId:[0-9]+}', [InvitationsController::class, 'revokeForSite'], Permission::SITE_MANAGE);
     }
 
     public function commands(): array

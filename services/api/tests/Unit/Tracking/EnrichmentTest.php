@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Analytics\Tests\Unit\Tracking;
 
+use Analytics\Shared\Net\IpTruncator;
 use Analytics\Tracking\Application\Enrichment\BotFilter;
 use Analytics\Tracking\Application\Enrichment\ChannelClassifier;
 use Analytics\Tracking\Application\Enrichment\PiiScrubber;
@@ -11,7 +12,6 @@ use Analytics\Tracking\Application\Enrichment\ReferrerClassifier;
 use Analytics\Tracking\Application\Enrichment\UrlSanitizer;
 use Analytics\Tracking\Application\Enrichment\UserAgentClassifier;
 use Analytics\Tracking\Application\VisitorHasher;
-use Analytics\Shared\Net\IpTruncator;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -89,7 +89,7 @@ final class EnrichmentTest extends TestCase
     {
         parse_str($query, $params);
         /** @var array<string, string> $params */
-        $result = new ChannelClassifier(self::referrers())->classify($params, $referrer, static fn (string $h): bool => str_ends_with($h, 'site.test'));
+        $result = new ChannelClassifier(self::referrers())->classify($params, $referrer, static fn(string $h): bool => str_ends_with($h, 'site.test'));
         self::assertSame($channel, $result->channel->value);
         self::assertSame($source, $result->source);
         if ($result->channel->isExternal()) {
@@ -101,7 +101,7 @@ final class EnrichmentTest extends TestCase
 
     public function testUtmValuesAreNormalisedAndScrubbed(): void
     {
-        $result = new ChannelClassifier(self::referrers())->classify(['utm_source' => ' NewsLetter ', 'utm_medium' => 'EMAIL', 'utm_campaign' => 'Promo for a@b.com'], null, static fn (): bool => false);
+        $result = new ChannelClassifier(self::referrers())->classify(['utm_source' => ' NewsLetter ', 'utm_medium' => 'EMAIL', 'utm_campaign' => 'Promo for a@b.com'], null, static fn(): bool => false);
         self::assertSame('newsletter', $result->utmSource);
         self::assertSame('email', $result->utmMedium);
         self::assertSame('Promo for [email]', $result->utmCampaign);

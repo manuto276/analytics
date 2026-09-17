@@ -147,7 +147,7 @@ final class CollectTest extends HttpTestCase
         self::assertSame(1, (int) $visits[1]['pageviews']);
         self::assertSame('internal', $visits[1]['channel']);
         $events = $this->events();
-        self::assertSame([1, 0, 1], array_map(static fn (array $e): int => (int) $e['is_entry'], $events));
+        self::assertSame([1, 0, 1], array_map(static fn(array $e): int => (int) $e['is_entry'], $events));
         self::assertSame(bin2hex((string) $events[1]['page_hash']), bin2hex((string) $visits[0]['exit_page_hash']));
     }
 
@@ -204,7 +204,7 @@ final class CollectTest extends HttpTestCase
             Payloads::pageview('https://po.test/next', 'https://po.test/'),
         ]), ['Origin' => 'https://po.test']);
         $events = $this->db->fetchAllAssociative('SELECT visitor_hash, visit_id, is_entry FROM events_raw WHERE site_id = ? ORDER BY id', [$site->id()]);
-        self::assertSame([[null, null, 1], [null, null, 0]], array_map(static fn (array $r): array => [$r['visitor_hash'], $r['visit_id'], (int) $r['is_entry']], $events));
+        self::assertSame([[null, null, 1], [null, null, 0]], array_map(static fn(array $r): array => [$r['visitor_hash'], $r['visit_id'], (int) $r['is_entry']], $events));
         self::assertSame(0, (int) $this->db->fetchOne('SELECT COUNT(*) FROM visits WHERE site_id = ?', [$site->id()]));
     }
 
@@ -308,7 +308,7 @@ final class CollectTest extends HttpTestCase
         $this->collect(Payloads::batch($key, [Payloads::pageview('https://www.site.test/x', 'https://www.site.test/')], 'c', ['vid' => $vid, 'sid' => $sid2, 'cv' => 1]));
         self::assertCount(2, $this->visits());
         $touches = $this->db->fetchAllAssociative('SELECT is_first, channel FROM attribution_touches WHERE site_id = ? ORDER BY id', [$this->site->id()]);
-        self::assertSame([['is_first' => 1, 'channel' => 'paid_search'], ['is_first' => 0, 'channel' => 'email']], array_map(static fn (array $t): array => ['is_first' => (int) $t['is_first'], 'channel' => $t['channel']], $touches));
+        self::assertSame([['is_first' => 1, 'channel' => 'paid_search'], ['is_first' => 0, 'channel' => 'email']], array_map(static fn(array $t): array => ['is_first' => (int) $t['is_first'], 'channel' => $t['channel']], $touches));
         self::assertSame(2, (int) $this->db->fetchOne('SELECT visits FROM visitors WHERE site_id = ?', [$this->site->id()]));
     }
 

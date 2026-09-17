@@ -98,7 +98,7 @@ paths:
   /auth/mfa:
     post:
       tags: [auth]
-      summary: Complete sign-in with a TOTP or recovery code (pending session cookie)
+      summary: Complete sign-in with a TOTP or recovery code (pending session cookie; no CSRF token needed)
       security: []
       requestBody:
         required: true
@@ -565,7 +565,7 @@ paths:
       tags: [sites]
       summary: Sites the current user can access
       parameters:
-        - { name: archived, in: query, schema: { type: string, enum: ['0', '1'] } }
+        - { name: archived, in: query, description: '1 includes archived sites in the list (global admins only)', schema: { type: string, enum: ['0', '1'] } }
       responses:
         default: { $ref: '#/components/responses/Problem' }
         '200':
@@ -724,6 +724,25 @@ paths:
   /sites/{siteId}/invitations:
     parameters:
       - $ref: '#/components/parameters/SiteId'
+    get:
+      tags: [sites]
+      summary: Invitations that grant access to this site (site admin)
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Invitation' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
     post:
       tags: [sites]
       summary: Invite someone to this site (site admin)
@@ -745,6 +764,28 @@ paths:
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
         '422': { $ref: '#/components/responses/Problem' }
+
+  /sites/{siteId}/invitations/{invitationId}:
+    parameters:
+      - $ref: '#/components/parameters/SiteId'
+      - { name: invitationId, in: path, required: true, schema: { type: integer } }
+    delete:
+      tags: [sites]
+      summary: Revoke a site invitation (site admin)
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: Revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Invitation' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
 
   /sites/{siteId}/consent:
     parameters:
@@ -1128,7 +1169,8 @@ paths:
       summary: Import costs from CSV (site admin). With dry_run=1 only a preview is returned.
       description: |
         Header row required: `day_from,day_to,channel,utm_source,utm_medium,utm_campaign,amount,currency,note`.
-        `amount` is a decimal in major units (e.g. `123.45`); `day_to` defaults to `day_from`.
+        `amount` is a decimal in major units (e.g. `123.45`), converted to minor units with the currency's
+        exponent and rounded half-up; `day_to` defaults to `day_from`.
         Nothing is imported if any row is invalid.
       requestBody:
         required: true
@@ -1182,6 +1224,7 @@ paths:
                       compare: { allOf: [{ $ref: '#/components/schemas/OverviewMetrics' }], nullable: true }
                       deltas:
                         type: object
+                        description: 'Relative change against the comparison range: (current - previous) / previous, as a fraction (0.25 = +25%). null when the previous value is 0 or unavailable.'
                         additionalProperties: { type: number, nullable: true }
                   meta: { $ref: '#/components/schemas/ReportMeta' }
         '304': { description: Not modified }
@@ -1239,7 +1282,25 @@ paths:
         - { name: kind, in: query, schema: { type: string, enum: [top, entry, exit], default: top } }
       responses:
         default: { $ref: '#/components/responses/Problem' }
-        '200': { $ref: '#/components/responses/TableReport' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [rows, total_rows]
+                    properties:
+                      rows:
+                        type: array
+                        items: { $ref: '#/components/schemas/PagesRow' }
+                      total_rows: { type: integer }
+                  meta: { $ref: '#/components/schemas/ReportMeta' }
+            text/csv:
+              schema: { type: string }
         '304': { description: Not modified }
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
@@ -1260,7 +1321,25 @@ paths:
         - $ref: '#/components/parameters/Sort'
       responses:
         default: { $ref: '#/components/responses/Problem' }
-        '200': { $ref: '#/components/responses/TableReport' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [rows, total_rows]
+                    properties:
+                      rows:
+                        type: array
+                        items: { $ref: '#/components/schemas/LandingPageRow' }
+                      total_rows: { type: integer }
+                  meta: { $ref: '#/components/schemas/ReportMeta' }
+            text/csv:
+              schema: { type: string }
         '304': { description: Not modified }
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
@@ -1282,7 +1361,25 @@ paths:
         - { name: group, in: query, schema: { type: string, enum: [channel, source, referrer], default: channel } }
       responses:
         default: { $ref: '#/components/responses/Problem' }
-        '200': { $ref: '#/components/responses/TableReport' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [rows, total_rows]
+                    properties:
+                      rows:
+                        type: array
+                        items: { $ref: '#/components/schemas/SourcesRow' }
+                      total_rows: { type: integer }
+                  meta: { $ref: '#/components/schemas/ReportMeta' }
+            text/csv:
+              schema: { type: string }
         '304': { description: Not modified }
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
@@ -1295,7 +1392,25 @@ paths:
       parameters: *tableParams
       responses:
         default: { $ref: '#/components/responses/Problem' }
-        '200': { $ref: '#/components/responses/TableReport' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [rows, total_rows]
+                    properties:
+                      rows:
+                        type: array
+                        items: { $ref: '#/components/schemas/CampaignsRow' }
+                      total_rows: { type: integer }
+                  meta: { $ref: '#/components/schemas/ReportMeta' }
+            text/csv:
+              schema: { type: string }
         '304': { description: Not modified }
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
@@ -1317,7 +1432,25 @@ paths:
         - { name: group, in: query, schema: { type: string, enum: [device, browser, os], default: device } }
       responses:
         default: { $ref: '#/components/responses/Problem' }
-        '200': { $ref: '#/components/responses/TableReport' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [rows, total_rows]
+                    properties:
+                      rows:
+                        type: array
+                        items: { $ref: '#/components/schemas/TechRow' }
+                      total_rows: { type: integer }
+                  meta: { $ref: '#/components/schemas/ReportMeta' }
+            text/csv:
+              schema: { type: string }
         '304': { description: Not modified }
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
@@ -1330,7 +1463,25 @@ paths:
       parameters: *tableParams
       responses:
         default: { $ref: '#/components/responses/Problem' }
-        '200': { $ref: '#/components/responses/TableReport' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [rows, total_rows]
+                    properties:
+                      rows:
+                        type: array
+                        items: { $ref: '#/components/schemas/CountriesRow' }
+                      total_rows: { type: integer }
+                  meta: { $ref: '#/components/schemas/ReportMeta' }
+            text/csv:
+              schema: { type: string }
         '304': { description: Not modified }
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
@@ -1343,7 +1494,25 @@ paths:
       parameters: *tableParams
       responses:
         default: { $ref: '#/components/responses/Problem' }
-        '200': { $ref: '#/components/responses/TableReport' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [rows, total_rows]
+                    properties:
+                      rows:
+                        type: array
+                        items: { $ref: '#/components/schemas/EventsRow' }
+                      total_rows: { type: integer }
+                  meta: { $ref: '#/components/schemas/ReportMeta' }
+            text/csv:
+              schema: { type: string }
         '304': { description: Not modified }
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
@@ -1358,7 +1527,25 @@ paths:
       parameters: *tableParams
       responses:
         default: { $ref: '#/components/responses/Problem' }
-        '200': { $ref: '#/components/responses/TableReport' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [rows, total_rows]
+                    properties:
+                      rows:
+                        type: array
+                        items: { $ref: '#/components/schemas/EventPropsRow' }
+                      total_rows: { type: integer }
+                  meta: { $ref: '#/components/schemas/ReportMeta' }
+            text/csv:
+              schema: { type: string }
         '304': { description: Not modified }
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
@@ -1380,7 +1567,25 @@ paths:
         - { name: prefix, in: query, schema: { type: string, maxLength: 128 } }
       responses:
         default: { $ref: '#/components/responses/Problem' }
-        '200': { $ref: '#/components/responses/TableReport' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [rows, total_rows]
+                    properties:
+                      rows:
+                        type: array
+                        items: { $ref: '#/components/schemas/ContentRow' }
+                      total_rows: { type: integer }
+                  meta: { $ref: '#/components/schemas/ReportMeta' }
+            text/csv:
+              schema: { type: string }
         '304': { description: Not modified }
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
@@ -1412,7 +1617,25 @@ paths:
       parameters: *tableParams
       responses:
         default: { $ref: '#/components/responses/Problem' }
-        '200': { $ref: '#/components/responses/TableReport' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [rows, total_rows]
+                    properties:
+                      rows:
+                        type: array
+                        items: { $ref: '#/components/schemas/GoalsRow' }
+                      total_rows: { type: integer }
+                  meta: { $ref: '#/components/schemas/ReportMeta' }
+            text/csv:
+              schema: { type: string }
         '304': { description: Not modified }
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
@@ -1425,7 +1648,25 @@ paths:
       parameters: *tableParams
       responses:
         default: { $ref: '#/components/responses/Problem' }
-        '200': { $ref: '#/components/responses/TableReport' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [rows, total_rows]
+                    properties:
+                      rows:
+                        type: array
+                        items: { $ref: '#/components/schemas/ConversionsRow' }
+                      total_rows: { type: integer }
+                  meta: { $ref: '#/components/schemas/ReportMeta' }
+            text/csv:
+              schema: { type: string }
         '304': { description: Not modified }
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
@@ -2103,6 +2344,7 @@ components:
             forms: { type: boolean }
         min_group_size: { type: integer }
         consent_receipts_enabled: { type: boolean }
+        archived: { type: boolean, description: 'Set to false to restore an archived site (global admin)' }
     ConsentTexts:
       type: object
       required: [title, body, accept, reject, close, policy, reopen]
@@ -2318,18 +2560,18 @@ components:
         visits: { type: integer }
         pageviews: { type: integer }
         views_per_visit: { type: number, nullable: true }
-        bounce_rate: { type: number, nullable: true }
+        bounce_rate: { type: number, nullable: true, description: 'Fraction 0–1' }
         avg_duration_ms: { type: integer, nullable: true }
         events: { type: integer }
         conversions: { type: integer }
         revenue_minor: { type: integer }
         consented_visits: { type: integer }
-        consent_rate: { type: number, nullable: true }
+        consent_rate: { type: number, nullable: true, description: 'Fraction 0–1 of visits that ran at the cookie level' }
     TimeseriesPoint:
       type: object
       required: [t, visitors, visits, pageviews, bounce_rate, avg_duration_ms, conversions, revenue_minor]
       properties:
-        t: { type: string, description: 'Day (YYYY-MM-DD), week start, month start, or hour (YYYY-MM-DDTHH:00)' }
+        t: { type: string, description: 'Day/week start/month start as YYYY-MM-DD, or "YYYY-MM-DD HH:00" in the site time zone for interval=hour' }
         visitors: { type: integer, nullable: true }
         visits: { type: integer }
         pageviews: { type: integer }
@@ -2341,6 +2583,115 @@ components:
       type: object
       description: 'Columns depend on the report: dimension columns (host, path, channel, source, referrer_host, utm_*, value, country, name, prop_key, prop_value, content_key, goal_id...) plus metric columns.'
       additionalProperties: true
+    PagesRow:
+      type: object
+      required: [host, path, pageviews, visits, visitors, entries, exits, bounce_rate, avg_engagement_ms]
+      properties:
+        host: { type: string, nullable: true }
+        path: { type: string, nullable: true }
+        pageviews: { type: integer }
+        visits: { type: integer, description: Visit-days that saw this page }
+        visitors: { type: integer }
+        entries: { type: integer }
+        exits: { type: integer }
+        bounce_rate: { type: number, nullable: true, description: 'Fraction 0–1 of entries on this page that bounced' }
+        avg_engagement_ms: { type: integer, nullable: true, description: Engaged milliseconds per pageview }
+    LandingPageRow:
+      type: object
+      required: [host, path, entries, bounces, bounce_rate]
+      properties:
+        host: { type: string, nullable: true }
+        path: { type: string, nullable: true }
+        entries: { type: integer }
+        bounces: { type: integer }
+        bounce_rate: { type: number, nullable: true, description: 'Fraction 0–1' }
+    SourcesRow:
+      type: object
+      required: [channel, source, referrer_host, visits, visitors, pageviews, bounce_rate, avg_duration_ms]
+      properties:
+        channel: { type: string, nullable: true }
+        source: { type: string, nullable: true }
+        referrer_host: { type: string, nullable: true }
+        visits: { type: integer }
+        visitors: { type: integer }
+        pageviews: { type: integer }
+        bounce_rate: { type: number, nullable: true, description: 'Fraction 0–1' }
+        avg_duration_ms: { type: integer, nullable: true }
+    CampaignsRow:
+      type: object
+      required: [utm_source, utm_medium, utm_campaign, utm_content, utm_term, visits, visitors, pageviews, bounce_rate]
+      properties:
+        utm_source: { type: string, nullable: true }
+        utm_medium: { type: string, nullable: true }
+        utm_campaign: { type: string, nullable: true }
+        utm_content: { type: string, nullable: true }
+        utm_term: { type: string, nullable: true }
+        visits: { type: integer }
+        visitors: { type: integer }
+        pageviews: { type: integer }
+        bounce_rate: { type: number, nullable: true, description: 'Fraction 0–1' }
+    TechRow:
+      type: object
+      required: [value, visits, visitors, pageviews]
+      properties:
+        value: { type: string, nullable: true, description: 'Device class, browser family or OS family; null when unknown' }
+        visits: { type: integer }
+        visitors: { type: integer }
+        pageviews: { type: integer }
+    CountriesRow:
+      type: object
+      required: [country, visits, visitors, pageviews]
+      properties:
+        country: { type: string, nullable: true, description: 'ISO 3166-1 alpha-2; null when unknown' }
+        visits: { type: integer }
+        visitors: { type: integer }
+        pageviews: { type: integer }
+    EventsRow:
+      type: object
+      required: [name, occurrences, visits]
+      properties:
+        name: { type: string }
+        occurrences: { type: integer }
+        visits: { type: integer }
+    EventPropsRow:
+      type: object
+      required: [prop_key, prop_value, occurrences, visits]
+      properties:
+        prop_key: { type: string }
+        prop_value: { type: string }
+        occurrences: { type: integer }
+        visits: { type: integer }
+    ContentRow:
+      type: object
+      required: [content_key, pageviews, visits, visitors, contacts, channels]
+      properties:
+        content_key: { type: string }
+        pageviews: { type: integer }
+        visits: { type: integer }
+        visitors: { type: integer }
+        contacts: { type: integer, description: Events listed in content_contact_events fired on this content }
+        channels:
+          type: object
+          description: visits per channel
+          additionalProperties: { type: integer }
+    GoalsRow:
+      type: object
+      required: [goal_id, name, type, conversions, conversion_rate, value_minor]
+      properties:
+        goal_id: { type: integer }
+        name: { type: string }
+        type: { type: string, enum: [pageview, event, conversion] }
+        conversions: { type: integer }
+        conversion_rate: { type: number, nullable: true, description: 'Fraction 0–1 of visits' }
+        value_minor: { type: integer, description: Only for conversion goals }
+    ConversionsRow:
+      type: object
+      required: [name, count, value_minor, attributed]
+      properties:
+        name: { type: string }
+        count: { type: integer }
+        value_minor: { type: integer, description: Sum of values in the site currency }
+        attributed: { type: integer, description: How many of them have an attributed touch }
     Realtime:
       type: object
       required: [active_visitors, pageviews_per_minute, top_pages, top_sources]
@@ -2352,7 +2703,7 @@ components:
             type: object
             required: [t, pageviews]
             properties:
-              t: { type: string }
+              t: { type: string, description: '"YYYY-MM-DD HH:MM" minute in the site time zone' }
               pageviews: { type: integer }
         top_pages:
           type: array
@@ -2434,7 +2785,7 @@ components:
             target_conversions: { type: integer }
             revenue_minor: { type: integer }
             cost_minor: { type: integer }
-            unattributed_share: { type: number, nullable: true }
+            unattributed_share: { type: number, nullable: true, description: 'Fraction 0–1 of conversions without an attributed touch' }
     CohortReport:
       type: object
       required: [cohort, rows]
@@ -2450,6 +2801,7 @@ components:
               size: { type: integer }
               retained:
                 type: array
+                description: 'Fraction 0–1 of the cohort active in each period, starting with the cohort period itself'
                 items: { type: number, nullable: true }
     ConsentReport:
       type: object
@@ -2477,7 +2829,7 @@ components:
             rejected: { type: integer }
             dismissed: { type: integer }
             reopened: { type: integer }
-            acceptance_rate: { type: number, nullable: true }
+            acceptance_rate: { type: number, nullable: true, description: 'Fraction 0–1 of decisions that accepted' }
     JobsStatus:
       type: object
       required: [jobs, rollup_lag_minutes, dirty_days, geo_db_age_days, pending_consent_drafts]

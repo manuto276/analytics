@@ -1,0 +1,41 @@
+# Build context = repository root (see deploy/docker/Dockerfile).
+# Everything the image stages need is source; build metadata comes from --build-arg,
+# so the git history is not part of the context.
+.git
+.github
+.idea
+.vscode
+.DS_Store
+
+# Dependencies and build output are re-created inside the image.
+**/node_modules
+**/.pnpm-store
+services/api/vendor
+services/api/var/cache
+services/api/var/log
+services/api/var/storage
+services/api/.phpunit.cache
+services/api/.php-cs-fixer.cache
+services/api/.deptrac.cache
+services/api/coverage
+services/dashboard/.nuxt
+services/dashboard/.output
+services/dashboard/.data
+services/dashboard/coverage
+services/dashboard/dist
+services/tracker/dist
+services/tracker/coverage
+services/e2e/test-results
+services/e2e/playwright-report
+services/e2e/blob-report
+deploy/manual/tests/vendor
+deploy/manual/.phpunit.cache
+dist
+
+# Local secrets and generated certificates never belong in an image.
+**/.env
+**/.env.local
+deploy/docker/certs/*.pem
+deploy/docker/certs/*.key
+deploy/docker/certs/*.srl
+deploy/docker/certs/*.csr

@@ -133,6 +133,10 @@ final readonly class SiteService
         if ($input->has('visitor_cookie_days')) {
             $site->visitorCookieDays = $input->int('visitor_cookie_days', null, 1, Site::MAX_VISITOR_COOKIE_DAYS);
         }
+        if (!$creating && $input->has('archived')) {
+            $archived = $input->bool('archived');
+            $site->archivedAt = $archived ? ($site->archivedAt ?? $this->clock->now()) : null;
+        }
         if ($input->has('min_group_size')) {
             $site->minGroupSize = $input->int('min_group_size', null, 1, 1000);
         }

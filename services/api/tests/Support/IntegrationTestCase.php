@@ -51,6 +51,11 @@ abstract class IntegrationTestCase extends TestCase
         \assert($pool instanceof AdapterInterface);
         $pool->clear();
         TestContainer::rateLimitStorage()->reset();
+        $salts = $this->container->get(\Analytics\Tracking\Application\DailySaltProvider::class);
+        if ($salts instanceof \Analytics\Tracking\Infrastructure\DbalDailySaltProvider) {
+            // The provider memoises today's salt; rolled-back tests must not reuse it.
+            $salts->forgetMemo();
+        }
 
         if ($this->useTransaction) {
             $this->db->beginTransaction();
@@ -86,6 +91,14 @@ abstract class IntegrationTestCase extends TestCase
         \assert($service instanceof $id);
 
         return $service;
+    }
+
+    /** Empties the application cache pool (site snapshots, report cache). */
+    protected function clearCaches(): void
+    {
+        $pool = $this->container->get(AdapterInterface::class);
+        \assert($pool instanceof AdapterInterface);
+        $pool->clear();
     }
 
     public static function truncateAll(Connection $db): void
