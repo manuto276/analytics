@@ -34,9 +34,23 @@ Site, or `site:domain:add`); requests from any other origin are refused with `40
 - **Pageviews** on load and on SPA navigation ([spa.md](spa.md)).
 - **Engagement**: the time the page was actually visible and the deepest scroll percentage, sent as
   one `en` event on `pagehide` and before each SPA navigation.
-- Nothing else. **Outbound links, file downloads and form submissions are not implemented** — the
-  per-site `auto_events` switches exist in the data model and in the served configuration, but the
-  tracker ignores them. Track those with `analytics.track()` or a `data-analytics-event` attribute.
+- **Automatic events**, each behind its own per-site switch (Settings → Site → automatic events,
+  served in `window.__an_cfg.auto`; all off by default). They are ordinary custom events, so they
+  follow the same batching, skips (`navigator.webdriver`, excluded paths, DNT `no_tracking`, base
+  tracking off) and limits as `analytics.track()`:
+
+  | Switch | Event | Props | Fires on |
+  |---|---|---|---|
+  | `outbound` | `outbound_link` | `url` (absolute, 100 chars), `host` | click on the nearest `a[href]` with an `http(s)` link to another host, including middle-click and modifier-click |
+  | `downloads` | `file_download` | `url`, `ext` (lower case) | click on a link whose path ends in `pdf, doc, docx, xls, xlsx, ppt, pptx, csv, zip, rar, 7z, gz, tar, dmg, pkg, exe, msi, apk, mp3, mp4, mov, avi, wav, txt, rtf, key, numbers, pages`, on any host |
+  | `forms` | `form_submit` | `id` (form id, else name, else empty), `action` (path only) | `submit` on a `<form>`. Field values are never read |
+
+  A download link is reported as `file_download` only (never also as `outbound_link`) when the
+  downloads switch is on. `javascript:`, `mailto:`, `tel:` and in-page anchors are ignored.
+  "Another host" means the link host is neither `location.hostname` nor a parent or child of it, so
+  **sibling subdomains are outbound**: on `www.example.com`, a link to `app.example.com` is reported
+  while `example.com` is not. Anything else you want measured goes through `analytics.track()` or a
+  `data-analytics-event` attribute.
 
 ## JavaScript API
 
