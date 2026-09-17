@@ -1687,6 +1687,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/sites/{siteId}/consent/receipts": {
+        parameters: {
+            query: {
+                /** @description The visitor id the person gives you (an_vid cookie) */
+                visitor_id: string;
+            };
+            header?: never;
+            path: {
+                siteId: components["parameters"]["SiteId"];
+            };
+            cookie?: never;
+        };
+        /** Proof of consent for one visitor (site admin; only when consent receipts are enabled) */
+        get: {
+            parameters: {
+                query: {
+                    /** @description The visitor id the person gives you (an_vid cookie) */
+                    visitor_id: string;
+                };
+                header?: never;
+                path: {
+                    siteId: components["parameters"]["SiteId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                consent_version: number;
+                                /** @enum {string} */
+                                decision: "accept";
+                                /** Format: date-time */
+                                decided_at: string;
+                            }[];
+                        };
+                    };
+                };
+                401: components["responses"]["Problem"];
+                403: components["responses"]["Problem"];
+                404: components["responses"]["Problem"];
+                409: components["responses"]["Problem"];
+                422: components["responses"]["Problem"];
+                default: components["responses"]["Problem"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/sites/{siteId}/consent/history": {
         parameters: {
             query?: never;
@@ -3188,9 +3248,6 @@ export interface paths {
                     from?: components["parameters"]["From"];
                     /** @description End day (inclusive); required with period=custom */
                     to?: components["parameters"]["To"];
-                    compare?: components["parameters"]["Compare"];
-                    /** @description filter[dim][op]=value, dims: page, entry_page, exit_page, host, channel, source, referrer, utm_source, utm_medium, utm_campaign, utm_content, utm_term, device, browser, os, country, event, content, level; ops: is, is_not, contains, prefix, glob */
-                    filter?: components["parameters"]["Filter"];
                     limit?: components["parameters"]["Limit"];
                     cursor?: components["parameters"]["Cursor"];
                     /** @description Metric name, prefix with - for descending (default descending by the main metric) */
@@ -3259,9 +3316,6 @@ export interface paths {
                     from?: components["parameters"]["From"];
                     /** @description End day (inclusive); required with period=custom */
                     to?: components["parameters"]["To"];
-                    compare?: components["parameters"]["Compare"];
-                    /** @description filter[dim][op]=value, dims: page, entry_page, exit_page, host, channel, source, referrer, utm_source, utm_medium, utm_campaign, utm_content, utm_term, device, browser, os, country, event, content, level; ops: is, is_not, contains, prefix, glob */
-                    filter?: components["parameters"]["Filter"];
                     limit?: components["parameters"]["Limit"];
                     cursor?: components["parameters"]["Cursor"];
                     /** @description Metric name, prefix with - for descending (default descending by the main metric) */
@@ -4209,10 +4263,6 @@ export interface components {
             conversions: number;
             revenue_minor: number;
         };
-        /** @description Columns depend on the report: dimension columns (host, path, channel, source, referrer_host, utm_*, value, country, name, prop_key, prop_value, content_key, goal_id...) plus metric columns. */
-        ReportRow: {
-            [key: string]: unknown;
-        };
         PagesRow: {
             host: string | null;
             path: string | null;
@@ -4577,23 +4627,6 @@ export interface components {
                 "application/json": {
                     data: components["schemas"]["CampaignCost"];
                 };
-            };
-        };
-        /** @description Table report (rows depend on the report, see ReportRow) */
-        TableReport: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": {
-                    data: {
-                        rows: components["schemas"]["ReportRow"][];
-                        total_rows: number;
-                        totals?: components["schemas"]["ReportRow"];
-                    };
-                    meta: components["schemas"]["ReportMeta"];
-                };
-                "text/csv": string;
             };
         };
     };
