@@ -234,8 +234,10 @@ final class Version20260917000002 extends AbstractMigration
         $this->addSql("CREATE TABLE rollup_dirty (
             site_id INT UNSIGNED NOT NULL,
             day DATE NOT NULL,
+            first_marked_at DATETIME(3) NOT NULL,
             marked_at DATETIME(3) NOT NULL,
-            PRIMARY KEY (site_id, day)
+            PRIMARY KEY (site_id, day),
+            KEY idx_rollup_dirty_first (first_marked_at)
         ) {$o}");
 
         $this->addSql("CREATE TABLE job_runs (

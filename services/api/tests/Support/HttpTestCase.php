@@ -144,6 +144,24 @@ abstract class HttpTestCase extends IntegrationTestCase
         return $this->request('DELETE', $uri, $body, $headers);
     }
 
+    /**
+     * Sends a tracking batch like a browser on the tracked site would (sendBeacon, text/plain).
+     *
+     * @param array<string, mixed>  $payload
+     * @param array<string, string> $headers
+     */
+    protected function collect(array $payload, array $headers = [], string $ip = self::CLIENT_IP): ResponseInterface
+    {
+        $headers += [
+            'Origin' => 'https://www.site.test',
+            'User-Agent' => Payloads::CHROME_UA,
+            'Accept-Language' => 'it-IT,it;q=0.9,en;q=0.8',
+            'Content-Type' => 'text/plain;charset=UTF-8',
+        ];
+
+        return $this->request('POST', '/t/e', json_encode($payload, \JSON_THROW_ON_ERROR), $headers, ['REMOTE_ADDR' => $ip]);
+    }
+
     /** Signs in by creating a session directly (no password round trip). */
     protected function loginAs(User $user): void
     {

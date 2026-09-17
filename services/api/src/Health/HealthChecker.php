@@ -50,7 +50,7 @@ final readonly class HealthChecker
         }
 
         if ($checks['migrations']['status'] === 'ok') {
-            $oldestDirty = $this->connection->fetchOne('SELECT MIN(marked_at) FROM rollup_dirty');
+            $oldestDirty = $this->connection->fetchOne('SELECT MIN(first_marked_at) FROM rollup_dirty');
             if (\is_string($oldestDirty)) {
                 $lag = (int) floor(($now->getTimestamp() - new \DateTimeImmutable($oldestDirty, new \DateTimeZone('UTC'))->getTimestamp()) / 60);
                 $checks['rollup_lag'] = ['status' => $lag > self::ROLLUP_LAG_WARN_MINUTES ? 'warn' : 'ok', 'detail' => $lag . ' min'];

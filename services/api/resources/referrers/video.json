@@ -1,0 +1,8 @@
+{
+  "type": "video",
+  "sources": {
+    "YouTube": ["youtube.com", "m.youtube.com", "youtu.be", "music.youtube.com"],
+    "Vimeo": ["vimeo.com"],
+    "Twitch": ["twitch.tv"]
+  }
+}

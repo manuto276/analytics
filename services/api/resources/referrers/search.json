@@ -1,0 +1,24 @@
+{
+  "type": "search",
+  "sources": {
+    "Google": ["google.*", "www.google.*", "google.com", "www.google.com", "news.google.com", "googleapis.com", "com.google.android.googlequicksearchbox", "android-app"],
+    "Bing": ["bing.com", "www.bing.com", "cn.bing.com", "edgeservices.bing.com"],
+    "DuckDuckGo": ["duckduckgo.com", "html.duckduckgo.com", "lite.duckduckgo.com"],
+    "Yahoo!": ["search.yahoo.com", "yahoo.com", "*.search.yahoo.com", "search.yahoo.co.jp"],
+    "Yandex": ["yandex.ru", "yandex.com", "ya.ru", "yandex.*"],
+    "Baidu": ["baidu.com", "www.baidu.com", "m.baidu.com"],
+    "Ecosia": ["ecosia.org", "www.ecosia.org"],
+    "Qwant": ["qwant.com", "www.qwant.com", "lite.qwant.com"],
+    "Startpage": ["startpage.com", "www.startpage.com"],
+    "Brave Search": ["search.brave.com"],
+    "Naver": ["search.naver.com", "naver.com"],
+    "Seznam": ["search.seznam.cz", "seznam.cz"],
+    "Yahoo! Japan": ["yahoo.co.jp"],
+    "Ask": ["ask.com", "www.ask.com"],
+    "AOL": ["search.aol.com"],
+    "Mojeek": ["mojeek.com", "www.mojeek.com"],
+    "Kagi": ["kagi.com"],
+    "Libero": ["arianna.libero.it", "search.libero.it"],
+    "Virgilio": ["ricerca.virgilio.it"]
+  }
+}

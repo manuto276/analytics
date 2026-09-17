@@ -1,0 +1,24 @@
+{
+  "type": "social",
+  "sources": {
+    "Facebook": ["facebook.com", "m.facebook.com", "l.facebook.com", "lm.facebook.com", "web.facebook.com", "fb.me", "fb.com"],
+    "Instagram": ["instagram.com", "l.instagram.com"],
+    "X": ["t.co", "twitter.com", "x.com", "mobile.twitter.com"],
+    "LinkedIn": ["linkedin.com", "lnkd.in", "www.linkedin.com"],
+    "Reddit": ["reddit.com", "old.reddit.com", "out.reddit.com", "np.reddit.com"],
+    "Pinterest": ["pinterest.com", "pinterest.*", "pin.it"],
+    "TikTok": ["tiktok.com", "www.tiktok.com"],
+    "Threads": ["threads.net", "l.threads.net", "threads.com"],
+    "Bluesky": ["bsky.app", "go.bsky.app"],
+    "Mastodon": ["mastodon.social", "mstdn.social"],
+    "Hacker News": ["news.ycombinator.com"],
+    "WhatsApp": ["web.whatsapp.com", "wa.me", "api.whatsapp.com"],
+    "Telegram": ["t.me", "web.telegram.org"],
+    "Snapchat": ["snapchat.com"],
+    "Tumblr": ["tumblr.com", "t.umblr.com"],
+    "Quora": ["quora.com"],
+    "Discord": ["discord.com", "discordapp.com"],
+    "VK": ["vk.com"],
+    "Product Hunt": ["producthunt.com"]
+  }
+}

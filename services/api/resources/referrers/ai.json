@@ -1,0 +1,10 @@
+{
+  "type": "ai",
+  "sources": {
+    "ChatGPT": ["chatgpt.com", "chat.openai.com"],
+    "Perplexity": ["perplexity.ai", "www.perplexity.ai"],
+    "Claude": ["claude.ai"],
+    "Gemini": ["gemini.google.com"],
+    "Copilot": ["copilot.microsoft.com"]
+  }
+}

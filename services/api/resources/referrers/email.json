@@ -1,0 +1,12 @@
+{
+  "type": "email",
+  "sources": {
+    "Gmail": ["mail.google.com"],
+    "Outlook": ["outlook.live.com", "outlook.office.com", "outlook.office365.com"],
+    "Yahoo! Mail": ["mail.yahoo.com"],
+    "Proton Mail": ["mail.proton.me", "mail.protonmail.com"],
+    "iCloud Mail": ["www.icloud.com"],
+    "Libero Mail": ["mail1.libero.it", "mail.libero.it"],
+    "Newsletter": ["substack.com", "mailchi.mp", "list-manage.com"]
+  }
+}
