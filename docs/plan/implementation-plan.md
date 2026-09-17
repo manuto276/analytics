@@ -94,7 +94,7 @@ Each module: `Domain/`, `Application/`, `Infrastructure/`, `Http/`. Deptrac: Dom
 | Module | Main classes |
 |---|---|
 | Kernel | AppFactory, ContainerFactory (compiled in prod), ConsoleApplicationFactory, Settings, BuildInfo |
-| Shared | Http\JsonResponder, ProblemDetails (RFC 9457), RequestMapper (cuyz/valinor); Crypto\SecretBox (XChaCha20-Poly1305, key ids), TokenGenerator, TokenHasher; Net\ClientIpResolver, IpTruncator, IpPrefix; Clock (psr/clock, FrozenClock); Doctrine types; Cache (Redis/DoctrineDbal/PhpFiles); RateLimit (symfony/rate-limiter); Lock (symfony/lock) |
+| Shared | Http\JsonResponder, ProblemDetails (RFC 9457), Validation\Input (hand-written request validation; cuyz/valinor was dropped); Crypto\SecretBox (XChaCha20-Poly1305, key ids), TokenGenerator, TokenHasher; Net\ClientIpResolver, IpTruncator, IpPrefix; Clock (psr/clock, FrozenClock); Doctrine types; Cache (Redis/DoctrineDbal/PhpFiles); RateLimit (symfony/rate-limiter); Lock (symfony/lock) |
 | Sites | Site, SiteDomain, TrackingSettings, VisitorHashMode, DomainMatcher, SnippetRenderer, CreateSite, UpdateSite |
 | Identity | User, GlobalRole, SiteRole, UserSiteRole, Invitation, AuthSession, TotpCredential, RecoveryCode, PasswordHasher, LoginService, LoginThrottle, SessionManager, TotpService, InvitationService, Authorizer |
 | Tracking | ScriptAction, CollectAction, ForgetAction; PayloadParser, PayloadV1, EventDraft, EventType, TrackingLevel; BotFilter, UserAgentClassifier, UrlSanitizer, PiiScrubber, ReferrerClassifier, UtmExtractor, ChannelClassifier, GeoLocator; DailySaltProvider, VisitorHasher; VisitResolver, VisitStore (Dbal/Redis); IngestBatchHandler, EventSink (Dbal/RedisQueue), QueueWorker, DirtyDayMarker |
@@ -104,7 +104,7 @@ Each module: `Domain/`, `Application/`, `Infrastructure/`, `Http/`. Deptrac: Dom
 | Retention | PartitionManager, RetentionPolicy, RetentionPurger, SaltJanitor, JobRunRecorder |
 | Audit / Health | AuditLogger; HealthChecker (db, pending migrations, rollup lag, salt, geo db age, disk) |
 
-**Dependencies** — runtime: slim/slim, slim/psr7, php-di/php-di, php-di/slim-bridge, doctrine/{orm,dbal,migrations}, symfony/{console,cache,rate-limiter,lock,uid,clock,dotenv,mailer(optional)}, cuyz/valinor, monolog/monolog, jaybizzle/crawler-detect, matomo/device-detector (LGPL-3.0), maxmind-db/reader, spomky-labs/otphp, bacon/bacon-qr-code. Dev: phpunit ^13, paratest, infection, league/openapi-psr7-validator, opis/json-schema, phpstan (+doctrine, strict-rules, phpunit, deprecation-rules), deptrac, rector, composer-require-checker, php-cs-fixer (PER-CS 2.0), roave/security-advisories.
+**Dependencies** — runtime: slim/slim, slim/psr7, php-di/php-di, php-di/slim-bridge, doctrine/{orm,dbal,migrations}, symfony/{console,cache,rate-limiter,lock,uid,clock,dotenv,mailer(optional)}, predis/predis, monolog/monolog, jaybizzle/crawler-detect, matomo/device-detector (LGPL-3.0), maxmind-db/reader, spomky-labs/otphp, bacon/bacon-qr-code. Dev: phpunit ^13, paratest, infection, league/openapi-psr7-validator, opis/json-schema, phpstan (+doctrine, strict-rules, phpunit, deprecation-rules), deptrac, rector, composer-require-checker, php-cs-fixer (PER-CS 2.0), roave/security-advisories.
 
 **Doctrine**: attribute mapping, native lazy objects, PhpFilesAdapter caches. ORM for configuration/identity entities; **hot and analytic tables via DBAL only**; schema-assets filter keeps DBAL tables out of `migrations:diff`.
 
@@ -140,7 +140,8 @@ Source of truth `docs/api/tracking-payload.v1.schema.json` (shared by tracker an
   "e":[{ "id":"b64url(12B)", "t":"pv|ev|en|cu|cs", "u":"https://www.example.com/p?utm_source=x",
          "r":"https://referrer.example.org/", "a":1234, "n":"signup_click",
          "p":{"plan":"pro"}, "ck":"author:42", "ms":15432, "sp":80,
-         "cs":"shown|accept|reject|dismiss|reopen" }] }
+         "cs":"shown|accept|reject|dismiss|reopen",
+         "lu":"https://www.example.com/landing", "lr":"https://referrer.example.org/" }] }   // lu/lr: landing page and referrer, cu only
 ```
 Types: `pv` pageview · `ev` custom event · `en` engagement (engaged ms, scroll %) · `cu` consent upgrade · `cs` consent statistic (counters only). Limits: ≤ 50 events/batch; URL ≤ 2048; name `[a-z0-9_:.-]{1,64}`; ≤ 10 scalar props (key ≤ 32, value ≤ 100); `occurred_at = received_at − clamp(a, 0, 24h)`; unknown `v` → `400` (supports N and N−1). Idempotency: `INSERT IGNORE` on `(site_id, event_uid, local_day)`.
 
@@ -180,7 +181,7 @@ Visit key: cookie level `sid`; `daily_hash` sites the visitor hash; `pageviews_o
   "value":{"amount_minor":4900,"currency":"EUR"}, "props":{"plan":"pro"},
   "declared_source":{"utm_source":"…"} }   // optional, separate model, LEGAL REVIEW
 ```
-Response `202 {accepted, duplicates, rejected:[{index, error}]}`; idempotent on `(site_id, external_id)`. `AttributionResolver`: (1) earliest attributed conversion with same `customer_ref`; (2) visitor first touch (`first_touch`) or last non-direct; (3) `unattributed` (still counted). Attribution snapshotted with model version; `conversions:reattribute` recomputes.
+Response `202 {accepted, duplicates, rejected:[{index, error}]}`; idempotent on `(site_id, external_id)`. `AttributionResolver`: (1) earliest attributed conversion with the same `customer_ref`; (2) visitor first touch (`first_touch`) and last non-direct touch (both snapshotted as `attr_*` and `lnd_*`); (3) `unattributed` (still counted). Attribution snapshotted with model version; `conversions:reattribute` recomputes.
 
 ## 5. Data model (MySQL 8.4)
 
@@ -212,15 +213,15 @@ Conventions: utf8mb4 `utf8mb4_0900_ai_ci` (paths `utf8mb4_bin`); UTC `DATETIME(3
 | Table | Columns | Keys / partitioning |
 |---|---|---|
 | daily_salts | day, salt BINARY(32), created_at | PK day |
-| events_raw | id BIGINT AI, local_day, site_id, event_uid BINARY(12), occurred_at, received_at, level, type, name NULL, visit_id, visitor_hash NULL, visitor_id BINARY(16) NULL, host, path, page_hash BINARY(8), query, referrer_host, channel, source, utm_source/medium/campaign/content/term, browser, browser_major, os, os_major, device, country CHAR(2), content_key, engagement_ms, scroll_pct, props JSON | PK (id, local_day); UNIQUE (site_id, event_uid, local_day); IDX (site_id, local_day, type), (site_id, received_at), (site_id, visitor_id, local_day); RANGE COLUMNS(local_day) monthly + pmax |
+| events_raw | id BIGINT AI, local_day, site_id, event_uid BINARY(12), occurred_at, received_at, level, type, name NULL, visit_id, is_entry, visitor_hash NULL, visitor_id BINARY(16) NULL, host, path, page_hash BINARY(8), query, referrer_host, channel, source, utm_source/medium/campaign/content/term, browser, browser_major, os, os_major, device, country CHAR(2), content_key, engagement_ms, scroll_pct, props JSON | PK (id, local_day); UNIQUE (site_id, event_uid, local_day); IDX (site_id, local_day, type), (site_id, received_at), (site_id, visitor_id, local_day); RANGE COLUMNS(local_day) monthly + pmax |
 | visits | id, local_day, site_id, level, started_at, last_activity_at, visitor_hash, visitor_id, entry_host, entry_path, entry_page_hash, exit_page_hash, pageviews, events, engagement_ms, is_bounce, channel, source, referrer_host, utm_*, browser, os, device, country, entry_content_key | PK (id, local_day); IDX (site_id, local_day), (site_id, visitor_id, started_at); monthly partitions |
-| visit_lookup | site_id, visitor_key BINARY(16), visit_id, visit_day, last_activity_at | PK (site_id, visitor_key); IDX last_activity_at |
+| visit_lookup | site_id, visitor_key BINARY(16), visit_id, visit_day, last_activity_at, source_key BINARY(8) (campaign-change detection) | PK (site_id, visitor_key); IDX last_activity_at |
 | visitors | site_id, visitor_id, first_seen_at, last_seen_at, first_touch_id, visits, consent_version | PK (site_id, visitor_id) |
 | attribution_touches | id, site_id, visitor_id, visit_id, visit_day, touched_at, is_first, channel, source, referrer_host, utm_*, landing_host, landing_path | IDX (site_id, visitor_id, touched_at) |
-| conversions | id, site_id, external_id, name, origin (server/browser), occurred_at, local_day, received_at, visitor_id, customer_ref BINARY(32), value_minor, currency, props JSON, attr_model_version, attr_touch_id, attr_channel, attr_source, attr_utm_*, declared_source JSON | UNIQUE (site_id, external_id); IDX (site_id, name, local_day), (site_id, customer_ref, occurred_at), (site_id, visitor_id) |
-| consent_stats_daily | site_id, day, consent_version, shown, accepted, rejected, dismissed, reopened, changed_to_accept, changed_to_reject | PK (site_id, day, consent_version) |
+| conversions | id, site_id, external_id, name, origin (server/browser), occurred_at, local_day, received_at, visitor_id, customer_ref BINARY(32), value_minor, currency, props JSON, attr_model_version, attr_via, attr_touch_id, attr_touched_at, attr_channel, attr_source, attr_utm_*, lnd_touch_id, lnd_touched_at, lnd_channel, lnd_source, lnd_utm_* (last non-direct), declared_source JSON | UNIQUE (site_id, external_id); IDX (site_id, name, local_day), (site_id, customer_ref, occurred_at), (site_id, visitor_id) |
+| consent_stats_daily | site_id, day, consent_version, shown, accepted, rejected, dismissed, reopened | PK (site_id, day, consent_version) |
 | consent_receipts (optional) | id, site_id, visitor_id, consent_version, decision, decided_at | IDX (site_id, visitor_id) |
-| rollup_dirty | site_id, day, marked_at | PK (site_id, day) |
+| rollup_dirty | site_id, day, first_marked_at (rollup lag), marked_at | PK (site_id, day) |
 | job_runs | id, job, started_at, finished_at, status, message, stats JSON | IDX (job, started_at) |
 
 Partitioned tables have no foreign keys (integrity in app + tests); partitions managed by `partitions:maintain`, not migrations; `DB_PARTITIONING=false` fallback uses chunked DELETE for retention.
@@ -244,7 +245,7 @@ Partitioned tables have no foreign keys (integrity in app + tests); partitions m
 Builders: DELETE + `INSERT … SELECT` per `(site_id, day)` in one transaction (idempotent), then bump `rollup_version` (cache invalidation).
 
 ### 5.4 Migrations policy
-Migration 1: ORM tables (generated, reviewed). Migration 2: DBAL/partitioned tables in raw SQL (partitions current month → +3 + pmax). Forward-only (`down()` throws); DDL non-transactional. Expand/contract: each release's schema works with the previous release's code; CI lint rejects `DROP COLUMN`, `RENAME`, `NOT NULL` without default unless `#[Contract]`.
+Migration 1: ORM tables (generated, reviewed). Migration 2: DBAL/partitioned tables in raw SQL (partitions current month → +3 + pmax). Forward-only (`down()` throws); DDL non-transactional. Expand/contract: each release's schema works with the previous release's code; The migration test suite rejects `DROP COLUMN`, `RENAME`, `DROP TABLE` and `MODIFY … NOT NULL` without a default unless the line is marked `contract-ok`.
 
 ## 6. Reporting API
 
@@ -485,87 +486,87 @@ Coverage gates: PHP lines ≥ 85% overall, ≥ 95% Tracking/Consent/Identity/Sha
 Each milestone ends with a green `make ci` and a verifiable result.
 
 ### M0 — Repository skeleton and tooling
-- [ ] `git init` in `/Users/emanuelefrascella/Progetti/analytics`, remote `git@github.com:manuto276/analytics.git`, AGPL-3.0 LICENSE, NOTICE, README, `.editorconfig`, `.gitignore`
-- [ ] Folders `deploy/ services/ docs/`; **save this plan as `docs/plan/implementation-plan.md`**; ADR template
-- [ ] Dev + test compose (php 8.4 + pcov, nginx + test certs, mysql 8.4, node 24 + pnpm); Makefile
-- [ ] `services/api`: Slim `GET /api/v1/health`; PHPUnit suites; PHPStan max, Deptrac, CS-Fixer, Rector
-- [ ] `services/dashboard`: template imported unchanged, `nuxt generate` builds
-- [ ] `services/tracker`: esbuild + Vitest + size-limit skeleton; `services/e2e` one smoke test
-- [ ] `ci.yml` for skeleton jobs; `docs/SECURITY.md`, `CONTRIBUTING.md`
+- [x] `git init` in `/Users/emanuelefrascella/Progetti/analytics`, remote `git@github.com:manuto276/analytics.git`, AGPL-3.0 LICENSE, NOTICE, README, `.editorconfig`, `.gitignore`
+- [x] Folders `deploy/ services/ docs/`; **save this plan as `docs/plan/implementation-plan.md`**; ADR template
+- [x] Dev + test compose (php 8.4 + pcov, nginx + test certs, mysql 8.4, node 24 + pnpm); Makefile
+- [x] `services/api`: Slim `GET /api/v1/health`; PHPUnit suites; PHPStan max, Deptrac, CS-Fixer, Rector
+- [x] `services/dashboard`: template imported unchanged, `nuxt generate` builds
+- [x] `services/tracker`: esbuild + Vitest + size-limit skeleton; `services/e2e` one smoke test
+- [x] `ci.yml` for skeleton jobs; `docs/SECURITY.md`, `CONTRIBUTING.md`
 - **Verify:** `make ci` green locally and on GitHub; `curl https://analytics.test/api/v1/health` → 200.
 
 ### M1 — Backend foundation
-- [ ] Settings/env, compiled PHP-DI container, ProblemDetails, request id, Monolog without IPs
-- [ ] ClientIp + truncation middleware, security headers, SameOrigin
-- [ ] Doctrine ORM/DBAL/Migrations, custom types, schema filter; `bin/analytics` with `migrations:*`, `app:preflight`, `cache:warmup`, `health:check`
-- [ ] Migration 1 (ORM tables) + Migration 2 (partitioned/DBAL tables); `partitions:maintain`
-- [ ] Test harness: per-worker DB, factories, FrozenClock, OpenAPI validator; `docs/api/openapi.yaml` v0
+- [x] Settings/env, compiled PHP-DI container, ProblemDetails, request id, Monolog without IPs
+- [x] ClientIp + truncation middleware, security headers, SameOrigin
+- [x] Doctrine ORM/DBAL/Migrations, custom types, schema filter; `bin/analytics` with `migrations:*`, `app:preflight`, `cache:warmup`, `health:check`
+- [x] Migration 1 (ORM tables) + Migration 2 (partitioned/DBAL tables); `partitions:maintain`
+- [x] Test harness: per-worker DB, factories, FrozenClock, OpenAPI validator; `docs/api/openapi.yaml` v0
 - **Verify:** migration suite green (fresh migrate, empty diff); `health:check` exits 0; PHPStan max without baseline.
 
 ### M2 — Identity and access
-- [ ] Users (argon2id), sessions (`__Host-` cookie), CSRF, throttling and lockout, logout
-- [ ] Roles, Authorizer, SiteAccessMiddleware
-- [ ] Invitations (copyable link, mailer optional), `user:*` commands, audit log
+- [x] Users (argon2id), sessions (`__Host-` cookie), CSRF, throttling and lockout, logout
+- [x] Roles, Authorizer, SiteAccessMiddleware
+- [x] Invitations (copyable link, mailer optional), `user:*` commands, audit log
 - **Verify:** functional auth tests and RBAC matrix green; console-created admin logs in via curl.
 
 ### M3 — Dashboard shell and site management
-- [ ] Remove mocks; `useApi`, `useAuth`, auth middleware; auth layout (login, invitation acceptance)
-- [ ] SitesMenu; Settings → Site (domains, timezone, levels, hash mode + legal notice), Members
-- [ ] Sites API + `site:create`; snippet endpoint
-- [ ] i18n en/it with parity test; OpenAPI → TS types; nginx SPA routing + Slim fallback
+- [x] Remove mocks; `useApi`, `useAuth`, auth middleware; auth layout (login, invitation acceptance)
+- [x] SitesMenu; Settings → Site (domains, timezone, levels, hash mode + legal notice), Members
+- [x] Sites API + `site:create`; snippet endpoint
+- [x] i18n en/it with parity test; OpenAPI → TS types; nginx SPA routing + Slim fallback
 - **Verify:** e2e: log in, create site with domains, invite and accept viewer (both languages); SPA and API on same origin.
 
 ### M4 — Base-level ingestion
-- [ ] Tracker core: pageview, custom events, engagement, SPA, beacon/fetch, declarative events, no storage
-- [ ] `/t/{key}.js` (config embed, ETag); `/t/e` (origin check, rate limit, PayloadParser v1 + JSON schema)
-- [ ] Enrichment: bot filter, UA, URL/PII sanitising, referrer, UTM, channel; `geo:update` + GeoLocator
-- [ ] DailySaltProvider, VisitorHasher, per-site hash mode; VisitResolver; DBAL sink; dirty marker
-- [ ] PrivacyInvariantsTest, NoSetCookie test, tracker no-storage test, size budget
+- [x] Tracker core: pageview, custom events, engagement, SPA, beacon/fetch, declarative events, no storage
+- [x] `/t/{key}.js` (config embed, ETag); `/t/e` (origin check, rate limit, PayloadParser v1 + JSON schema)
+- [x] Enrichment: bot filter, UA, URL/PII sanitising, referrer, UTM, channel; `geo:update` + GeoLocator
+- [x] DailySaltProvider, VisitorHasher, per-site hash mode; VisitResolver; DBAL sink; dirty marker
+- [x] PrivacyInvariantsTest, NoSetCookie test, tracker no-storage test, size budget
 - **Verify:** Playwright visits to fixtures create `events_raw` and `visits` rows; privacy tests green; tracker ≤ 5 KB gzip on 3 browsers.
 
 ### M5 — Rollups and core reports
-- [ ] Rollup builders + `rollup:run`/`rollup:rebuild`, locks, job_runs
-- [ ] ReportQuery, QueryPlanner, ReportCache; overview, timeseries (+ compare), pages, landing-pages, sources, campaigns, tech, countries, events, content, realtime; CSV export
-- [ ] Dashboard: Overview, Pages, Sources, Campaigns, Audience, Events, Realtime; filters in URL
-- [ ] Golden tests on seeded dataset + EXPLAIN checks
+- [x] Rollup builders + `rollup:run`/`rollup:rebuild`, locks, job_runs
+- [x] ReportQuery, QueryPlanner, ReportCache; overview, timeseries (+ compare), pages, landing-pages, sources, campaigns, tech, countries, events, content, realtime; CSV export
+- [x] Dashboard: Overview, Pages, Sources, Campaigns, Audience, Events, Realtime; filters in URL
+- [x] Golden tests on seeded dataset + EXPLAIN checks
 - **Verify:** golden snapshots match; e2e dashboard shows expected counts after `rollup:run`; visual baselines approved.
 
 ### M6 — Consent banner and cookie level
-- [ ] Consent config draft/publish/revision/version API; editor with live preview and contrast check; history, stats
-- [ ] Banner (shadow DOM, equal weight, close/Esc reject, a11y, locales), state machine, cookies, JS consent API, reopen link/floating button
-- [ ] Cookie-level ingestion: vid/sid, `cu`, visitors, attribution_touches, consent_stats_daily, optional receipts, `/t/forget`
-- [ ] Cohorts report + Retention page
+- [x] Consent config draft/publish/revision/version API; editor with live preview and contrast check; history, stats
+- [x] Banner (shadow DOM, equal weight, close/Esc reject, a11y, locales), state machine, cookies, JS consent API, reopen link/floating button
+- [x] Cookie-level ingestion: vid/sid, `cu`, visitors, attribution_touches, consent_stats_daily, optional receipts, `/t/forget`
+- [x] Cohorts report + Retention page
 - **Verify:** e2e consent scenarios across `www.site.test`/`app.site.test` (accept, reject, 180-d no re-ask, version bump, reopen, forget); axe clean; `docs/privacy/cookies.md` + `garante-2021-mapping.md` with test ids.
 
 ### M7 — Goals, conversions, funnels, attribution, costs
-- [ ] API keys (scopes, UI, console); conversions API (batch, idempotency, customer_ref HMAC, declared source)
-- [ ] AttributionResolver (first_touch, last_non_direct, declared) + `conversions:reattribute`
-- [ ] Goals and funnels CRUD + reports; attribution report (windows, revenue, cost, CAC, ROAS, % unattributed)
-- [ ] Campaign costs: manual + CSV import with preview
-- [ ] External read API `content/{key}/stats` with `min_group_size`
+- [x] API keys (scopes, UI, console); conversions API (batch, idempotency, customer_ref HMAC, declared source)
+- [x] AttributionResolver (first_touch, last_non_direct, declared) + `conversions:reattribute`
+- [x] Goals and funnels CRUD + reports; attribution report (windows, revenue, cost, CAC, ROAS, % unattributed)
+- [x] Campaign costs: manual + CSV import with preview
+- [x] External read API `content/{key}/stats` with `min_group_size`
 - **Verify:** e2e consented visit with UTM → server conversion → follow-up by customer_ref within 30 d → attribution and CAC correct; funnel counts match golden values.
 
 ### M8 — Security hardening
-- [ ] TOTP enrolment, MFA login, recovery codes, session list/revoke, password change/reset (mailer)
-- [ ] Key rotation, CSP hashes at build, rate-limit review, threat model, `docs/SECURITY.md`
+- [x] TOTP enrolment, MFA login, recovery codes, session list/revoke, password change/reset (mailer)
+- [x] Key rotation, CSP hashes at build, rate-limit review, threat model, `docs/SECURITY.md`
 - **Verify:** functional + e2e MFA flows green; security header tests green; ZAP baseline no high findings.
 
 ### M9 — Retention and operations
-- [ ] `retention:purge`, `salt:rotate`, `queue:work` (Redis), `jobs:status`
-- [ ] JobsSlideover; health details (rollup lag, geo DB age)
-- [ ] Runbook, cron, backups (exclude salts), monitoring docs
+- [x] `retention:purge`, `salt:rotate`, `queue:work` (Redis), `jobs:status`
+- [x] JobsSlideover; health details (rollup lag, geo DB age)
+- [x] Runbook, cron, backups (exclude salts), monitoring docs
 - **Verify:** frozen-clock integration: raw > 13 months removed, rollups intact; queue-mode suite green with Redis.
 
 ### M10 — Packaging and deploy tooling
-- [ ] Dockerfile stages (package, php-runtime, nginx-runtime); `build.sh`, `publish.sh`
-- [ ] Deploy `console` (init, deploy, verify, list, status, rollback, cleanup, app, self-update) + PHPUnit suite
-- [ ] Smoke test in CI; `compose.prod.yml` + image test; `release.yml`
-- [ ] docs/deploy (tarball, managed PHP hosts, docker, nginx with `$realpath_root` + anonymised logs)
+- [x] Dockerfile stages (package, php-runtime, nginx-runtime); `build.sh`, `publish.sh`
+- [x] Deploy `console` (init, deploy, verify, list, status, rollback, cleanup, app, self-update) + PHPUnit suite
+- [x] Smoke test in CI; `compose.prod.yml` + image test; `release.yml`
+- [x] docs/deploy (tarball, managed PHP hosts, docker, nginx with `$realpath_root` + anonymised logs)
 - **Verify:** CI builds `analytics-<TS>.tar.gz` + `.sha256` with `REVISION` = HEAD; smoke deploy → health → second deploy → rollback green; prod compose serves a report.
 
 ### M11 — WordPress plugin and first production deployment
-- [ ] Generic `analytics-connector` plugin + tests
-- [ ] Proxy and cache examples (nginx, Varnish) documented
+- [x] Generic `analytics-connector` plugin + tests
+- [x] Proxy and cache examples (nginx, Varnish) documented
 - [ ] Production: site + DB in hosting panel, web root `current/public`, vhost edits, `.env`, `console init`, first `console deploy`, `user:create-admin`, cron, `geo:update`
 - [ ] Legal review: visitor hash mode, subdomains as one site, cookie table, consent texts; enable cookie level only after sign-off
 - **Verify:** real base-level pageviews visible within 5 min; `console status` healthy; production rollback drill succeeds; banner live after sign-off.
@@ -576,11 +577,11 @@ Each milestone ends with a green `make ci` and a verifiable result.
 
 ## 15. Verification checklist (release gate)
 - [ ] `make ci` green; coverage and MSI thresholds met
-- [ ] PrivacyInvariantsTest, NoSetCookie, tracker no-storage-before-choice green
-- [ ] Tracker ≤ 5.0 KB gzip; axe no serious violations (banner, dashboard)
-- [ ] OpenAPI types fresh; i18n parity
-- [ ] Upgrade migration from previous release green; contract lint clean
-- [ ] Deploy smoke (deploy, rollback) green; checksum matches tarball
+- [x] PrivacyInvariantsTest, NoSetCookie, tracker no-storage-before-choice green
+- [x] Tracker ≤ 5.0 KB gzip; axe no serious violations (banner, dashboard)
+- [x] OpenAPI types fresh; i18n parity
+- [x] Upgrade migration from previous release green; contract lint clean
+- [x] Deploy smoke (deploy, rollback) green; checksum matches tarball
 - [ ] `docs/privacy/garante-2021-mapping.md` and `cookies.md` updated for any behaviour change
 
 ## 16. Risks and open decisions

@@ -113,8 +113,8 @@ final readonly class PartitionManager
                 $definitions[] = Partitioning::definition($month);
                 $created[$table][] = Partitioning::partitionName($month);
             }
-            // Keep the lowest partition itself as the catch-all below the first new month.
-            array_unshift($definitions, \sprintf("PARTITION %s VALUES LESS THAN ('%s')", $lowestName, $start->format('Y-m-d')));
+            // The replacement keeps a catch-all below the first new month; p_old is always the lowest.
+            array_unshift($definitions, \sprintf("PARTITION p_old VALUES LESS THAN ('%s')", $start->format('Y-m-d')));
             $this->connection->executeStatement(\sprintf('ALTER TABLE %s REORGANIZE PARTITION %s INTO (%s)', $table, $lowestName, implode(', ', $definitions)));
         }
 

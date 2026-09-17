@@ -19,6 +19,7 @@ final class ConsentModule extends Module
         $routes->delete($site . '/draft', [ConsentController::class, 'discardDraft'], Permission::SITE_MANAGE);
         $routes->post($site . '/publish', [ConsentController::class, 'publish'], Permission::SITE_MANAGE);
         $routes->get($site . '/history', [ConsentController::class, 'history'], Permission::SITE_VIEW);
+        $routes->get($site . '/receipts', [ConsentController::class, 'receipts'], Permission::SITE_MANAGE);
     }
 
     public function entityPaths(): array

@@ -1,0 +1,13 @@
+{
+  "_comment": "422 application/problem+json. Match on \"code\", never on \"title\" or \"detail\". See ../errors.md.",
+  "type": "https://github.com/manuto276/analytics/blob/main/docs/api/errors.md#validation_failed",
+  "title": "Validation failed",
+  "status": 422,
+  "code": "validation_failed",
+  "detail": "The request contains invalid fields.",
+  "errors": {
+    "period": ["Must be one of: today, yesterday, 7d, 30d, 90d, month, last_month, 12mo, year, custom."],
+    "limit": ["Must be between 1 and 1000."]
+  },
+  "request_id": "9f1c4b2e7a5d3086"
+}

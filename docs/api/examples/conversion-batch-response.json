@@ -1,0 +1,8 @@
+{
+  "_comment": "202 Accepted from POST /api/v1/server/sites/{publicKey}/conversions for a batch of three, where order-1 had already been sent and the third item has an invalid name. Shape from Analytics\\Tests\\Functional\\Conversions\\ServerConversionsTest::testSingleAndBatchIngestWithIdempotency.",
+  "accepted": 1,
+  "duplicates": 1,
+  "rejected": [
+    { "index": 2, "error": "name: Has an invalid format." }
+  ]
+}

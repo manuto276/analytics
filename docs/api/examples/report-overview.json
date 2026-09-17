@@ -1,0 +1,45 @@
+{
+  "_comment": "GET /api/v1/sites/1/reports/overview?period=7d&compare=previous_period — values from Analytics\\Tests\\Functional\\Reporting\\ReportsTest::testOverviewAndTimeseries (site time zone Europe/Rome, frozen clock 2026-09-17).",
+  "data": {
+    "metrics": {
+      "visitors": 3,
+      "visits": 3,
+      "pageviews": 4,
+      "views_per_visit": 1.33,
+      "bounce_rate": 0.6667,
+      "avg_duration_ms": 6667,
+      "events": 1,
+      "conversions": 0,
+      "revenue_minor": 0,
+      "consented_visits": 0,
+      "consent_rate": 0
+    },
+    "compare": {
+      "visitors": 0,
+      "visits": 0,
+      "pageviews": 0,
+      "views_per_visit": null,
+      "bounce_rate": null,
+      "avg_duration_ms": null,
+      "events": 0,
+      "conversions": 0,
+      "revenue_minor": 0,
+      "consented_visits": 0,
+      "consent_rate": null
+    },
+    "deltas": {}
+  },
+  "meta": {
+    "site_id": 1,
+    "range": { "from": "2026-09-11", "to": "2026-09-17" },
+    "compare_range": { "from": "2026-09-04", "to": "2026-09-10" },
+    "interval": "day",
+    "source": "rollup",
+    "availability": { "visitors": true, "bounce": true, "duration": true },
+    "generated_at": "2026-09-17T10:00:00+00:00",
+    "cache": "miss",
+    "timezone": "Europe/Rome",
+    "currency": "EUR",
+    "next_cursor": null
+  }
+}

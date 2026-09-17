@@ -1,0 +1,54 @@
+{
+  "_comment": "GET /api/v1/sites/1/reports/pages?period=7d — row values from Analytics\\Tests\\Functional\\Reporting\\ReportsTest::testPagesSourcesTechCountriesEventsContent.",
+  "data": {
+    "rows": [
+      {
+        "host": "www.site.test",
+        "path": "/pricing",
+        "pageviews": 2,
+        "visits": 2,
+        "visitors": 2,
+        "entries": 1,
+        "exits": 1,
+        "bounce_rate": 0,
+        "avg_engagement_ms": 3500
+      },
+      {
+        "host": "www.site.test",
+        "path": "/",
+        "pageviews": 1,
+        "visits": 1,
+        "visitors": 1,
+        "entries": 1,
+        "exits": 0,
+        "bounce_rate": 0,
+        "avg_engagement_ms": 12000
+      },
+      {
+        "host": "www.site.test",
+        "path": "/blog/post",
+        "pageviews": 1,
+        "visits": 1,
+        "visitors": 1,
+        "entries": 1,
+        "exits": 1,
+        "bounce_rate": 1,
+        "avg_engagement_ms": null
+      }
+    ],
+    "total_rows": 3
+  },
+  "meta": {
+    "site_id": 1,
+    "range": { "from": "2026-09-11", "to": "2026-09-17" },
+    "compare_range": null,
+    "interval": null,
+    "source": "rollup",
+    "availability": { "visitors": true, "bounce": true, "duration": true },
+    "generated_at": "2026-09-17T10:00:00+00:00",
+    "cache": "miss",
+    "timezone": "Europe/Rome",
+    "currency": "EUR",
+    "next_cursor": null
+  }
+}

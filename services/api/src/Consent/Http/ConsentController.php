@@ -7,8 +7,13 @@ namespace Analytics\Consent\Http;
 use Analytics\Audit\Application\AuditLogger;
 use Analytics\Consent\Application\ConsentService;
 use Analytics\Kernel\Http\RequestContext;
+use Analytics\Shared\Crypto\Base64Url;
+use Analytics\Shared\Http\ApiProblem;
 use Analytics\Shared\Http\JsonResponder;
+use Analytics\Shared\Types;
 use Analytics\Sites\Application\SiteRepository;
+use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
@@ -19,6 +24,7 @@ final readonly class ConsentController
         private ConsentService $consent,
         private SiteRepository $sites,
         private AuditLogger $audit,
+        private Connection $connection,
     ) {}
 
     public function show(ServerRequestInterface $request): ResponseInterface
@@ -63,6 +69,35 @@ final readonly class ConsentController
         $this->audit->log('consent.published', RequestContext::actor($request), $site->id(), 'consent_config', $config->id(), ['revision' => $config->revision, 'consent_version' => $config->consentVersion, 'material_change' => $material]);
 
         return $this->responder->data(ConsentService::toArray($config));
+    }
+
+    /**
+     * Proof of consent for one visitor id (the visitor provides it, e.g. from an_vid or
+     * analytics.getVisitorId()). Only available when the site stores consent receipts.
+     */
+    public function receipts(ServerRequestInterface $request): ResponseInterface
+    {
+        $site = RequestContext::site($request);
+        if (!$site->consentReceiptsEnabled) {
+            throw ApiProblem::conflict('receipts_disabled', 'Consent receipts are not enabled for this site.');
+        }
+        $visitorId = $request->getQueryParams()['visitor_id'] ?? '';
+        $raw = \is_string($visitorId) && preg_match('/^[A-Za-z0-9_-]{22}$/', $visitorId) === 1 ? Base64Url::decode($visitorId) : null;
+        if ($raw === null || \strlen($raw) !== 16) {
+            throw ApiProblem::validation(['visitor_id' => ['Must be a visitor id (22 characters).']]);
+        }
+        $rows = $this->connection->fetchAllAssociative(
+            'SELECT consent_version, decision, decided_at FROM consent_receipts WHERE site_id = ? AND visitor_id = ? ORDER BY decided_at DESC LIMIT 100',
+            [$site->id(), $raw],
+            [ParameterType::INTEGER, ParameterType::BINARY],
+        );
+        $this->audit->log('consent.receipts_read', RequestContext::actor($request), $site->id(), 'site', $site->id());
+
+        return $this->responder->data(array_map(static fn(array $row): array => [
+            'consent_version' => Types::int($row['consent_version']),
+            'decision' => Types::string($row['decision']),
+            'decided_at' => new \DateTimeImmutable(Types::string($row['decided_at']), new \DateTimeZone('UTC'))->format(\DATE_ATOM),
+        ], $rows));
     }
 
     public function history(ServerRequestInterface $request): ResponseInterface

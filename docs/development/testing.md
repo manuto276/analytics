@@ -29,6 +29,7 @@ make ci             # exactly what .github/workflows/ci.yml runs, in the same or
 | `test-deploy` | `deploy/manual/tests` PHPUnit | `php:8.4-cli` container |
 | `test-smoke` | `deploy/manual/smoke/smoke.sh` with the newest package | managed-host containers |
 | `test-image` | production images + `compose.prod.yml` health check | prod compose |
+| `test-wordpress` | plugin unit tests + a real WordPress smoke (nightly in CI) | `php:8.4-cli` + WordPress compose |
 | `lint` | PHP-CS-Fixer, ESLint, actionlint, hadolint, shellcheck | mixed |
 
 The test database is `analytics_test` on the stack's MySQL
@@ -41,8 +42,28 @@ with `innodb_flush_log_at_trx_commit=0`: the data is disposable.
 ```bash
 make e2e-setup                       # stack + migrations + admin + site + fixtures/site-key.js
 make test-e2e
-make test-e2e E2E_ARGS="--project=chromium tests/smoke.spec.ts"
+make test-e2e E2E_ARGS="--project=chromium tests/consent.spec.ts"
+make test-e2e E2E_ARGS="--grep @tracker"
+make e2e-snapshots                   # regenerate the screenshot baselines
 ```
+
+The suite covers the scenarios of plan §13.2: sign-in and TOTP enrolment,
+invitations and role restrictions, site creation, base-level tracking through
+the fixtures (including the forbidden origin and the first-party proxy),
+`rollup:run` → Overview/Pages/Sources/realtime, the whole consent life cycle
+(accept, shared `an_vid` across subdomains, reject, material change, reopen,
+`/t/forget`), server-side conversions with attribution, `customer_ref`
+follow-ups, funnels and the cost import that produces CAC/ROAS, axe audits in
+both languages and two screenshot baselines. `services/e2e/README.md` lists
+every spec and the helpers behind them.
+
+Because the Playwright image has no docker client, operator commands
+(`rollup:run`, `api-key:create`, `dev:seed`, …) reach the application through a
+test-only **console bridge**: a small PHP server
+(`services/e2e/support/console-bridge.php`) running in the `console` service of
+the test stack, reachable only on the compose network and limited to an
+allow-list of commands. It exists solely in `compose.test.yml` and is never part
+of a release.
 
 `e2e-setup` (`deploy/docker/scripts/e2e-setup.sh`) is idempotent. It creates the
 first admin with `bin/analytics user:create-admin` and one site with the domain
@@ -103,8 +124,48 @@ backend).
 
 ## Known gaps
 
-- `tests/Migrations` is still empty, so `make test-migrations` fails with
-  "No tests executed" until the migration suite lands (plan M1).
-- `mutation` needs `infection/infection` in the API's dev dependencies; the
-  target and the nightly job skip with a warning while it is missing.
-- `perf` (k6) expects `services/e2e/perf/collect.js`, which arrives with M12.
+- `perf` (k6) expects `services/e2e/perf/collect.js`, which does not exist yet; the target prints a
+  message and skips.
+- **Mutation testing is unavailable**: `infection/infection` cannot be installed next to PHPUnit 13
+  (it requires `sebastian/diff` < 8, PHPUnit 13 pulls 8). `make mutation` and the nightly job skip
+  with a warning until Infection supports PHPUnit 13.
+- `test-tracker-browser` is `test-e2e` filtered by `--grep @tracker`, so it only runs what the e2e
+  specs have tagged.
+- Two dashboard issues are allow-listed in the e2e suite until they are fixed, each with a comment
+  next to the allowance: muted `[data-slot="label"]` text below 4.5:1 contrast (`a11y.spec.ts`) and a
+  wrong MFA code returning to the password form instead of showing "Invalid code" (`auth.spec.ts`).
+  WebKit alone also reports the consent banner buttons as low contrast, because axe cannot read
+  styles adopted into a shadow root there.
+- Screenshot baselines (`services/e2e/tests/visual.spec.ts-snapshots/`) were generated in the
+  Playwright container on arm64; if another architecture reports small antialiasing differences,
+  regenerate them with `make e2e-snapshots` and commit the result.
+- Beacons sent while a page is going away are best-effort, so tracking assertions use a floor
+  ("at least N batches") rather than exact counts.
+
+## Writing a test
+
+| Kind | Where | Base class / helper |
+|---|---|---|
+| Pure logic | `services/api/tests/Unit` | plain `PHPUnit\Framework\TestCase` |
+| Database behaviour | `services/api/tests/Integration` | `Analytics\Tests\Support\IntegrationTestCase` |
+| HTTP behaviour | `services/api/tests/Functional` | `Analytics\Tests\Support\HttpTestCase` |
+| Schema | `services/api/tests/Migrations` | `MigrationsTest` |
+| Tracker | `services/tracker/test/*.test.ts` | helpers in `test/helpers.ts` |
+| Browser | `services/e2e/tests/*.spec.ts` | Playwright |
+| Deploy console | `deploy/manual/tests` | `DeployTestCase` |
+
+Support classes worth knowing:
+
+- `Analytics\Tests\Support\Factory` — builders for sites, users, invitations, API keys, consent
+  configurations;
+- `Analytics\Tests\Support\Payloads` — tracking payload v1 builders (`pageview`, `event`,
+  `engagement`, `consentStat`, `consentUpgrade`, `batch`);
+- `Analytics\Tests\Support\Scenario\SeededDataset` — a deterministic multi-channel dataset shared
+  by the integration and reporting tests;
+- `HttpTestCase` — `request()`, `get()`, `collect()`, `assertStatus()`, `assertProblem()`, a frozen
+  clock, and OpenAPI validation of every request and response (disable per test with
+  `$this->validateOpenApi = false`).
+
+The clock is frozen in the test environment (`APP_TEST_CLOCK`, honoured only when `APP_ENV=test`), so
+tests can assert on exact days and on time-based behaviour such as the 30-minute visit timeout and the
+13-month retention cutoff.

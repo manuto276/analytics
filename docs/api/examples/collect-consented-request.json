@@ -1,0 +1,27 @@
+{
+  "_comment": "A cookie-level batch: the visitor has accepted, so vid/sid are present and a consent upgrade (cu) carries the landing page of this page load. The consent statistic (cs) is always sent at base level, in a separate request.",
+  "v": 1,
+  "k": "pk_XXXXXXXXXXXXXXXXXXXXX",
+  "l": "c",
+  "vid": "AbCdEfGhIjKlMnOpQr_-12",
+  "sid": "ZyXwVuTsRqPoNmLkJi_-34",
+  "cv": 3,
+  "sw": 390,
+  "e": [
+    {
+      "id": "cEYyZ0xrWnNUMXdt",
+      "t": "cu",
+      "u": "https://www.example.com/pricing",
+      "lu": "https://www.example.com/pricing?utm_source=newsletter&utm_medium=email",
+      "lr": "https://mail.example.org/",
+      "a": 0
+    },
+    {
+      "id": "ampuVDh2RmVXcTRz",
+      "t": "pv",
+      "u": "https://www.example.com/checkout",
+      "r": "https://www.example.com/pricing",
+      "a": 0
+    }
+  ]
+}

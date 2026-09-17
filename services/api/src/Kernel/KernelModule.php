@@ -24,8 +24,9 @@ final class KernelModule extends Module
     public function rootRoutes(RouteCollectorProxyInterface $group): void
     {
         $group->get('/robots.txt', [Http\SpaFallbackAction::class, 'robots']);
+        $group->post('/_ops/opcache-reset', [Http\OpsController::class, 'resetOpcache']);
         // Anything that is not the API or the tracker falls back to the dashboard SPA.
-        $group->get('/{path:(?!api/|t/).*}', Http\SpaFallbackAction::class);
+        $group->get('/{path:(?!api/|t/|_ops/).*}', Http\SpaFallbackAction::class);
     }
 
     public function commands(): array

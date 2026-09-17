@@ -1,0 +1,16 @@
+{
+  "_comment": "Body of POST /api/v1/server/sites/{publicKey}/conversions. Send one object or an array of at most 100.",
+  "id": "order-8812",
+  "name": "purchase",
+  "occurred_at": "2026-09-17T10:00:00Z",
+  "visitor_id": "AbCdEfGhIjKlMnOpQr_-12",
+  "customer_ref": "customer-42",
+  "value": { "amount_minor": 4900, "currency": "EUR" },
+  "props": { "plan": "pro" },
+  "declared_source": {
+    "utm_source": "newsletter",
+    "utm_medium": "email",
+    "utm_campaign": "september",
+    "channel": "email"
+  }
+}

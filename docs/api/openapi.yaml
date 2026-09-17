@@ -862,6 +862,38 @@ paths:
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
         '422': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/consent/receipts:
+    parameters:
+      - $ref: '#/components/parameters/SiteId'
+      - { name: visitor_id, in: query, required: true, description: The visitor id the person gives you (an_vid cookie), schema: { type: string, pattern: '^[A-Za-z0-9_-]{22}$' } }
+    get:
+      tags: [consent]
+      summary: Proof of consent for one visitor (site admin; only when consent receipts are enabled)
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [consent_version, decision, decided_at]
+                      properties:
+                        consent_version: { type: integer }
+                        decision: { type: string, enum: [accept] }
+                        decided_at: { type: string, format: date-time }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+
   /sites/{siteId}/consent/history:
     parameters:
       - $ref: '#/components/parameters/SiteId'

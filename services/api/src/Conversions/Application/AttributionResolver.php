@@ -46,6 +46,21 @@ final readonly class AttributionResolver
         ];
         $at = $occurredAt->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s.v');
 
+        if ($customerRefHash !== null) {
+            $previous = $this->connection->fetchAssociative(
+                "SELECT attr_touch_id, attr_touched_at, attr_channel, attr_source, attr_utm_source, attr_utm_medium, attr_utm_campaign,
+                        lnd_touch_id, lnd_touched_at, lnd_channel, lnd_source, lnd_utm_source, lnd_utm_medium, lnd_utm_campaign
+                   FROM conversions
+                  WHERE site_id = ? AND customer_ref = ? AND attr_channel <> 'unattributed'
+                  ORDER BY occurred_at ASC, id ASC LIMIT 1",
+                [$siteId, $customerRefHash],
+                [ParameterType::INTEGER, ParameterType::BINARY],
+            );
+            if (\is_array($previous)) {
+                return array_merge($unattributed, $previous, ['attr_via' => 'customer_ref', 'attr_model_version' => self::MODEL_VERSION]);
+            }
+        }
+
         if ($visitorId !== null) {
             $first = $this->touch($siteId, $visitorId, $at, true);
             $last = $this->touch($siteId, $visitorId, $at, false);
@@ -67,21 +82,6 @@ final readonly class AttributionResolver
                     'lnd_utm_medium' => $last['utm_medium'] ?? null,
                     'lnd_utm_campaign' => $last['utm_campaign'] ?? null,
                 ]);
-            }
-        }
-
-        if ($customerRefHash !== null) {
-            $previous = $this->connection->fetchAssociative(
-                "SELECT attr_touch_id, attr_touched_at, attr_channel, attr_source, attr_utm_source, attr_utm_medium, attr_utm_campaign,
-                        lnd_touch_id, lnd_touched_at, lnd_channel, lnd_source, lnd_utm_source, lnd_utm_medium, lnd_utm_campaign
-                   FROM conversions
-                  WHERE site_id = ? AND customer_ref = ? AND attr_channel <> 'unattributed'
-                  ORDER BY occurred_at ASC, id ASC LIMIT 1",
-                [$siteId, $customerRefHash],
-                [ParameterType::INTEGER, ParameterType::BINARY],
-            );
-            if (\is_array($previous)) {
-                return array_merge($unattributed, $previous, ['attr_via' => 'customer_ref', 'attr_model_version' => self::MODEL_VERSION]);
             }
         }
 

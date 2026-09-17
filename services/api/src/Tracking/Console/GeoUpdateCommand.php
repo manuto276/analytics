@@ -17,8 +17,6 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[AsCommand(name: 'geo:update', description: 'Downloads the DB-IP Lite Country database (CC BY 4.0) and swaps it in atomically')]
 final class GeoUpdateCommand extends Command
 {
-    public const string DEFAULT_URL = 'https://download.db-ip.com/free/dbip-country-lite-%s.mmdb.gz';
-
     public function __construct(private readonly Settings $settings, private readonly JobRunner $jobs, private readonly ClockInterface $clock)
     {
         parent::__construct();
@@ -40,8 +38,7 @@ final class GeoUpdateCommand extends Command
             return self::SUCCESS;
         }
         $urlOption = $input->getOption('url');
-        $envUrl = getenv('GEO_DB_URL');
-        $template = \is_string($urlOption) ? $urlOption : (\is_string($envUrl) && $envUrl !== '' ? $envUrl : self::DEFAULT_URL);
+        $template = \is_string($urlOption) && $urlOption !== '' ? $urlOption : $this->settings->geoDbUrl;
 
         $result = $this->jobs->run('geo:update', function () use ($template, $target, $now): array {
             $dir = \dirname($target);

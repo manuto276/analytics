@@ -213,8 +213,6 @@ final class Version20260917000002 extends AbstractMigration
             rejected INT UNSIGNED NOT NULL DEFAULT 0,
             dismissed INT UNSIGNED NOT NULL DEFAULT 0,
             reopened INT UNSIGNED NOT NULL DEFAULT 0,
-            changed_to_accept INT UNSIGNED NOT NULL DEFAULT 0,
-            changed_to_reject INT UNSIGNED NOT NULL DEFAULT 0,
             PRIMARY KEY (site_id, day, consent_version)
         ) {$o}");
 

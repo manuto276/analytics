@@ -1,0 +1,34 @@
+{
+  "_comment": "Body of POST /t/e, sent as text/plain by navigator.sendBeacon. Shape taken from Analytics\\Tests\\Support\\Payloads and services/tracker/src/collector.ts. Schema: ../tracking-payload.v1.schema.json. The _comment key itself is not part of the payload (additionalProperties is false).",
+  "v": 1,
+  "k": "pk_XXXXXXXXXXXXXXXXXXXXX",
+  "l": "b",
+  "cv": 0,
+  "sw": 1440,
+  "e": [
+    {
+      "id": "Yk5tQXJEd0hLbFZ6",
+      "t": "pv",
+      "u": "https://www.example.com/pricing?utm_source=newsletter&utm_medium=email&gclid=zzz",
+      "r": "https://mail.example.org/",
+      "a": 0,
+      "ck": "author:7"
+    },
+    {
+      "id": "M3ZIb0pSc1BkQ2Ux",
+      "t": "ev",
+      "u": "https://www.example.com/pricing",
+      "n": "signup_click",
+      "p": { "plan": "pro" },
+      "a": 420
+    },
+    {
+      "id": "d1FsTmJ4WHkyR2sw",
+      "t": "en",
+      "u": "https://www.example.com/pricing",
+      "ms": 15432,
+      "sp": 80,
+      "a": 1200
+    }
+  ]
+}
