@@ -88,6 +88,13 @@ it is stored separately for exactly that reason — **LEGAL REVIEW**, see
 `shown`, `accepted`, `rejected`, `dismissed`, `reopened` per `(site, day, consent_version)`. This is
 how acceptance rates are measured without recording who decided what. Retention 13 months.
 
+### `consent_stat_uids` — idempotency keys for those counters
+
+`(site_id, local_day, event_uid)`, nothing else. The event uid is the random 12-byte identifier the
+tracker generates per event; it carries no information about the visitor or the page and is never
+joined to anything. It exists only so a retried beacon cannot inflate the acceptance rate. Partitioned
+by month and purged with the same 13-month window as the raw tables.
+
 ### `consent_receipts` — optional, off by default
 
 `visitor_id`, `consent_version`, `decision`, `decided_at`, written on a consent upgrade when the site

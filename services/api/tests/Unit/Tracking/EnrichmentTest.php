@@ -11,6 +11,7 @@ use Analytics\Tracking\Application\Enrichment\PiiScrubber;
 use Analytics\Tracking\Application\Enrichment\ReferrerClassifier;
 use Analytics\Tracking\Application\Enrichment\UrlSanitizer;
 use Analytics\Tracking\Application\Enrichment\UserAgentClassifier;
+use Analytics\Tracking\Application\Payload\PayloadParser;
 use Analytics\Tracking\Application\VisitorHasher;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -55,6 +56,30 @@ final class EnrichmentTest extends TestCase
         self::assertSame('call [phone]', PiiScrubber::scrub('call +39 (02) 1234-5678'));
         self::assertSame('order [number]', PiiScrubber::scrub('order 1234567890123'));
         self::assertSame('/2026/09/17/post-12345', PiiScrubber::scrubPath('/2026/09/17/post-12345'));
+    }
+
+    /**
+     * A property key is validated at ingest and scrubbed afterwards, and the substitution is not
+     * bound by the length of what it replaces. Whatever comes out has to fit
+     * `rollup_events_daily.prop_key`, or that key fails the whole (site, day) rollup for ever.
+     */
+    public function testPropKeysComeOutOfTheScrubberStorable(): void
+    {
+        // The ingest limit is also the width of the column that stores the key.
+        $max = PayloadParser::MAX_PROP_KEY;
+
+        // Rewritten and still storable: the brackets are data to the JSON path the rollup builds.
+        self::assertSame('user[number]', PiiScrubber::scrubPropKey('user1234567890', $max));
+        self::assertSame('plan', PiiScrubber::scrubPropKey('plan', $max));
+        self::assertLessThanOrEqual($max, \strlen((string) PiiScrubber::scrubPropKey(str_repeat('9', $max), $max)));
+
+        // A substitution can be longer than what it replaces: 6 characters in, 7 out.
+        self::assertSame('[email]', PiiScrubber::scrub('a@b.co'));
+        self::assertNull(PiiScrubber::scrubPropKey('a@b.co', 6), 'a key that grew past the limit cannot be stored');
+        self::assertNull(PiiScrubber::scrubPropKey('order1234567890', 8));
+        self::assertNull(PiiScrubber::scrubPropKey(str_repeat('k', $max + 1), $max));
+        // The empty key is the rollup's "no property" marker row, so it can never be a real key.
+        self::assertNull(PiiScrubber::scrubPropKey('', $max));
     }
 
     /** @return iterable<string, array{string, ?string, string, ?string}> */

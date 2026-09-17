@@ -131,6 +131,32 @@ final class CollectTest extends HttpTestCase
         self::assertSame(0, (int) $visits[0]['is_bounce'], 'an interaction event is not a bounce');
     }
 
+    /**
+     * `cs` events never reach events_raw, so their idempotency comes from consent_stat_uids.
+     * The tracker retries a sendBeacon on a network error or a 5xx; the acceptance rate is the one
+     * number in the product with a compliance meaning, so a retry must not move it.
+     */
+    public function testConsentStatisticsAreCountedOncePerEventUid(): void
+    {
+        $batch = Payloads::batch($this->site->publicKey, [Payloads::consentStat('shown'), Payloads::consentStat('accept')]);
+        for ($i = 0; $i < 5; ++$i) {
+            $this->assertStatus(202, $this->collect($batch));
+        }
+
+        $stats = $this->db->fetchAssociative('SELECT shown, accepted FROM consent_stats_daily WHERE site_id = ?', [$this->site->id()]);
+        self::assertSame(['shown' => 1, 'accepted' => 1], array_map('intval', (array) $stats));
+        self::assertSame(2, (int) $this->db->fetchOne('SELECT COUNT(*) FROM consent_stat_uids WHERE site_id = ?', [$this->site->id()]));
+        self::assertSame(0, (int) $this->db->fetchOne('SELECT COUNT(*) FROM events_raw WHERE site_id = ?', [$this->site->id()]), 'cs events are counters only');
+
+        // A consent-stat-only batch still changes the consent report of that day.
+        self::assertSame(1, (int) $this->db->fetchOne('SELECT COUNT(*) FROM rollup_dirty WHERE site_id = ? AND day = ?', [$this->site->id(), '2026-09-17']));
+
+        // Fresh uids keep counting.
+        $this->collect(Payloads::batch($this->site->publicKey, [Payloads::consentStat('shown'), Payloads::consentStat('reject')]));
+        $stats = $this->db->fetchAssociative('SELECT shown, accepted, rejected FROM consent_stats_daily WHERE site_id = ?', [$this->site->id()]);
+        self::assertSame(['shown' => 2, 'accepted' => 1, 'rejected' => 1], array_map('intval', (array) $stats));
+    }
+
     public function testThirtyMinuteInactivityStartsANewVisit(): void
     {
         $key = $this->site->publicKey;

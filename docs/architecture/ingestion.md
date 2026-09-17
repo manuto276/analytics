@@ -66,7 +66,7 @@ Limits enforced by the parser:
 | Events per batch | 50 → `400 too_many_events` |
 | URL length | 2048 characters; scheme must be http/https and a host must be present |
 | Event name | `/^[a-z0-9_:.-]{1,64}$/` |
-| Props | 10 keys, key ≤ 32 bytes, string value ≤ 100 characters, scalars only |
+| Props | 10 keys, key matching `/^[A-Za-z0-9_:.-]{1,32}$/` (`PROP_KEY_PATTERN`), string value ≤ 100 characters, scalars only |
 | Content key | `/^[A-Za-z0-9_:.\/-]{1,128}$/` |
 | Age `a` | clamped to `[0, 86 400 000]` ms |
 | Engagement `ms` | clamped to `[0, 86 400 000]`; `sp` clamped to `[0, 100]` |
@@ -77,6 +77,12 @@ Structural problems reject the whole batch (`invalid_payload`, `unsupported_vers
 `PayloadParser::$dropped`. Duplicate `id` values inside one batch are dropped too.
 
 A `c` payload with a missing or malformed `vid`/`sid` is **downgraded to base level**, not rejected.
+
+A property key outside the allow-list (an empty key, a key over 32 bytes, anything containing a
+quote, a backslash, a space or a non-ASCII character) drops the **whole event**, like every other
+malformed property. The allow-list is deliberately narrow: property keys are interpolated into a
+MySQL JSON path (`JSON_EXTRACT(props, CONCAT('$."', prop_key, '"'))`) when the event rollups are
+built, and the empty key is reserved as the "no property" marker row of `rollup_events_daily`.
 
 Tests: `Analytics\Tests\Unit\Tracking\PayloadParserTest` (including a seeded fuzz case).
 
@@ -185,6 +191,21 @@ a visit. `cu` (consent upgrade) is special: when the new cookie-level key has no
 base-level visitor hash does, the existing base visit is **upgraded in place** (`level = 'c'`,
 `visitor_id` filled) instead of a second visit being created.
 
+**Claiming the key.** When the lookup row does not exist yet, the read protects nothing: under READ
+COMMITTED InnoDB takes no gap lock, so two simultaneous requests of one visitor would both see "no
+visit", both start one, and both upsert the same `visit_lookup` primary key without any unique
+violation (which is why the deadlock retry loop never caught it). Before starting a visit the handler
+therefore claims the key with a single `INSERT IGNORE INTO visit_lookup … VALUES (…, 0, …)`; the
+primary key serialises the racers, because a concurrent, still uncommitted insert of the same key
+blocks that statement until the other transaction ends. One row is inserted → this request won and
+creates the visit, writing its id over the placeholder before committing (no other connection can
+read an uncommitted row, so the placeholder is never observable). Zero rows → another request won;
+its row is re-read (locked, ignoring the in-request memo) and the rules above are applied once more,
+so the event joins the winner's visit instead of duplicating it.
+
+Test: `Analytics\Tests\Integration\Tracking\ConcurrentVisitTest`, which races a second OS process
+against the request.
+
 Per visit the handler accumulates `pageviews`, `events`, `engagement_ms`, the last activity, the exit
 page hash, and recomputes `is_bounce = (pageviews <= 1 AND events = 0)`.
 
@@ -211,11 +232,13 @@ One transaction per site batch, `READ COMMITTED`, retried up to 4 times on a dea
 violation with a randomised backoff. In order:
 
 1. drop drafts whose `event_uid` already exists for that site and day;
-2. resolve visits (`SELECT … FOR UPDATE` on `visit_lookup`);
+2. resolve visits (`SELECT … FOR UPDATE` on `visit_lookup`, then `INSERT IGNORE` to claim a key that
+   does not exist yet);
 3. `INSERT IGNORE INTO events_raw` in chunks of 100 rows;
 4. update the visit aggregates;
 5. upsert `visit_lookup`;
-6. increment `consent_stats_daily` counters;
+6. `INSERT IGNORE` the uids of the `cs` events into `consent_stat_uids` and increment the
+   `consent_stats_daily` counters of the uids that were really inserted;
 7. `INSERT … ON DUPLICATE KEY UPDATE` into `rollup_dirty` for each touched local day.
 
 `INGEST_MODE=queue` → `RedisQueueEventSink` `RPUSH`es the JSON drafts onto the Redis list `an:ingest`
@@ -231,13 +254,22 @@ counters are not incremented twice). A client that retries a `sendBeacon` — wh
 a network error or a 5xx — therefore cannot double-count. Event uids are 12 random bytes generated in
 the browser.
 
-Test: `Analytics\Tests\Functional\Tracking\CollectTest::testBatchesAreIdempotent`.
+`cs` events are counters only and are never written to `events_raw`, so that guard cannot cover them.
+They get the same guarantee from `consent_stat_uids`, keyed by `(site_id, local_day, event_uid)`: the
+uids of the batch are `INSERT IGNORE`d and only the ones actually inserted are counted. The table is
+raw data — partitioned by month and purged after `RETENTION_MONTHS` like `events_raw` and `visits`.
+
+Tests: `Analytics\Tests\Functional\Tracking\CollectTest::testBatchesAreIdempotent` and
+`::testConsentStatisticsAreCountedOncePerEventUid`.
 
 ## 10. Consent upgrade and consent statistics
 
 - `cs` events are counters only. They are always sent at base level, never create or join a visit, are
   exempt from the path exclusion list and from the "base tracking disabled" switch, and land in
-  `consent_stats_daily` keyed by `(site_id, day, consent_version)`.
+  `consent_stats_daily` keyed by `(site_id, day, consent_version)`. Each uid is counted once
+  (`consent_stat_uids`, see §9), and a day whose counters moved is marked dirty so the cached consent
+  report is not served past the change — `rollup:run` bumps the site's `rollup_version`, which is
+  what the report cache is keyed by.
 - `cu` is sent once, right after an "accept", at cookie level. It upgrades the visit, creates the
   visitor and the first touch, and — when `consent_receipts_enabled` — writes a `consent_receipts`
   row.

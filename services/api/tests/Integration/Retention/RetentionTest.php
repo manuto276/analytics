@@ -65,6 +65,35 @@ final class RetentionTest extends IntegrationTestCase
         }
     }
 
+    /**
+     * consent_stat_uids is raw data (one row per counted `cs` event uid) and follows the same
+     * 13-month rule and the same monthly partitioning as events_raw and visits.
+     */
+    public function testPurgeRemovesOldConsentStatisticIdempotencyKeys(): void
+    {
+        $site = $this->factory->site([], ['www.example.com']);
+        $partitions = $this->service(PartitionManager::class);
+        $old = $this->clock->now()->modify('-14 months');
+        $partitions->ensurePastMonths($old->modify('-1 month'));
+        self::assertContains('consent_stat_uids', Partitioning::PARTITIONED_TABLES);
+        self::assertArrayHasKey(Partitioning::partitionName($old), $partitions->partitions('consent_stat_uids'));
+
+        foreach ([$old->format('Y-m-d'), $this->clock->now()->format('Y-m-d')] as $day) {
+            $this->db->insert(
+                'consent_stat_uids',
+                ['site_id' => $site->id(), 'local_day' => $day, 'event_uid' => random_bytes(12)],
+                ['event_uid' => \Doctrine\DBAL\ParameterType::BINARY],
+            );
+        }
+
+        $stats = $this->service(RetentionPurger::class)->purge();
+
+        self::assertArrayHasKey('consent_stat_uids', $stats);
+        self::assertSame(0, (int) $this->db->fetchOne('SELECT COUNT(*) FROM consent_stat_uids WHERE local_day = ?', [$old->format('Y-m-d')]));
+        self::assertSame(1, (int) $this->db->fetchOne('SELECT COUNT(*) FROM consent_stat_uids'), 'recent keys stay');
+        self::assertArrayNotHasKey(Partitioning::partitionName($old), $partitions->partitions('consent_stat_uids'));
+    }
+
     public function testPurgeRefusesWhenDaysStillNeedARollup(): void
     {
         $site = $this->factory->site([], ['www.example.com']);

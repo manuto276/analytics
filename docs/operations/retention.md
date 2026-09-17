@@ -12,6 +12,7 @@ The command is `bin/analytics retention:purge`, run daily from cron
 |---|---|---|---|
 | `events_raw` | `RETENTION_MONTHS` | `local_day` | drop whole monthly partitions, then chunked delete for the rest |
 | `visits` | `RETENTION_MONTHS` | `local_day` | same |
+| `consent_stat_uids` | `RETENTION_MONTHS` | `local_day` | drop whole monthly partitions, then chunked delete for the rest |
 | `visit_lookup` | `RETENTION_MONTHS` | `visit_day` | chunked delete |
 | `attribution_touches` | `RETENTION_MONTHS` | `touched_at` | chunked delete |
 | `conversions` | `RETENTION_MONTHS` | `local_day` | chunked delete |

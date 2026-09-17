@@ -139,7 +139,13 @@ final readonly class CollectService
 
         $props = [];
         foreach ($event->props as $key => $value) {
-            $props[PiiScrubber::scrub($key)] = \is_string($value) ? PiiScrubber::scrub($value) : $value;
+            // Scrubbing runs after parsing and rewrites the key, so what is stored has to be checked
+            // against the column that stores it, not against the key the parser accepted.
+            $scrubbed = PiiScrubber::scrubPropKey($key, PayloadParser::MAX_PROP_KEY);
+            if ($scrubbed === null) {
+                continue;
+            }
+            $props[$scrubbed] = \is_string($value) ? PiiScrubber::scrub($value) : $value;
         }
 
         return new EventDraft(

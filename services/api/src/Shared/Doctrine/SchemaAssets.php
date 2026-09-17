@@ -19,6 +19,7 @@ final class SchemaAssets
         'attribution_touches',
         'conversions',
         'consent_stats_daily',
+        'consent_stat_uids',
         'consent_receipts',
         'rollup_dirty',
         'job_runs',

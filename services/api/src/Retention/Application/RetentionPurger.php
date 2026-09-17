@@ -50,6 +50,7 @@ final readonly class RetentionPurger
             'events_raw' => 0,
             'visits' => 0,
             'visit_lookup' => 0,
+            'consent_stat_uids' => 0,
             'visitors' => 0,
             'attribution_touches' => 0,
             'conversions' => 0,
@@ -69,7 +70,7 @@ final readonly class RetentionPurger
             return $stats;
         }
 
-        foreach (['events_raw', 'visits'] as $table) {
+        foreach (['events_raw', 'visits', 'consent_stat_uids'] as $table) {
             if ($this->partitions->enabled() && $this->partitions->isPartitioned($table)) {
                 $dropped = $this->partitions->dropBefore($table, $cutoff);
                 $stats['dropped_partitions'] = array_merge($stats['dropped_partitions'], $dropped);

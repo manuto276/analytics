@@ -10,7 +10,7 @@ namespace Analytics\Shared\Doctrine;
  */
 final class Partitioning
 {
-    public const array PARTITIONED_TABLES = ['events_raw', 'visits'];
+    public const array PARTITIONED_TABLES = ['events_raw', 'visits', 'consent_stat_uids'];
 
     /** Set from Settings when the container is built; migrations run outside the container's reach. */
     private static ?bool $enabled = null;

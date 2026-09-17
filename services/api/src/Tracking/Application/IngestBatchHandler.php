@@ -106,13 +106,12 @@ final class IngestBatchHandler
     private function process(SiteSnapshot $site, array $drafts): int
     {
         $drafts = $this->withoutDuplicates($site->id, $drafts);
-        $consentCounters = [];
+        $consentStats = [];
 
         foreach ($drafts as $draft) {
             if ($draft->type === EventType::ConsentStat) {
                 if ($draft->consentStat !== null) {
-                    $key = $draft->localDay . '|' . $draft->consentVersion;
-                    $consentCounters[$key][$draft->consentStat->column()] = ($consentCounters[$key][$draft->consentStat->column()] ?? 0) + 1;
+                    $consentStats[] = $draft;
                 }
                 continue;
             }
@@ -137,16 +136,16 @@ final class IngestBatchHandler
         $this->insertEvents($site->id);
         $this->flushVisits($site->id);
         $this->flushLookups($site->id);
-        foreach ($consentCounters as $key => $columns) {
-            [$day, $version] = explode('|', $key);
-            $this->incrementConsentStats($site->id, $day, (int) $version, $columns);
-        }
+        $this->countConsentStats($site->id, $consentStats);
         $this->markDirty($site->id);
 
         return \count($this->rows);
     }
 
     /**
+     * Drops drafts whose uid is already stored, so a retried batch cannot increment a counter twice.
+     * Consent statistics never reach events_raw and have their own uid table (countConsentStats()).
+     *
      * @param list<EventDraft> $drafts
      *
      * @return list<EventDraft>
@@ -181,6 +180,44 @@ final class IngestBatchHandler
     private function resolveVisit(SiteSnapshot $site, EventDraft $draft, string $key): array
     {
         $lookup = $this->lookup($site->id, $key);
+        $reused = $this->reuseVisit($site, $draft, $key, $lookup);
+        if ($reused !== null) {
+            return [$reused, false];
+        }
+
+        if ($draft->type === EventType::Engagement) {
+            return [null, false];
+        }
+
+        if ($lookup === null && !$this->claimVisitorKey($site->id, $key, $draft)) {
+            // Somebody else claimed the key first and has committed by now (our claim waited on
+            // their row lock): their visit may well be the one this event belongs to, so re-read
+            // the row — locked and bypassing the memo — and apply the rules once more.
+            $reused = $this->reuseVisit($site, $draft, $key, $this->lookup($site->id, $key, true));
+            if ($reused !== null) {
+                return [$reused, false];
+            }
+        }
+
+        $visitId = $this->startVisit($site, $draft);
+        $this->lookups[$key] = ['visit_id' => $visitId, 'visit_day' => $draft->localDay, 'last' => $draft->occurredAt, 'source_key' => $draft->sourceKey, 'level' => $draft->level->value, 'dirty' => true];
+        if ($draft->level === TrackingLevel::Consented && $draft->visitorId !== null) {
+            $this->recordConsentedVisit($site, $draft, $visitId);
+        }
+
+        return [$visitId, $draft->type === EventType::Pageview || $draft->type === EventType::ConsentUpgrade];
+    }
+
+    /**
+     * Decides whether $draft joins the visit $lookup points at (or, for a consent upgrade, the base
+     * visit of the same page load) and records the resulting change in the in-memory lookup.
+     *
+     * @param array{visit_id: int, visit_day: string, last: \DateTimeImmutable, source_key: ?string, level: string, dirty?: true}|null $lookup
+     *
+     * @return int|null the visit to reuse, null when a new visit has to be started
+     */
+    private function reuseVisit(SiteSnapshot $site, EventDraft $draft, string $key, ?array $lookup): ?int
+    {
         $active = $lookup !== null
             && $lookup['visit_day'] === $draft->localDay
             && $draft->occurredAt->getTimestamp() - $lookup['last']->getTimestamp() <= self::VISIT_TIMEOUT_SECONDS;
@@ -196,41 +233,59 @@ final class IngestBatchHandler
                 $this->lookups[$key] = ['visit_id' => $base['visit_id'], 'visit_day' => $base['visit_day'], 'last' => $draft->occurredAt, 'source_key' => $base['source_key'], 'level' => 'c', 'dirty' => true];
                 $this->upgradeVisit($site, $base['visit_id'], $base['visit_day'], $draft);
 
-                return [$base['visit_id'], false];
+                return $base['visit_id'];
             }
         }
 
-        if ($active) {
-            \assert($lookup !== null);
-            if ($draft->occurredAt > $lookup['last']) {
-                $this->lookups[$key]['last'] = $draft->occurredAt;
-            }
-            $this->lookups[$key]['dirty'] = true;
-            if ($draft->type === EventType::ConsentUpgrade && $lookup['level'] !== 'c') {
-                $this->upgradeVisit($site, $lookup['visit_id'], $lookup['visit_day'], $draft);
-                $this->lookups[$key]['level'] = 'c';
-            }
-
-            return [$lookup['visit_id'], false];
+        if (!$active) {
+            return null;
+        }
+        \assert($lookup !== null);
+        $this->lookups[$key] = $lookup;
+        if ($draft->occurredAt > $lookup['last']) {
+            $this->lookups[$key]['last'] = $draft->occurredAt;
+        }
+        $this->lookups[$key]['dirty'] = true;
+        if ($draft->type === EventType::ConsentUpgrade && $lookup['level'] !== 'c') {
+            $this->upgradeVisit($site, $lookup['visit_id'], $lookup['visit_day'], $draft);
+            $this->lookups[$key]['level'] = 'c';
         }
 
-        if ($draft->type === EventType::Engagement) {
-            return [null, false];
-        }
-
-        $visitId = $this->startVisit($site, $draft);
-        $this->lookups[$key] = ['visit_id' => $visitId, 'visit_day' => $draft->localDay, 'last' => $draft->occurredAt, 'source_key' => $draft->sourceKey, 'level' => $draft->level->value, 'dirty' => true];
-        if ($draft->level === TrackingLevel::Consented && $draft->visitorId !== null) {
-            $this->recordConsentedVisit($site, $draft, $visitId);
-        }
-
-        return [$visitId, $draft->type === EventType::Pageview || $draft->type === EventType::ConsentUpgrade];
+        return $lookup['visit_id'];
     }
 
-    /** @return array{visit_id: int, visit_day: string, last: \DateTimeImmutable, source_key: ?string, level: string, dirty?: true}|null */
-    private function lookup(int $siteId, string $key): ?array
+    /**
+     * Claims the visitor key for this transaction with a single statement. Under READ COMMITTED
+     * InnoDB takes no gap lock, so a `SELECT … FOR UPDATE` that finds nothing does not stop a
+     * concurrent request from creating the same key: two requests of one visitor would each start a
+     * visit and then silently overwrite each other's `visit_lookup` row. The primary key of
+     * `visit_lookup` does serialise them — a concurrent, still uncommitted insert of the same key
+     * blocks this statement until that transaction ends.
+     *
+     * The placeholder visit id is replaced by flushLookups() before this transaction commits, and no
+     * other connection can read an uncommitted row, so it is never observable.
+     *
+     * @return bool true when this transaction created the row
+     */
+    private function claimVisitorKey(int $siteId, string $key, EventDraft $draft): bool
     {
-        if (\array_key_exists($key, $this->lookups)) {
+        $affected = (int) $this->connection->executeStatement(
+            'INSERT IGNORE INTO visit_lookup (site_id, visitor_key, visit_id, visit_day, last_activity_at, source_key) VALUES (?, ?, 0, ?, ?, ?)',
+            [$siteId, $key, $draft->localDay, self::ts($draft->occurredAt), $draft->sourceKey],
+            [ParameterType::INTEGER, ParameterType::BINARY, ParameterType::STRING, ParameterType::STRING, ParameterType::BINARY],
+        );
+
+        return $affected === 1;
+    }
+
+    /**
+     * @param bool $refresh re-read the row instead of answering from the per-request memo
+     *
+     * @return array{visit_id: int, visit_day: string, last: \DateTimeImmutable, source_key: ?string, level: string, dirty?: true}|null
+     */
+    private function lookup(int $siteId, string $key, bool $refresh = false): ?array
+    {
+        if (!$refresh && \array_key_exists($key, $this->lookups)) {
             return $this->lookups[$key];
         }
         $row = $this->connection->fetchAssociative(
@@ -477,6 +532,41 @@ final class IngestBatchHandler
                 [$siteId, $key, $lookup['visit_id'], $lookup['visit_day'], self::ts($lookup['last']), $lookup['source_key']],
                 [ParameterType::INTEGER, ParameterType::BINARY, ParameterType::INTEGER, ParameterType::STRING, ParameterType::STRING, ParameterType::BINARY],
             );
+        }
+    }
+
+    /**
+     * Counts consent statistics exactly once per event uid. `cs` events are counters only and are
+     * never written to events_raw, so the UNIQUE (site_id, event_uid, local_day) guard of that table
+     * cannot protect them: consent_stat_uids carries the same idempotency for them. A uid that was
+     * already counted (a retried sendBeacon) is ignored, and only days whose counters really moved
+     * are marked dirty, so a retry does not schedule a pointless rollup either.
+     *
+     * @param list<EventDraft> $drafts drafts of type ConsentStat with a non-null consentStat
+     */
+    private function countConsentStats(int $siteId, array $drafts): void
+    {
+        $counters = [];
+        foreach ($drafts as $draft) {
+            \assert($draft->consentStat !== null);
+            $affected = (int) $this->connection->executeStatement(
+                'INSERT IGNORE INTO consent_stat_uids (site_id, local_day, event_uid) VALUES (?, ?, ?)',
+                [$siteId, $draft->localDay, $draft->uid],
+                [ParameterType::INTEGER, ParameterType::STRING, ParameterType::BINARY],
+            );
+            if ($affected !== 1) {
+                continue;
+            }
+            $key = $draft->localDay . '|' . $draft->consentVersion;
+            $column = $draft->consentStat->column();
+            $counters[$key][$column] = ($counters[$key][$column] ?? 0) + 1;
+            // The consent report reads consent_stats_daily directly, but its cache is keyed by the
+            // site's rollup_version, which only a rollup run bumps: a changed day must be dirty.
+            $this->dirty[$draft->localDay] = true;
+        }
+        foreach ($counters as $key => $columns) {
+            [$day, $version] = explode('|', $key);
+            $this->incrementConsentStats($siteId, $day, (int) $version, $columns);
         }
     }
 

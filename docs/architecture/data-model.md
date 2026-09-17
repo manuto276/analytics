@@ -66,6 +66,7 @@ Site defaults (from `Analytics\Sites\Domain\Site`): `timezone=UTC`, `currency=EU
 | `attribution_touches` (D) | first visit and each non-direct entry of a consented visitor | `site_id`, `visitor_id`, `visit_id`, `visit_day`, `touched_at`, `is_first`, `channel`, `source`, `referrer_host`, `utm_*`, `landing_host`, `landing_path` | PK `id`; IDX (`site_id`,`visitor_id`,`touched_at`), `touched_at` |
 | `conversions` (D) | server-side conversions with an attribution snapshot | `site_id`, `external_id`, `name`, `origin`, `occurred_at`, `local_day`, `received_at`, `visitor_id`, `customer_ref BINARY(32)` (HMAC), `value_minor`, `currency`, `props` JSON, `attr_model_version`, `attr_via`, `attr_touch_id`, `attr_touched_at`, `attr_channel`, `attr_source`, `attr_utm_source/medium/campaign`, `lnd_*` (last non-direct), `declared_source` JSON | PK `id`; UNIQUE (`site_id`,`external_id`); IDX (`site_id`,`name`,`local_day`), (`site_id`,`local_day`), (`site_id`,`customer_ref`,`occurred_at`), (`site_id`,`visitor_id`) |
 | `consent_stats_daily` (D) | banner counters, no identifiers | `site_id`, `day`, `consent_version`, `shown`, `accepted`, `rejected`, `dismissed`, `reopened`, `changed_to_accept`, `changed_to_reject` | PK (`site_id`,`day`,`consent_version`) |
+| `consent_stat_uids` (D) | event uids of banner statistics, so a retried beacon is counted once | `site_id`, `local_day DATE`, `event_uid BINARY(12)` | PK (`site_id`,`local_day`,`event_uid`); RANGE COLUMNS(`local_day`) monthly |
 | `consent_receipts` (D) | optional per-visitor consent record | `site_id`, `visitor_id`, `consent_version`, `decision`, `decided_at` | PK `id`; IDX (`site_id`,`visitor_id`), `decided_at` |
 | `rollup_dirty` (D) | days whose rollups must be rebuilt | `site_id`, `day`, `first_marked_at`, `marked_at` | PK (`site_id`,`day`); IDX `first_marked_at` |
 | `job_runs` (D) | one row per scheduled job run | `job`, `started_at`, `finished_at`, `status`, `message`, `stats` JSON | PK `id`; IDX (`job`,`started_at`) |
@@ -124,7 +125,7 @@ Enforced by `bin/analytics retention:purge` (see [../operations/retention.md](..
 
 | Data | Window | Column used |
 |---|---|---|
-| `events_raw`, `visits` | `RETENTION_MONTHS` (default 13) | `local_day` |
+| `events_raw`, `visits`, `consent_stat_uids` | `RETENTION_MONTHS` (default 13) | `local_day` |
 | `visit_lookup` | same | `visit_day` |
 | `attribution_touches` | same | `touched_at` |
 | `conversions` | same | `local_day` |

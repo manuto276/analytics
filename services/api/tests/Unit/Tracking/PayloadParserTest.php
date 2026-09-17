@@ -97,6 +97,54 @@ final class PayloadParserTest extends TestCase
         self::assertSame(12, $parser->dropped);
     }
 
+    /** @return iterable<string, array{string, bool}> */
+    public static function propKeys(): iterable
+    {
+        yield 'plain' => ['plan', true];
+        yield 'digits and underscore' => ['plan_2', true];
+        yield 'dot, dash and colon' => ['a.b-c:d', true];
+        yield 'upper case' => ['Plan', true];
+        yield '32 bytes' => [str_repeat('k', 32), true];
+        yield 'double quote' => ['a"b', false];
+        yield 'backslash' => ['a\\b', false];
+        yield '33 bytes' => [str_repeat('k', 33), false];
+        yield 'utf-8' => ['café', false];
+        yield 'empty' => ['', false];
+        yield 'space' => ['a b', false];
+        yield 'bracket' => ['a[0]', false];
+        yield 'dollar path' => ['$.x', false];
+    }
+
+    /**
+     * A key that reaches `events_raw` ends up inside a MySQL JSON path when the event rollups are
+     * built, so anything outside the allow-list must never be stored.
+     */
+    #[DataProvider('propKeys')]
+    public function testPropKeysAreRestrictedToTheAllowList(string $key, bool $accepted): void
+    {
+        $parser = new PayloadParser();
+        $parsed = $parser->parse(Payloads::batch(self::KEY, [Payloads::event('ok', [$key => 'x'])]));
+
+        if ($accepted) {
+            self::assertCount(1, $parsed->events);
+            self::assertSame([$key => 'x'], $parsed->events[0]->props);
+            self::assertSame(0, $parser->dropped);
+        } else {
+            self::assertSame([], $parsed->events, 'the whole event is dropped');
+            self::assertSame(1, $parser->dropped);
+        }
+    }
+
+    public function testAcceptedPropKeysMatchTheJsonSchema(): void
+    {
+        foreach (self::propKeys() as $case) {
+            [$key, $accepted] = $case;
+            if ($accepted && $key !== '') {
+                self::assertValidAgainstSchema(Payloads::batch(self::KEY, [Payloads::event('ok', [$key => 'x'])]));
+            }
+        }
+    }
+
     public function testConsentedLevelWithoutIdsIsDowngraded(): void
     {
         $parsed = new PayloadParser()->parse(Payloads::batch(self::KEY, [Payloads::pageview()], 'c', ['vid' => 'nope']));

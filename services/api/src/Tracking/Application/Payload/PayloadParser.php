@@ -25,6 +25,12 @@ final class PayloadParser
     public const int MAX_AGE_MS = 86_400_000;
     public const string NAME_PATTERN = '/^[a-z0-9_:.-]{1,64}$/';
     public const string CONTENT_KEY_PATTERN = '/^[A-Za-z0-9_:.\/-]{1,128}$/';
+    /**
+     * Property keys end up inside a JSON path (`$."<key>"`) built by the rollup SQL, so they are
+     * restricted to characters that are safe there. The empty key is reserved: `rollup_events_daily`
+     * uses `prop_key = ''` as the "no property" marker row.
+     */
+    public const string PROP_KEY_PATTERN = '/^[A-Za-z0-9_:.-]{1,' . self::MAX_PROP_KEY . '}$/';
 
     /** Number of events dropped by the last parse() call. */
     public int $dropped = 0;
@@ -190,7 +196,7 @@ final class PayloadParser
         $out = [];
         foreach ($value as $key => $item) {
             $key = (string) $key;
-            if ($key === '' || \strlen($key) > self::MAX_PROP_KEY) {
+            if (preg_match(self::PROP_KEY_PATTERN, $key) !== 1) {
                 return null;
             }
             $valid = match (true) {

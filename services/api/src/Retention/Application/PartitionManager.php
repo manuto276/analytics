@@ -10,7 +10,8 @@ use Analytics\Shared\Types;
 use Doctrine\DBAL\Connection;
 
 /**
- * Monthly partitions of events_raw and visits: keeps future partitions ready and drops whole
+ * Monthly partitions of the raw tables (Partitioning::PARTITIONED_TABLES: events_raw, visits and
+ * consent_stat_uids): keeps future partitions ready and drops whole
  * months when retention passes. With DB_PARTITIONING=false everything falls back to chunked deletes.
  */
 final readonly class PartitionManager
