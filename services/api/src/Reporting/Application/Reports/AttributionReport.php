@@ -181,12 +181,13 @@ final readonly class AttributionReport
         );
         $costs = [];
         foreach ($rows as $row) {
-            $from = new \DateTimeImmutable(Types::string($row['day_from']));
-            $to = new \DateTimeImmutable(Types::string($row['day_to']));
-            $totalDays = (int) $from->diff($to)->days + 1;
-            $overlapFrom = max($from, $range->from);
-            $overlapTo = min($to, $range->to);
-            $overlapDays = (int) $overlapFrom->diff($overlapTo)->days + 1;
+            // Local days only: $range carries midnight in the site's time zone while day_from/day_to
+            // are plain dates, so clamping DateTimes of different zones (or of a zone with a DST
+            // shift inside the range) would drop a day of budget.
+            $from = Types::string($row['day_from']);
+            $to = Types::string($row['day_to']);
+            $totalDays = self::dayCount($from, $to);
+            $overlapDays = self::dayCount(max($from, $range->fromDay()), min($to, $range->toDay()));
             $amount = (int) round(Types::int($row['amount_minor']) * $overlapDays / max(1, $totalDays));
             $key = match ($group) {
                 'source' => Types::nullableString($row['utm_source']) ?? Types::string($row['channel'], 'unattributed'),
@@ -197,6 +198,13 @@ final readonly class AttributionReport
         }
 
         return $costs;
+    }
+
+    /** Inclusive number of calendar days between two YYYY-MM-DD days, counted free of any time zone. */
+    private static function dayCount(string $from, string $to): int
+    {
+        $utc = new \DateTimeZone('UTC');
+        return (int) new \DateTimeImmutable($from . ' 00:00:00', $utc)->diff(new \DateTimeImmutable($to . ' 00:00:00', $utc))->days + 1;
     }
 
     /**

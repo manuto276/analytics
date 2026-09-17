@@ -44,14 +44,17 @@ final readonly class JobRunner
             return ['status' => 'succeeded', 'stats' => $stats, 'message' => null];
         } catch (\Throwable $e) {
             $message = mb_substr($e::class . ': ' . $e->getMessage(), 0, 1000);
-            $this->logger->error('Job failed', ['job' => $name, 'error' => $message]);
+            // A job that gave up part of the way through keeps the counts it did produce, so that
+            // the failed run still tells the operator how much of it went through.
+            $stats = $e instanceof JobStats ? $e->jobStats() : [];
+            $this->logger->error('Job failed', ['job' => $name, 'error' => $message, 'stats' => $stats]);
             try {
-                $this->finish($id, 'failed', $message, []);
+                $this->finish($id, 'failed', $message, $stats);
             } catch (\Throwable) {
                 // The database may be the reason of the failure.
             }
 
-            return ['status' => 'failed', 'stats' => [], 'message' => $message];
+            return ['status' => 'failed', 'stats' => $stats, 'message' => $message];
         } finally {
             $lock->release();
         }

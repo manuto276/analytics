@@ -26,7 +26,7 @@ final readonly class JobsStatus
         $jobs = [];
         foreach (self::JOBS as $job) {
             $row = $this->connection->fetchAssociative(
-                'SELECT started_at, finished_at, status, message FROM job_runs WHERE job = ? ORDER BY started_at DESC LIMIT 1',
+                'SELECT started_at, finished_at, status, message, stats FROM job_runs WHERE job = ? ORDER BY started_at DESC LIMIT 1',
                 [$job],
             );
             $duration = null;
@@ -41,6 +41,9 @@ final readonly class JobsStatus
                 'last_status' => \is_array($row) ? Types::nullableString($row['status']) : null,
                 'last_message' => \is_array($row) ? Types::nullableString($row['message']) : null,
                 'last_duration_ms' => $duration,
+                // Kept even on a failed run: a job that gave up part of the way through still says
+                // how much it managed to do.
+                'last_stats' => \is_array($row) ? self::stats(Types::nullableString($row['stats'])) : null,
             ];
         }
 
@@ -63,6 +66,24 @@ final readonly class JobsStatus
             'geo_db_age_days' => $geoAge,
             'pending_consent_drafts' => array_map(static fn(array $row): array => ['site_id' => Types::int($row['site_id']), 'site_name' => Types::string($row['name'])], $drafts),
         ];
+    }
+
+    /** @return array<string, mixed>|null */
+    private static function stats(?string $json): ?array
+    {
+        if ($json === null || $json === '') {
+            return null;
+        }
+        $decoded = json_decode($json, true);
+        if (!\is_array($decoded)) {
+            return null;
+        }
+        $stats = [];
+        foreach ($decoded as $key => $value) {
+            $stats[(string) $key] = $value;
+        }
+
+        return $stats;
     }
 
     private static function iso(?string $value): ?string

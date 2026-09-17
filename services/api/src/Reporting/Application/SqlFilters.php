@@ -36,8 +36,6 @@ final class SqlFilters
     /** @var array<string, string> event dimension => column of events_raw */
     private const array EVENT_COLUMNS = [
         'page' => 'e.path',
-        'entry_page' => 'e.path',
-        'exit_page' => 'e.path',
         'host' => 'e.host',
         'event' => 'e.name',
         'content' => 'e.content_key',
@@ -56,11 +54,27 @@ final class SqlFilters
         'level' => 'e.level',
     ];
 
+    /** An event row that stands for a whole visit nobody recorded: it is its own entry and exit. */
+    private const string ORPHAN_ENTRY = 'e.visit_id IS NULL AND e.is_entry = 1';
+
+    /**
+     * Entry page of the visit an event row belongs to. An orphan entry answers with its own path
+     * (it is the whole visit); any other row without a visit has no entry page, hence NULL.
+     */
+    private const string ENTRY_PATH = 'COALESCE(v.entry_path, IF(' . self::ORPHAN_ENTRY . ', e.path, NULL))';
+
     /** @var list<string> */
     private array $conditions = [];
     /** @var array<string, string> */
     private array $params = [];
     private int $index = 0;
+    /**
+     * Placeholder namespace of the translation being built. Each translation has its own so that a
+     * caller can merge the parameters of several translations of the same filter list into one query
+     * (a dimension may need a different number of placeholders on the visits side and on the
+     * events side, so shared numbering would silently cross-bind).
+     */
+    private string $prefix = 'f';
 
     /**
      * Conditions for a query over visits (alias v). Event dimensions become EXISTS sub-queries
@@ -72,7 +86,7 @@ final class SqlFilters
      */
     public function forVisits(array $filters): array
     {
-        $this->reset();
+        $this->reset('fv');
         foreach ($filters as $filter) {
             $column = self::VISIT_COLUMNS[$filter->dimension] ?? null;
             if ($filter->dimension === 'exit_page') {
@@ -94,23 +108,31 @@ final class SqlFilters
     }
 
     /**
-     * Conditions for a query over events_raw (alias e) joined to visits (alias v, may be NULL).
+     * Conditions for a query over events_raw (alias e).
+     *
+     * $rows says what the rows are, which is what makes the visit dimensions (`entry_page`,
+     * `exit_page`) answerable: either the query joins the visit of each row, or every row already
+     * *is* a whole visit (an orphan entry pageview) and answers for itself. There is no third case,
+     * so no filter the public API accepts can reach an events-side query it cannot translate.
      *
      * @param list<Filter> $filters
      *
      * @return array{sql: string, params: array<string, string>}
      */
-    public function forEvents(array $filters, bool $hasVisitJoin = true, bool $eventFilterOnRow = false): array
+    public function forEvents(array $filters, EventRows $rows = EventRows::JoinedToVisits, bool $eventFilterOnRow = false): array
     {
-        $this->reset();
+        $this->reset('fe');
+        $orphans = $rows === EventRows::OrphanEntries;
         foreach ($filters as $filter) {
-            if ($filter->dimension === 'exit_page' || $filter->dimension === 'entry_page') {
-                if (!$hasVisitJoin) {
-                    throw new \InvalidArgumentException('Filter ' . $filter->dimension . ' needs visit data.');
-                }
-                $this->conditions[] = $filter->dimension === 'entry_page'
-                    ? $this->condition('v.entry_path', $filter)
-                    : 'EXISTS (SELECT 1 FROM events_raw ex WHERE ex.site_id = v.site_id AND ex.local_day = v.local_day AND ex.visit_id = v.id AND ex.page_hash = v.exit_page_hash AND ' . $this->condition('ex.path', $filter) . ')';
+            if ($filter->dimension === 'entry_page') {
+                $this->conditions[] = $this->condition($orphans ? 'e.path' : self::ENTRY_PATH, $filter);
+                continue;
+            }
+            if ($filter->dimension === 'exit_page') {
+                $this->conditions[] = $orphans
+                    ? $this->condition('e.path', $filter)
+                    : '(EXISTS (SELECT 1 FROM events_raw ex WHERE ex.site_id = v.site_id AND ex.local_day = v.local_day AND ex.visit_id = v.id AND ex.page_hash = v.exit_page_hash AND '
+                        . $this->condition('ex.path', $filter) . ') OR (' . self::ORPHAN_ENTRY . ' AND ' . $this->condition('e.path', $filter) . '))';
                 continue;
             }
             if ($filter->dimension === 'event' && !$eventFilterOnRow) {
@@ -118,7 +140,7 @@ final class SqlFilters
                 $this->conditions[] = 'EXISTS (SELECT 1 FROM events_raw ev WHERE ev.site_id = e.site_id AND ev.local_day = e.local_day AND ev.visit_id = e.visit_id AND ev.visit_id IS NOT NULL AND ev.type = \'ev\' AND ' . $this->condition('ev.name', $filter) . ')';
                 continue;
             }
-            if (\in_array($filter->dimension, ['channel', 'source', 'referrer', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'], true) && $hasVisitJoin) {
+            if (\in_array($filter->dimension, ['channel', 'source', 'referrer', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'], true) && !$orphans) {
                 // Visit-level attribution wins when the event belongs to a visit.
                 $visitColumn = self::VISIT_COLUMNS[$filter->dimension];
                 $eventColumn = self::EVENT_COLUMNS[$filter->dimension];
@@ -142,7 +164,7 @@ final class SqlFilters
      */
     public function forRollup(array $filters, array $columns): array
     {
-        $this->reset();
+        $this->reset('fr');
         foreach ($filters as $filter) {
             $column = $columns[$filter->dimension] ?? throw new \InvalidArgumentException('Unsupported filter dimension ' . $filter->dimension);
             $this->conditions[] = $this->condition($column, $filter);
@@ -158,7 +180,7 @@ final class SqlFilters
 
     private function condition(string $column, Filter $filter): string
     {
-        $name = 'f' . $this->index++;
+        $name = $this->prefix . $this->index++;
         $value = $filter->value;
 
         if ($value === '' && \in_array($filter->operator, [FilterOperator::Is, FilterOperator::IsNot], true)) {
@@ -181,11 +203,12 @@ final class SqlFilters
         return '';
     }
 
-    private function reset(): void
+    private function reset(string $prefix): void
     {
         $this->conditions = [];
         $this->params = [];
         $this->index = 0;
+        $this->prefix = $prefix;
     }
 
     /** @return array{sql: string, params: array<string, string>} */

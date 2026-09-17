@@ -17,6 +17,14 @@ final class RawSelects
     public const string VISITORS_V = 'COUNT(DISTINCT v.visitor_hash) + COUNT(DISTINCT CASE WHEN v.visitor_hash IS NULL THEN v.visitor_id END)';
     public const string VISITORS_E = 'COUNT(DISTINCT e.visitor_hash) + COUNT(DISTINCT CASE WHEN e.visitor_hash IS NULL THEN e.visitor_id END)';
 
+    /**
+     * JSON path of one prop key. The key is quoted with JSON_QUOTE, which escapes `"`, `\` and
+     * control characters exactly the way a path expression expects; concatenating the raw key makes
+     * MySQL raise "Invalid JSON path expression" (error 3143) for any key holding one of them, which
+     * would abort the whole rollup build.
+     */
+    public const string PROP_PATH = 'CONCAT(\'$.\', JSON_QUOTE(k.prop_key))';
+
     /** Visits-side daily metrics. Columns: day, visits, visitors, bounces, engagement_ms, consented_visits, visit_pageviews. */
     public static function visitMetrics(string $visitsWhere): string
     {
@@ -32,10 +40,22 @@ final class RawSelects
             SQL;
     }
 
-    /** Events-side daily metrics. Columns: day, pageviews, events, orphan_entries. */
-    public static function eventMetrics(string $eventsWhere, bool $joinVisits = false): string
+    /**
+     * The visit of each event row, joined only so that visit dimensions can be read on an event
+     * (`COALESCE(v.…, e.…)`, `v.entry_path`). $visitsDayRange only repeats the day restriction the
+     * events already carry, so that MySQL can prune the partitions of `visits` instead of reading
+     * all thirteen months of them. It must never hold a filter: a condition in the ON clause of a
+     * LEFT JOIN filters nothing, it only makes v NULL.
+     */
+    public static function visitsJoin(string $visitsDayRange = ''): string
     {
-        $join = $joinVisits ? ' LEFT JOIN visits v ON v.site_id = e.site_id AND v.id = e.visit_id AND v.local_day = e.local_day' : '';
+        return ' LEFT JOIN visits v ON v.site_id = e.site_id AND v.id = e.visit_id AND v.local_day = e.local_day' . $visitsDayRange;
+    }
+
+    /** Events-side daily metrics. Columns: day, pageviews, events, orphan_entries. */
+    public static function eventMetrics(string $eventsWhere, bool $joinVisits = false, string $visitsDayRange = ''): string
+    {
+        $join = $joinVisits ? self::visitsJoin($visitsDayRange) : '';
 
         return <<<SQL
             SELECT e.local_day AS day, COALESCE(SUM(e.type = 'pv'), 0) AS pageviews, COALESCE(SUM(e.type = 'ev'), 0) AS events,
@@ -57,11 +77,15 @@ final class RawSelects
             SQL;
     }
 
-    /** Columns: day, page_hash, host, path, pageviews, visits, visitors, entries, exits, entry_bounces, engagement_ms. */
-    public static function pages(string $eventsWhere, string $visitsWhere, bool $joinVisits = false): string
+    /**
+     * Columns: day, page_hash, host, path, pageviews, visits, visitors, entries, exits, entry_bounces, engagement_ms.
+     *
+     * With $joinVisits the event arms can resolve the visit dimensions (see visitsJoin()).
+     */
+    public static function pages(string $eventsWhere, string $visitsWhere, bool $joinVisits = false, string $visitsDayRange = ''): string
     {
         $visitorsE = self::VISITORS_E;
-        $join = $joinVisits ? ' LEFT JOIN visits v ON v.site_id = e.site_id AND v.id = e.visit_id AND v.local_day = e.local_day' : '';
+        $join = $joinVisits ? self::visitsJoin($visitsDayRange) : '';
 
         return <<<SQL
             SELECT e.local_day AS day, e.page_hash, MAX(e.host) AS host, MAX(e.path) AS path, COUNT(*) AS pageviews,
@@ -145,9 +169,10 @@ final class RawSelects
     }
 
     /** Columns: day, value, visits, visitors, pageviews. $dimension is one of device, browser, os. */
-    public static function tech(string $dimension, string $eventsWhere, string $visitsWhere): string
+    public static function tech(string $dimension, string $eventsWhere, string $visitsWhere, bool $joinVisits = false, string $visitsDayRange = ''): string
     {
         $visitors = self::VISITORS_V;
+        $join = $joinVisits ? self::visitsJoin($visitsDayRange) : '';
 
         return <<<SQL
             SELECT v.local_day AS day, IFNULL(v.{$dimension}, '') AS value, COUNT(*) AS visits, {$visitors} AS visitors, 0 AS pageviews
@@ -156,16 +181,17 @@ final class RawSelects
              GROUP BY v.local_day, value
             UNION ALL
             SELECT e.local_day, IFNULL(e.{$dimension}, ''), COALESCE(SUM(e.visit_id IS NULL AND e.is_entry = 1), 0), 0, COUNT(*)
-              FROM events_raw e
+              FROM events_raw e{$join}
              WHERE e.site_id = :site AND e.type = 'pv' {$eventsWhere}
              GROUP BY e.local_day, 2
             SQL;
     }
 
     /** Columns: day, country, visits, visitors, pageviews. */
-    public static function geo(string $eventsWhere, string $visitsWhere): string
+    public static function geo(string $eventsWhere, string $visitsWhere, bool $joinVisits = false, string $visitsDayRange = ''): string
     {
         $visitors = self::VISITORS_V;
+        $join = $joinVisits ? self::visitsJoin($visitsDayRange) : '';
 
         return <<<SQL
             SELECT v.local_day AS day, IFNULL(v.country, 'ZZ') AS country, COUNT(*) AS visits, {$visitors} AS visitors, 0 AS pageviews
@@ -174,16 +200,16 @@ final class RawSelects
              GROUP BY v.local_day, country
             UNION ALL
             SELECT e.local_day, IFNULL(e.country, 'ZZ'), COALESCE(SUM(e.visit_id IS NULL AND e.is_entry = 1), 0), 0, COUNT(*)
-              FROM events_raw e
+              FROM events_raw e{$join}
              WHERE e.site_id = :site AND e.type = 'pv' {$eventsWhere}
              GROUP BY e.local_day, 2
             SQL;
     }
 
     /** Columns: day, name, prop_key, prop_value_hash, prop_value, occurrences, visits. */
-    public static function events(string $eventsWhere, bool $joinVisits = false): string
+    public static function events(string $eventsWhere, bool $joinVisits = false, string $visitsDayRange = ''): string
     {
-        $join = $joinVisits ? ' LEFT JOIN visits v ON v.site_id = e.site_id AND v.id = e.visit_id AND v.local_day = e.local_day' : '';
+        $join = $joinVisits ? self::visitsJoin($visitsDayRange) : '';
 
         return <<<SQL
             SELECT e.local_day AS day, e.name, '' AS prop_key, UNHEX('0000000000000000') AS prop_value_hash, '' AS prop_value,
@@ -195,18 +221,19 @@ final class RawSelects
     }
 
     /** Columns: day, name, prop_key, prop_value_hash, prop_value, occurrences, visits. */
-    public static function eventProps(string $eventsWhere, bool $joinVisits = false): string
+    public static function eventProps(string $eventsWhere, bool $joinVisits = false, string $visitsDayRange = ''): string
     {
-        $join = $joinVisits ? ' LEFT JOIN visits v ON v.site_id = e.site_id AND v.id = e.visit_id AND v.local_day = e.local_day' : '';
+        $join = $joinVisits ? self::visitsJoin($visitsDayRange) : '';
+        $path = self::PROP_PATH;
 
         return <<<SQL
             SELECT day, name, prop_key, UNHEX(SUBSTRING(SHA2(prop_value, 256), 1, 16)) AS prop_value_hash, MAX(prop_value) AS prop_value,
                    COUNT(*) AS occurrences, COUNT(DISTINCT visit_id) + COALESCE(SUM(visit_id IS NULL), 0) AS visits
               FROM (
                 SELECT e.local_day AS day, e.name, e.visit_id, CAST(k.prop_key AS CHAR(32)) AS prop_key,
-                       LEFT(IF(JSON_TYPE(JSON_EXTRACT(e.props, CONCAT('$."', k.prop_key, '"'))) = 'STRING',
-                               JSON_UNQUOTE(JSON_EXTRACT(e.props, CONCAT('$."', k.prop_key, '"'))),
-                               CAST(JSON_EXTRACT(e.props, CONCAT('$."', k.prop_key, '"')) AS CHAR)), 100) AS prop_value
+                       LEFT(IF(JSON_TYPE(JSON_EXTRACT(e.props, {$path})) = 'STRING',
+                               JSON_UNQUOTE(JSON_EXTRACT(e.props, {$path})),
+                               CAST(JSON_EXTRACT(e.props, {$path}) AS CHAR)), 100) AS prop_value
                   FROM events_raw e{$join}
                   JOIN JSON_TABLE(JSON_KEYS(e.props), '$[*]' COLUMNS (prop_key VARCHAR(32) PATH '$')) k
                  WHERE e.site_id = :site AND e.type = 'ev' AND e.name IS NOT NULL AND e.props IS NOT NULL {$eventsWhere}
@@ -215,21 +242,29 @@ final class RawSelects
             SQL;
     }
 
-    /** Columns: day, content_key, channel, pageviews, visits, visitors, contacts. */
-    public static function content(string $eventsWhere, string $visitsWhere = ''): string
+    /**
+     * Columns: day, content_key, channel, pageviews, visits, visitors, contacts.
+     *
+     * Rows are events; the visit is joined only to resolve attribution (COALESCE(v.…, e.…)), which
+     * is also the grouping key, so every condition belongs to the events tail. Events without a
+     * visit stay in (that is the rollup's semantics) and fall back to their own attribution.
+     * See visitsJoin() for what $visitsDayRange may and may not hold.
+     */
+    public static function content(string $eventsWhere, string $visitsDayRange = ''): string
     {
         $visitorsE = self::VISITORS_E;
+        $join = ltrim(self::visitsJoin($visitsDayRange));
 
         return <<<SQL
             SELECT e.local_day AS day, e.content_key, COALESCE(v.channel, e.channel) AS channel, COUNT(*) AS pageviews,
                    COUNT(DISTINCT e.visit_id) + COALESCE(SUM(e.visit_id IS NULL AND e.is_entry = 1), 0) AS visits,
                    {$visitorsE} AS visitors, 0 AS contacts
-              FROM events_raw e LEFT JOIN visits v ON v.site_id = e.site_id AND v.id = e.visit_id AND v.local_day = e.local_day{$visitsWhere}
+              FROM events_raw e {$join}
              WHERE e.site_id = :site AND e.type = 'pv' AND e.content_key IS NOT NULL {$eventsWhere}
              GROUP BY e.local_day, e.content_key, 3
             UNION ALL
             SELECT e.local_day, e.content_key, COALESCE(v.channel, e.channel), 0, 0, 0, COUNT(*)
-              FROM events_raw e LEFT JOIN visits v ON v.site_id = e.site_id AND v.id = e.visit_id AND v.local_day = e.local_day{$visitsWhere}
+              FROM events_raw e {$join}
              WHERE e.site_id = :site AND e.type = 'ev' AND e.content_key IS NOT NULL AND e.name IN (:contacts) {$eventsWhere}
              GROUP BY e.local_day, e.content_key, 3
             SQL;

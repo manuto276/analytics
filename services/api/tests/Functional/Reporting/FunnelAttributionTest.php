@@ -123,6 +123,45 @@ final class FunnelAttributionTest extends HttpTestCase
         $this->assertProblem($this->get($this->base . '/reports/attribution?window=5'), 422);
     }
 
+    /**
+     * Campaign spend is prorated over local days. The report range carries midnight in the site's
+     * time zone while day_from/day_to are plain dates, so a campaign that covers the whole range
+     * must still contribute its whole budget, in any time zone.
+     */
+    public function testCampaignCostProrationDoesNotLoseADayToTheSiteTimeZone(): void
+    {
+        $this->post($this->base . '/costs', ['day_from' => '2026-01-01', 'day_to' => '2026-01-31', 'channel' => 'paid_search', 'utm_source' => 'google', 'utm_campaign' => 'winter', 'amount_minor' => 100000, 'currency' => 'EUR']);
+        // Ten days of a second campaign, of which only six fall inside the range below.
+        $this->post($this->base . '/costs', ['day_from' => '2026-01-01', 'day_to' => '2026-01-10', 'channel' => 'paid_social', 'utm_source' => 'facebook', 'utm_campaign' => 'launch', 'amount_minor' => 100000, 'currency' => 'EUR']);
+
+        foreach (['Europe/Rome', 'America/New_York', 'UTC'] as $timezone) {
+            $this->site->timezone = $timezone;
+            $this->em->flush();
+            $this->clearCaches();
+
+            $full = $this->costsByChannel('2026-01-01', '2026-01-31');
+            self::assertSame(100000, $full['paid_search'], 'the whole budget belongs to a range that covers the whole campaign (' . $timezone . ')');
+            self::assertSame(100000, $full['paid_social'], 'a campaign inside the range keeps its whole budget (' . $timezone . ')');
+
+            $partial = $this->costsByChannel('2026-01-05', '2026-01-31');
+            self::assertSame(87097, $partial['paid_search'], '27 of the 31 campaign days overlap the range (' . $timezone . ')');
+            self::assertSame(60000, $partial['paid_social'], '6 of the 10 campaign days overlap the range (' . $timezone . ')');
+        }
+    }
+
+    /** @return array<string, int> channel => cost_minor */
+    private function costsByChannel(string $from, string $to): array
+    {
+        $report = $this->data($this->get($this->base . '/reports/attribution?period=custom&from=' . $from . '&to=' . $to . '&group=channel'));
+        $costs = [];
+        foreach ($report['rows'] as $row) {
+            $costs[(string) $row['key']] = $row['cost_minor'];
+        }
+        self::assertSame(array_sum($costs), $report['totals']['cost_minor']);
+
+        return $costs;
+    }
+
     public function testGoalsReportCountsEveryGoalType(): void
     {
         $key = $this->site->publicKey;

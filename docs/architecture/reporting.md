@@ -8,10 +8,28 @@ fragments in both cases. The path is
 ## Rollups
 
 `rollup:run` (cron, every 5 minutes) takes the oldest rows of `rollup_dirty`, rebuilds every rollup of
-that `(site_id, day)` and deletes the dirty mark. `rollup:rebuild --site --from --to` marks a range
-dirty and rebuilds it; with `--recompute-days` it first recalculates `local_day` on `events_raw` and
-`visits` from `occurred_at`/`started_at` in the site's *current* time zone — what you run after
-changing a site's time zone.
+that `(site_id, day)` and deletes the dirty mark. A day whose build throws is **left dirty and
+skipped**: the run carries on with the other rows and ends by throwing a `RollupRunFailed` summary, so
+the job is recorded as failed without one unbuildable day blocking every other site for ever (it is
+ordered first by `first_marked_at`, so it would be retried before anything else on every run).
+
+`RollupRunFailed` implements `Analytics\Shared\Jobs\JobStats`, so the counts the run did produce
+(`days`, `sites`, `failed`) survive the failure: `JobRunner` records them on the failed `job_runs`
+row instead of an empty object, and `jobs:status` / `GET /api/v1/admin/jobs` show them as
+`last_stats`. Any module's exception can opt in the same way without `Shared` knowing about it.
+
+`rollup:rebuild --site --from --to` marks a range dirty and rebuilds it; with `--recompute-days` it
+first recalculates `local_day` on the raw rows in the site's *current* time zone — what you run after
+changing a site's time zone. The recompute keeps the invariant every reporting join relies on:
+
+- `visits.local_day` comes from `started_at`;
+- an event that belongs to a visit takes **the visit's** day, never its own — that is the ingest rule
+  (`IngestBatchHandler::resolveVisit()` only reuses a visit whose day is the event's day), so a visit
+  that straddles the new midnight keeps all of its events;
+- a standalone event (`visit_id IS NULL`) keeps its own day, recomputed from `occurred_at`;
+- `visit_lookup.visit_day` and `attribution_touches.visit_day` follow the visit;
+- the rebuilt range is the requested range **plus every day a row moved out of or into**, which may be
+  one day outside it in either direction.
 
 `RollupBuilder::build()` is a `DELETE` followed by `INSERT … SELECT` per table, inside one
 transaction, which makes it idempotent: running it twice on the same day gives the same rows. After a
@@ -59,6 +77,7 @@ site) are counted by their visitor id. The two terms never overlap, so the sum i
 visitors for that day.
 
 ### Orphan pageviews
+<a id="orphan-pageviews"></a>
 
 On a `pageviews_only` site there are no visits, so a pageview flagged `is_entry = 1` (a pageview not
 arriving from the site itself) is counted as one visit by the raw selects
@@ -116,10 +135,44 @@ Operators (`FilterOperator`): `is`, `is_not`, `contains`, `prefix`, `glob`.
 | `glob` | `*` -> `%`, `?` -> `_`, everything else escaped |
 | `page` on a visit query | `EXISTS` a pageview of that visit whose path matches |
 | `exit_page` on a visit query | `EXISTS` a pageview of that visit whose `page_hash` equals the visit's `exit_page_hash` and whose path matches |
+| `entry_page` / `exit_page` on an event query | the entry/exit page of the visit the row belongs to; a row that has no visit but *is* an entry (see [orphan pageviews](#orphan-pageviews)) is the whole visit, so it answers with its own path |
 | `event` on a visit query | `EXISTS` a custom event of that visit with that name — "visits that fired this event" |
 | `content` | the visit's `entry_content_key` matches **or** any event of the visit has a matching `content_key` |
 | campaign/source dimensions on an event query with a visit join | `COALESCE(visit column, event column)` — visit-level attribution wins |
 | `event` on the events report | applied to the row itself, not as an `EXISTS` |
+
+Two rules keep a translated filter list honest:
+
+- each translation namespaces its own placeholders (`forVisits` binds `fv0…`, `forEvents` `fe0…`,
+  `forRollup` `fr0…`). `TableReports::rawInner()` merges the visits half and the events half of the
+  same filter list into one query, and a dimension can need a different number of placeholders on the
+  two sides (`content` emits two conditions on the visits side, one on the events side), so shared
+  numbering would make one half read the next filter's value — and the answer would depend on the
+  order the filters were written in;
+- a condition is never spliced into the `ON` clause of a `LEFT JOIN`. There it filters nothing, it
+  only makes the joined row NULL. Where a report joins `visits` purely to resolve attribution
+  (`pages`, `content`), the `ON` clause carries only the day range, so that MySQL can prune the
+  partitions of `visits`, and every filter goes into the `WHERE` clause of the events side, resolved
+  through `COALESCE(v.…, e.…)` — the same expression the rollup groups by.
+
+`SqlFilters::forEvents()` takes an `EventRows` saying what the rows of the events side are, and there
+are only two answers:
+
+- `JoinedToVisits` — the query carries `RawSelects::visitsJoin()`, so the visit answers for the row
+  (`COALESCE(v.entry_path, …)`, an `EXISTS` on `v.exit_page_hash`, `COALESCE(v.…, e.…)` for
+  attribution). Every report that has an arm of ordinary events uses this;
+- `OrphanEntries` — the arm holds only `visit_id IS NULL AND is_entry = 1` rows, which are whole
+  one-pageview visits, so they answer `entry_page` and `exit_page` with `e.path` and attribution with
+  their own columns. `landing-pages` and `sources` have exactly such an arm, and `entry_page` is a
+  dimension the landing rollup covers, so the two sources have to agree on it.
+
+Because there is no third case, no filter the API accepts can reach an events query that cannot
+translate it: `entry_page`/`exit_page` used to raise `InvalidArgumentException` ("needs visit data")
+— a **500** on a plain query parameter — on every report whose raw query had no visits join
+(`landing-pages`, `sources`, `campaigns`, `tech`, `countries`, `events`, `event-props`), which a
+second filter outside that report's rollup dimensions was enough to reach.
+`Analytics\Tests\Integration\Reporting\VisitPageFilterTest` checks every report against a direct
+SQL oracle for both dimensions.
 
 Filters are not applied to the conversion figures inside `overview`/`timeseries`: when filters are
 present, `DailyMetrics::raw()` skips the conversions query entirely, so `conversions` and
@@ -147,6 +200,24 @@ present, `DailyMetrics::raw()` skips the conversions query entirely, so `convers
 | attribution | `/attribution` | `model=first_touch\|last_non_direct\|declared`, `group=channel\|source\|campaign`, `window=7\|30\|90`, `base=`, `target=` | per group: visits, base/target conversions, revenue, cost, CAC, ROAS; totals with the unattributed share |
 | cohorts | `/cohorts` | `cohort=week\|month`, `periods=1..13` | retention grid of consented visitors |
 | consent | `/consent` | — | per day and version: shown, accepted, rejected, dismissed, reopened; totals with acceptance rate |
+
+`event-props` reads each value out of the stored JSON with a path built from the key. The key is
+quoted with `JSON_QUOTE`, so it is always data and never part of the path syntax: a key holding `"`,
+`\` or a control character used to make MySQL raise *Invalid JSON path expression* and fail the whole
+rollup build for that day.
+
+The stored key must also *fit* `rollup_events_daily.prop_key` (`VARCHAR(32)`). Ingestion validates
+the key against an allow-list and then scrubs it, and the scrubber substitutes (`[number]`,
+`[email]`, `[phone]`), so the key that is stored is not the key that was validated and is not bounded
+by its length. `PiiScrubber::scrubPropKey()` therefore re-checks the *result*: a key that no longer
+fits is refused and ingestion drops that one property, keeping the event. The `[` and `]` the
+placeholders introduce are deliberately kept — the allow-list does not permit them, but `JSON_QUOTE`
+takes any key as data, and a property reported under `user[number]` is more useful than none.
+
+Campaign cost in `attribution` is prorated over **local days**: the overlap between the campaign's
+`day_from`/`day_to` and the report range is computed on the dates themselves, never on `DateTime`s of
+different zones, so a campaign that covers the whole range contributes its whole budget whatever the
+site's time zone (and whatever DST does inside the range).
 
 Sorting is restricted per report by `TableReports::SORTABLE`; anything else is a `422`. `sort=-visits`
 (or plain `visits`) is descending, `sort=+visits` ascending. Derived sorts (`bounce_rate`,
@@ -213,6 +284,11 @@ served as `Content-Disposition: attachment; filename="<report>-<from>-<to>.csv"`
 `Analytics\Tests\Integration\Reporting\QueryPlanTest` runs `EXPLAIN` on the raw report queries and
 asserts that they use an index and prune partitions, that selective queries use an index, and that
 rollup queries hit the primary key. Adding a report query without an index will fail that test.
+
+Every join of `visits` onto events goes through `RawSelects::visitsJoin()` and every caller passes it
+the day range the events already carry. Without it the join has no restriction on `visits.local_day`
+and MySQL reads **all thirteen months** of partitions to answer a query about three days, so each
+such join is in the data provider of that test twice: once bare and once joined.
 
 ## External read API
 

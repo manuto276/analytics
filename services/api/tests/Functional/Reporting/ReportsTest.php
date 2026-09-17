@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Analytics\Tests\Functional\Reporting;
 
 use Analytics\Identity\Domain\SiteRole;
+use Analytics\Identity\Domain\User;
 use Analytics\Reporting\Application\Rollup\RollupRunner;
 use Analytics\Sites\Domain\Site;
+use Analytics\Sites\Domain\VisitorHashMode;
 use Analytics\Tests\Support\HttpTestCase;
 use Analytics\Tests\Support\Payloads;
 
@@ -14,15 +16,16 @@ final class ReportsTest extends HttpTestCase
 {
     private Site $site;
     private string $base;
+    private User $viewer;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->site = $this->factory->site(['timezone' => 'Europe/Rome', 'contentContactEvents' => ['contact_form']], ['www.site.test']);
         $this->base = '/api/v1/sites/' . $this->site->id() . '/reports';
-        $viewer = $this->factory->user();
-        $this->factory->grant($viewer, $this->site, SiteRole::Viewer);
-        $this->loginAs($viewer);
+        $this->viewer = $this->factory->user();
+        $this->factory->grant($this->viewer, $this->site, SiteRole::Viewer);
+        $this->loginAs($this->viewer);
     }
 
     /** Two visitors, three visits, four pageviews, one custom event, one engagement event. */
@@ -160,6 +163,64 @@ final class ReportsTest extends HttpTestCase
 
         $none = $this->json($this->get($this->base . '/overview?period=7d&' . http_build_query(['filter' => ['channel' => ['is' => 'paid_search']]])));
         self::assertSame(0, $none['data']['metrics']['visits']);
+    }
+
+    /**
+     * `entry_page` and `exit_page` are visit dimensions that plain query parameters can send to any
+     * report. Paired with a filter no rollup covers they force the raw path, where the reports whose
+     * raw query had no visits join used to raise "needs visit data" — a 500 on a public endpoint.
+     */
+    public function testEntryAndExitPageFiltersAreAnsweredByEveryReport(): void
+    {
+        $this->ingest();
+        $reports = ['/overview', '/timeseries?interval=day', '/pages', '/landing-pages', '/sources', '/campaigns', '/tech', '/countries', '/events', '/events/signup_click/props', '/content'];
+
+        foreach ($reports as $report) {
+            foreach (['entry_page', 'exit_page'] as $dimension) {
+                // `device` is covered by no rollup here, so the planner has to answer from raw data.
+                $filter = http_build_query(['filter' => [$dimension => ['is' => '/pricing'], 'device' => ['is' => 'desktop']]]);
+                $url = $this->base . $report . (str_contains($report, '?') ? '&' : '?') . 'period=7d&' . $filter;
+                $response = $this->get($url);
+                self::assertSame(200, $response->getStatusCode(), $report . ' with a ' . $dimension . ' filter: ' . $response->getBody());
+                self::assertSame('raw', $this->json($response)['meta']['source'], $report . ' must answer ' . $dimension . ' from raw data');
+            }
+        }
+    }
+
+    /**
+     * A `pageviews_only` site has no visits at all: its entry pageviews *are* the visits, so they
+     * answer `entry_page` and `exit_page` with their own path. That is also what the landing rollup
+     * stores for them, so both sources must agree.
+     */
+    public function testVisitPageFiltersOnASiteWithoutVisits(): void
+    {
+        $site = $this->factory->site(['visitorHashMode' => VisitorHashMode::PageviewsOnly], ['po.test']);
+        $this->factory->grant($this->viewer, $site, SiteRole::Viewer);
+        $base = '/api/v1/sites/' . $site->id() . '/reports';
+        $this->clock->modify('2026-09-16 08:00:00');
+        foreach ([['/pricing', []], ['/pricing', ['User-Agent' => Payloads::IPHONE_UA]], ['/', []]] as [$path, $headers]) {
+            $this->collect(Payloads::batch($site->publicKey, [
+                Payloads::pageview('https://po.test' . $path, 'https://www.google.com/'),
+            ]), ['Origin' => 'https://po.test'] + $headers);
+        }
+        $this->clock->modify('2026-09-17 10:00:00');
+        $this->service(RollupRunner::class)->runDirty($site->id());
+        self::assertSame(0, (int) $this->db->fetchOne('SELECT COUNT(*) FROM visits WHERE site_id = ?', [$site->id()]));
+
+        $entries = static fn(array $json): int => (int) array_sum(array_column($json['data']['rows'], 'entries'));
+        $page = ['filter' => ['entry_page' => ['is' => '/pricing']]];
+        $rollup = $this->json($this->get($base . '/landing-pages?period=7d&' . http_build_query($page)));
+        self::assertSame('rollup', $rollup['meta']['source']);
+        self::assertSame(2, $entries($rollup), 'both entry pageviews of /pricing');
+
+        $raw = $this->json($this->get($base . '/landing-pages?period=7d&' . http_build_query(['filter' => $page['filter'] + ['device' => ['is' => 'desktop']]])));
+        self::assertSame('raw', $raw['meta']['source']);
+        self::assertSame(1, $entries($raw), 'only the desktop one, and the raw path must still see it');
+
+        // The same row is the whole visit, so it is its own exit page too.
+        $exit = $this->json($this->get($base . '/sources?period=7d&' . http_build_query(['filter' => ['exit_page' => ['is' => '/pricing'], 'device' => ['is' => 'desktop']]])));
+        self::assertSame('raw', $exit['meta']['source']);
+        self::assertSame(1, (int) array_sum(array_column($exit['data']['rows'], 'visits')));
     }
 
     public function testValidationAndPlannerErrors(): void

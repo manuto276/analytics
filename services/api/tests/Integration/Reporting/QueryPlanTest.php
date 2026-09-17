@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Analytics\Tests\Integration\Reporting;
 
+use Analytics\Reporting\Application\Reports\TimeseriesReport;
 use Analytics\Reporting\Application\Rollup\RawSelects;
 use Analytics\Shared\Types;
 use Analytics\Sites\Domain\SiteSnapshot;
@@ -36,14 +37,23 @@ final class QueryPlanTest extends IntegrationTestCase
         $visitRange = ' AND v.local_day BETWEEN :from AND :to';
         yield 'daily visit metrics' => [RawSelects::visitMetrics($visitRange)];
         yield 'daily event metrics' => [RawSelects::eventMetrics($range)];
+        // Filtered overview/timeseries queries join visits to read the visit dimensions on an event.
+        yield 'daily event metrics joined to visits' => [RawSelects::eventMetrics($range, true, $visitRange)];
+        yield 'hourly event metrics joined to visits' => [TimeseriesReport::hourlyEvents("DATE_FORMAT(CONVERT_TZ(e.occurred_at, '+00:00', :offset), '%Y-%m-%d %H:00')", '', true, $visitRange)];
         yield 'pages' => [RawSelects::pages($range, $visitRange)];
+        // The report path joins visits so attribution filters can resolve through COALESCE(v.…, e.…).
+        yield 'pages joined to visits' => [RawSelects::pages($range, $visitRange, true, $visitRange)];
         yield 'landing pages' => [RawSelects::landing($range, $visitRange)];
         yield 'sources' => [RawSelects::sources($range, $visitRange)];
         yield 'campaigns' => [RawSelects::campaigns($visitRange)];
         yield 'tech' => [RawSelects::tech('device', $range, $visitRange)];
+        yield 'tech joined to visits' => [RawSelects::tech('device', $range, $visitRange, true, $visitRange)];
         yield 'geo' => [RawSelects::geo($range, $visitRange)];
+        yield 'geo joined to visits' => [RawSelects::geo($range, $visitRange, true, $visitRange)];
         yield 'events' => [RawSelects::events($range)];
+        yield 'events joined to visits' => [RawSelects::events($range, true, $visitRange)];
         yield 'event props' => [RawSelects::eventProps($range)];
+        yield 'event props joined to visits' => [RawSelects::eventProps($range, true, $visitRange)];
         yield 'content' => [RawSelects::content($range, $visitRange)];
     }
 
@@ -63,6 +73,9 @@ final class QueryPlanTest extends IntegrationTestCase
         }
         if (!str_contains($sql, ':currency')) {
             unset($params['currency']);
+        }
+        if (str_contains($sql, ':offset')) {
+            $params['offset'] = '+02:00';
         }
 
         $plan = $this->db->fetchAllAssociative('EXPLAIN ' . $sql, $params, $types);

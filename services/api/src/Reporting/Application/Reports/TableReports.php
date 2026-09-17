@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Analytics\Reporting\Application\Reports;
 
+use Analytics\Reporting\Application\EventRows;
 use Analytics\Reporting\Application\Rollup\RawSelects;
 use Analytics\Reporting\Application\SqlFilters;
 use Analytics\Reporting\Domain\DateRange;
@@ -21,6 +22,12 @@ use Doctrine\DBAL\ParameterType;
  */
 final readonly class TableReports
 {
+    /**
+     * Repeats on the joined `visits` the day restriction the events already carry, so that MySQL
+     * prunes its partitions. Only ever a day range — see RawSelects::visitsJoin().
+     */
+    private const string VISITS_DAY_RANGE = ' AND v.local_day BETWEEN :from AND :to';
+
     public function __construct(private Connection $connection, private SqlFilters $filters) {}
 
     /**
@@ -65,7 +72,8 @@ final readonly class TableReports
         if ($useRollup) {
             [$inner, $params] = $this->rollupInner('rollup_pages_daily', ['page_hash', 'host', 'path', ...$sums], $q, $range, ['page' => 'path', 'entry_page' => 'path', 'exit_page' => 'path', 'host' => 'host']);
         } else {
-            [$inner, $params] = $this->rawInner(RawSelects::pages(...), $q, $range, true);
+            // The event arms join visits so that the visit dimensions can be read on an event row.
+            [$inner, $params] = $this->rawInner(static fn(string $e, string $v): string => RawSelects::pages($e, $v, true, self::VISITS_DAY_RANGE), $q, $range, EventRows::JoinedToVisits);
         }
         $having = match ($kind) {
             'entry' => 'SUM(entries) > 0',
@@ -99,7 +107,8 @@ final readonly class TableReports
         if ($useRollup) {
             [$inner, $params] = $this->rollupInner('rollup_landing_daily', ['page_hash', 'channel', 'host', 'path', ...$sums], $q, $range, ['entry_page' => 'path', 'page' => 'path', 'host' => 'host', 'channel' => 'channel']);
         } else {
-            [$inner, $params] = $this->rawInner(RawSelects::landing(...), $q, $range, false);
+            // The only event arm holds the entry pageviews of visits that were never recorded.
+            [$inner, $params] = $this->rawInner(RawSelects::landing(...), $q, $range, EventRows::OrphanEntries);
         }
         $result = $this->group($inner, $params, ['page_hash' => 'page_hash'], $sums, ['host' => 'MAX(host)', 'path' => 'MAX(path)'], 'SUM(entries) > 0', $this->order($q, 'landing-pages', 'entries'), $q);
 
@@ -120,7 +129,7 @@ final readonly class TableReports
         if ($useRollup) {
             [$inner, $params] = $this->rollupInner('rollup_sources_daily', ['channel', 'source_hash', 'source', 'referrer_host', ...$sums], $q, $range, ['channel' => 'channel', 'source' => 'source', 'referrer' => 'referrer_host']);
         } else {
-            [$inner, $params] = $this->rawInner(RawSelects::sources(...), $q, $range, false);
+            [$inner, $params] = $this->rawInner(RawSelects::sources(...), $q, $range, EventRows::OrphanEntries);
         }
         [$keys, $extras, $having] = match ($group) {
             'source' => [['source_key' => "IFNULL(source, '')"], ['source' => 'MAX(source)', 'channel' => 'MAX(channel)'], "IFNULL(MAX(source), '') <> ''"],
@@ -149,7 +158,8 @@ final readonly class TableReports
         if ($useRollup) {
             [$inner, $params] = $this->rollupInner('rollup_campaigns_daily', ['utm_hash', ...array_keys($dimensions), ...$sums], $q, $range, $dimensions);
         } else {
-            [$inner, $params] = $this->rawInner(static fn(string $e, string $v): string => RawSelects::campaigns($v), $q, $range, false);
+            // Visits only: there is no events arm to translate the filters onto.
+            [$inner, $params] = $this->rawInner(static fn(string $e, string $v): string => RawSelects::campaigns($v), $q, $range, null);
         }
         $result = $this->group($inner, $params, ['utm_hash' => 'utm_hash'], $sums, array_map(static fn(string $c): string => 'MAX(' . $c . ')', $dimensions), null, $this->order($q, 'campaigns', 'visits'), $q);
 
@@ -178,7 +188,7 @@ final readonly class TableReports
             [$inner, $params] = $this->rollupInner('rollup_tech_daily', ['value', ...$sums], $q, $range, [$group => 'value'], ' AND dimension = :dimension');
             $params['dimension'] = $group;
         } else {
-            [$inner, $params] = $this->rawInner(static fn(string $e, string $v): string => RawSelects::tech($group, $e, $v), $q, $range, false);
+            [$inner, $params] = $this->rawInner(static fn(string $e, string $v): string => RawSelects::tech($group, $e, $v, true, self::VISITS_DAY_RANGE), $q, $range, EventRows::JoinedToVisits);
         }
         $result = $this->group($inner, $params, ['value' => 'value'], $sums, [], null, $this->order($q, 'tech', 'visits'), $q);
 
@@ -197,7 +207,7 @@ final readonly class TableReports
         if ($useRollup) {
             [$inner, $params] = $this->rollupInner('rollup_geo_daily', ['country', ...$sums], $q, $range, ['country' => 'country']);
         } else {
-            [$inner, $params] = $this->rawInner(RawSelects::geo(...), $q, $range, false);
+            [$inner, $params] = $this->rawInner(static fn(string $e, string $v): string => RawSelects::geo($e, $v, true, self::VISITS_DAY_RANGE), $q, $range, EventRows::JoinedToVisits);
         }
         $result = $this->group($inner, $params, ['country' => 'country'], $sums, [], null, $this->order($q, 'countries', 'visits'), $q);
 
@@ -216,7 +226,7 @@ final readonly class TableReports
         if ($useRollup) {
             [$inner, $params] = $this->rollupInner('rollup_events_daily', ['name', ...$sums], $q, $range, ['event' => 'name'], " AND prop_key = ''");
         } else {
-            [$inner, $params] = $this->rawInner(static fn(string $e, string $v): string => RawSelects::events($e), $q, $range, false, true, true);
+            [$inner, $params] = $this->rawInner(static fn(string $e, string $v): string => RawSelects::events($e, true, self::VISITS_DAY_RANGE), $q, $range, EventRows::JoinedToVisits, true, true);
         }
         $result = $this->group($inner, $params, ['name' => 'name'], $sums, [], null, $this->order($q, 'events', 'occurrences'), $q);
 
@@ -235,7 +245,7 @@ final readonly class TableReports
         if ($useRollup) {
             [$inner, $params] = $this->rollupInner('rollup_events_daily', ['name', 'prop_key', 'prop_value_hash', 'prop_value', ...$sums], $q, $range, ['event' => 'name'], " AND prop_key <> '' AND name = :event");
         } else {
-            [$inner, $params] = $this->rawInner(static fn(string $e, string $v): string => RawSelects::eventProps($e . ' AND e.name = :event'), $q, $range, false, true, true);
+            [$inner, $params] = $this->rawInner(static fn(string $e, string $v): string => RawSelects::eventProps($e . ' AND e.name = :event', true, self::VISITS_DAY_RANGE), $q, $range, EventRows::JoinedToVisits, true, true);
         }
         $params['event'] = $name;
         $result = $this->group($inner, $params, ['prop_key' => 'prop_key', 'prop_value_hash' => 'prop_value_hash'], $sums, ['prop_value' => 'MAX(prop_value)'], null, $this->order($q, 'event-props', 'occurrences'), $q);
@@ -257,7 +267,9 @@ final readonly class TableReports
         if ($useRollup) {
             [$inner, $params] = $this->rollupInner('rollup_content_daily', ['content_key', 'channel', ...$sums], $q, $range, ['content' => 'content_key', 'channel' => 'channel'], $extraWhere);
         } else {
-            [$inner, $params] = $this->rawInner(static fn(string $e, string $v): string => RawSelects::content($e . ($prefix === '' ? '' : ' AND e.content_key LIKE :prefix'), $v), $q, $range, false);
+            // RawSelects::content() always joins visits, so attribution filters must resolve through
+            // COALESCE(v.…, e.…) here too — the same expression the rollup groups by.
+            [$inner, $params] = $this->rawInner(static fn(string $e, string $v): string => RawSelects::content($e . ($prefix === '' ? '' : ' AND e.content_key LIKE :prefix'), self::VISITS_DAY_RANGE), $q, $range, EventRows::JoinedToVisits);
             $params['contacts'] = $q->site->contentContactEvents === [] ? ['__none__'] : $q->site->contentContactEvents;
         }
         if ($prefix !== '') {
@@ -303,7 +315,7 @@ final readonly class TableReports
         if ($useRollup) {
             [$inner, $params] = $this->rollupInner('rollup_conversions_daily', ['name', 'attr_channel', ...$sums], $q, $range, []);
         } else {
-            [$inner, $params] = $this->rawInner(static fn(string $e, string $v): string => RawSelects::conversions(' AND c.local_day BETWEEN :from AND :to'), $q, $range, false, false);
+            [$inner, $params] = $this->rawInner(static fn(string $e, string $v): string => RawSelects::conversions(' AND c.local_day BETWEEN :from AND :to'), $q, $range, null, false);
             $params['currency'] = $q->site->currency;
         }
         $result = $this->group($inner, $params, ['name' => 'name'], $sums, [], null, $this->order($q, 'conversions', 'count'), $q);
@@ -332,13 +344,14 @@ final readonly class TableReports
 
     /**
      * @param callable(string, string): string $select
+     * @param ?EventRows                       $eventRows what the rows of the events arms are, or null when the select has none
      *
      * @return array{0: string, 1: array<string, mixed>}
      */
-    private function rawInner(callable $select, ReportQuery $q, DateRange $range, bool $joinVisitsForEvents, bool $useRange = true, bool $eventFilterOnRow = false): array
+    private function rawInner(callable $select, ReportQuery $q, DateRange $range, ?EventRows $eventRows, bool $useRange = true, bool $eventFilterOnRow = false): array
     {
         $visitFilters = $this->filters->forVisits($q->filters);
-        $eventFilters = $this->filters->forEvents($q->filters, $joinVisitsForEvents, $eventFilterOnRow);
+        $eventFilters = $eventRows === null ? ['sql' => '', 'params' => []] : $this->filters->forEvents($q->filters, $eventRows, $eventFilterOnRow);
         $eventsWhere = ($useRange ? ' AND e.local_day BETWEEN :from AND :to' : '') . $eventFilters['sql'];
         $visitsWhere = ($useRange ? ' AND v.local_day BETWEEN :from AND :to' : '') . $visitFilters['sql'];
         $sql = $select($eventsWhere, $visitsWhere);

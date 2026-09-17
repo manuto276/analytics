@@ -32,7 +32,7 @@ final readonly class DailyMetrics
     public function raw(SiteSnapshot $site, DateRange $range, array $filters = []): array
     {
         $visitWhere = $this->filters->forVisits($filters);
-        $eventWhere = $this->filters->forEvents($filters, true);
+        $eventWhere = $this->filters->forEvents($filters, EventRows::JoinedToVisits);
         $params = ['site' => $site->id, 'from' => $range->fromDay(), 'to' => $range->toDay(), 'currency' => $site->currency];
         $days = self::emptyDays($range);
 
@@ -46,7 +46,8 @@ final readonly class DailyMetrics
             $days[$day]['consented_visits'] += Types::int($row['consented_visits']);
         }
 
-        $eventSql = RawSelects::eventMetrics(' AND e.local_day BETWEEN :from AND :to' . $eventWhere['sql'], $filters !== []);
+        // The join carries the day range of the events, so MySQL prunes the partitions of visits.
+        $eventSql = RawSelects::eventMetrics(' AND e.local_day BETWEEN :from AND :to' . $eventWhere['sql'], $filters !== [], ' AND v.local_day BETWEEN :from AND :to');
         foreach ($this->connection->fetchAllAssociative($eventSql, $params + $eventWhere['params']) as $row) {
             $day = Types::string($row['day']);
             $days[$day]['pageviews'] += Types::int($row['pageviews']);

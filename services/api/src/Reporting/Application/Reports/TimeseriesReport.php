@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Analytics\Reporting\Application\Reports;
 
 use Analytics\Reporting\Application\DailyMetrics;
+use Analytics\Reporting\Application\EventRows;
+use Analytics\Reporting\Application\Rollup\RawSelects;
 use Analytics\Reporting\Application\SqlFilters;
 use Analytics\Reporting\Domain\DateRange;
 use Analytics\Reporting\Domain\Interval;
@@ -18,6 +20,9 @@ use Doctrine\DBAL\Connection;
  */
 final readonly class TimeseriesReport
 {
+    /** Only ever a day range — see RawSelects::visitsJoin(). */
+    public const string VISITS_DAY_RANGE = ' AND v.local_day BETWEEN :from AND :to';
+
     public function __construct(
         private Connection $connection,
         private DailyMetrics $metrics,
@@ -89,7 +94,7 @@ final readonly class TimeseriesReport
         }
 
         $visitFilters = $this->filters->forVisits($query->filters);
-        $eventFilters = $this->filters->forEvents($query->filters, $query->filters !== []);
+        $eventFilters = $this->filters->forEvents($query->filters, EventRows::JoinedToVisits);
         $params = ['site' => $query->site->id, 'from' => $range->fromDay(), 'to' => $range->toDay(), 'offset' => $offset];
         $bucketExpression = static fn(string $column, string $alias): string => "DATE_FORMAT(CONVERT_TZ({$alias}.{$column}, '+00:00', :offset), '%Y-%m-%d %H:00')";
 
@@ -105,11 +110,8 @@ final readonly class TimeseriesReport
             $this->add($buckets, Types::string($row['bucket']), ['visits' => Types::int($row['visits']), 'visitors' => Types::int($row['visitors']), 'bounces' => Types::int($row['bounces']), 'engagement_ms' => Types::int($row['engagement_ms']), 'consented_visits' => Types::int($row['consented_visits'])]);
         }
 
-        $join = $query->filters !== [] ? ' LEFT JOIN visits v ON v.site_id = e.site_id AND v.id = e.visit_id AND v.local_day = e.local_day' : '';
         $eventRows = $this->connection->fetchAllAssociative(
-            'SELECT ' . $bucketExpression('occurred_at', 'e') . ' AS bucket, COALESCE(SUM(e.type = \'pv\'), 0) AS pageviews,
-                    COALESCE(SUM(e.type = \'ev\'), 0) AS events, COALESCE(SUM(e.type = \'pv\' AND e.visit_id IS NULL AND e.is_entry = 1), 0) AS orphan_entries
-               FROM events_raw e' . $join . ' WHERE e.site_id = :site AND e.local_day BETWEEN :from AND :to' . $eventFilters['sql'] . ' GROUP BY bucket',
+            self::hourlyEvents($bucketExpression('occurred_at', 'e'), $eventFilters['sql'], $query->filters !== [], self::VISITS_DAY_RANGE),
             $params + $eventFilters['params'],
         );
         foreach ($eventRows as $row) {
@@ -131,6 +133,20 @@ final readonly class TimeseriesReport
         ksort($buckets);
 
         return $buckets;
+    }
+
+    /**
+     * The hourly events query. $visitsDayRange repeats on the joined visits the day range the
+     * events already carry, so that MySQL prunes its partitions instead of reading every month
+     * (see RawSelects::visitsJoin()); QueryPlanTest EXPLAINs exactly this string.
+     */
+    public static function hourlyEvents(string $bucket, string $eventsWhere, bool $joinVisits, string $visitsDayRange = ''): string
+    {
+        $join = $joinVisits ? RawSelects::visitsJoin($visitsDayRange) : '';
+
+        return 'SELECT ' . $bucket . ' AS bucket, COALESCE(SUM(e.type = \'pv\'), 0) AS pageviews,
+                    COALESCE(SUM(e.type = \'ev\'), 0) AS events, COALESCE(SUM(e.type = \'pv\' AND e.visit_id IS NULL AND e.is_entry = 1), 0) AS orphan_entries
+               FROM events_raw e' . $join . ' WHERE e.site_id = :site AND e.local_day BETWEEN :from AND :to' . $eventsWhere . ' GROUP BY bucket';
     }
 
     /**

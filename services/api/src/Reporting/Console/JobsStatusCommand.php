@@ -42,10 +42,11 @@ final class JobsStatusCommand extends Command
                 Types::string($job['last_status'] ?? '-', '-'),
                 Types::string($job['last_started_at'] ?? '-', '-'),
                 Types::string($job['last_duration_ms'] ?? '-', '-'),
+                \is_array($job['last_stats'] ?? null) ? json_encode($job['last_stats'], \JSON_THROW_ON_ERROR) : '-',
                 mb_substr(Types::string($job['last_message'] ?? ''), 0, 60),
             ];
         }
-        new Table($output)->setHeaders(['job', 'status', 'started', 'ms', 'message'])->setRows($rows)->render();
+        new Table($output)->setHeaders(['job', 'status', 'started', 'ms', 'stats', 'message'])->setRows($rows)->render();
         $geoAge = Types::nullableInt($status['geo_db_age_days'] ?? null);
         $output->writeln(\sprintf(
             'rollup lag: %d min over %d dirty day(s); geo database: %s',
