@@ -11,7 +11,7 @@
 x-php-test-env: &php-test-env
   APP_ENV: test
   APP_URL: https://analytics.test
-  LOG_LEVEL: debug
+  LOG_LEVEL: ${LOG_LEVEL:-debug}
   APP_SECRET: dGVzdC10ZXN0LXRlc3QtdGVzdC10ZXN0LXRlc3QwMDA=
   APP_ENCRYPTION_KEYS: k1:dGVzdC1rZXktdGVzdC1rZXktdGVzdC1rZXktdGVzdDA=
   DATABASE_URL: mysql://root:root@mysql:3306/analytics_test

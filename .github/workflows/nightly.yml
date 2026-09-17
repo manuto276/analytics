@@ -165,6 +165,36 @@ jobs:
           WP_SMOKE_PORT: '8091'
         run: ./services/wordpress-plugin/analytics-connector/tests/smoke/smoke.sh
 
+  load:
+    name: Load baseline (informative)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Seed and run k6
+        # Informative: the plan's budgets (collect p95 < 50 ms at 100 rps,
+        # reports p95 < 500 ms) are reported, never a build gate — a shared CI
+        # runner is not a performance reference.
+        continue-on-error: true
+        env:
+          SEED_EVENTS: '1000000'
+          PERF_DAYS: '60'
+          DURATION: '120s'
+        run: make perf
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: k6-summary
+          path: services/e2e/perf/summary.json
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Tear down
+        if: always()
+        run: make down
+
   zap:
     name: OWASP ZAP baseline
     runs-on: ubuntu-latest

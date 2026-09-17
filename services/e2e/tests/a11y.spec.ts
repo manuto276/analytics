@@ -94,12 +94,7 @@ test('a report table page is accessible', async ({ page }) => {
   await gotoReport(page, '/pages', 'pages', { site: site.id, period: '7d' })
   await expect(page.getByRole('table').first()).toBeVisible()
 
-  await audit(page, {
-    // Known, reported to the dashboard owner: the labels of the unselected
-    // report tabs (Top/Entry/Exit pages) do not reach 4.5:1 against the tab
-    // background. Remove this allowance once the tab styling is fixed.
-    known: [/^color-contrast .*reka-tabs.*trigger/],
-  })
+  await audit(page)
 })
 
 test('the sign-in page is accessible', async ({ page }) => {
@@ -107,10 +102,5 @@ test('the sign-in page is accessible', async ({ page }) => {
   await page.goto('/login')
   await expect(page.getByRole('heading', { name: /Sign in|Accedi/ })).toBeVisible()
 
-  await audit(page, {
-    // Same known issue as the report tabs: Nuxt UI renders muted
-    // `[data-slot="label"]` text (here the language switcher) below 4.5:1 in
-    // light mode. Reported to the dashboard owner.
-    known: [/^color-contrast .*data-slot="label"/],
-  })
+  await audit(page)
 })

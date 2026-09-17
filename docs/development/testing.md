@@ -94,6 +94,49 @@ Two things trip up every new e2e test:
 Reports and traces land in `services/e2e/playwright-report/` and
 `services/e2e/test-results/` (uploaded by CI when a job fails).
 
+## Load baseline
+
+```bash
+make perf                                  # seeds ~200k events, then 100 rps of /t/e for 60 s
+make perf SEED_EVENTS=5000000 PERF_DAYS=60 DURATION=300s   # the plan's 5M-event baseline
+make perf PERF_SKIP_SEED=1 COLLECT_RPS=200 # reuse the seeded data, push harder
+```
+
+`deploy/docker/scripts/perf.sh` prepares the stack and the `perf` site, seeds it
+with `dev:seed` (visits per day derived from `SEED_EVENTS`, roughly four events
+per visit) and runs `services/e2e/perf/collect.js` in the `grafana/k6` container
+on the compose network. Two scenarios: collect batches ramping to `COLLECT_RPS`
+(default 100) and the overview/pages/sources reports at `REPORTS_RPS` (default
+5, with a real session cookie). The plan's budgets — collect p95 < 50 ms,
+reports p95 < 500 ms — are k6 thresholds, so the summary shows whether they were
+met; the nightly job runs with `continue-on-error`, since a shared CI runner is
+not a performance reference. The raw metrics land in
+`services/e2e/perf/summary.json` (git-ignored, uploaded as a nightly artifact).
+
+Three details make the measurement describe the application rather than the
+harness:
+
+- **Production configuration.** After seeding, `perf.sh` recreates the php
+  container with `deploy/docker/compose.perf.yml`: `APP_ENV=prod` (compiled
+  PHP-DI container, warmed with `cache:warmup`), the production `php.ini`,
+  Redis for the cache and rate limits, and `LOG_LEVEL=warning`. In the ordinary
+  test configuration the same request takes an order of magnitude longer,
+  because the container is rebuilt on every request and OPcache revalidates
+  every file. `dev:seed` refuses `APP_ENV=prod`, which is why the seeding runs
+  first.
+- **Realistic headers.** Every batch carries a browser `User-Agent` *and* an
+  `Accept-Language`: a request without the latter is treated as a bot, answered
+  `202` and dropped, so the script would otherwise time the bot filter.
+- **Spread client IPs.** The collect limiter allows 300 requests per minute per
+  (site, shortened IP), so the script sends each batch from a different /24.
+
+Traffic goes over plain HTTP to `http://analytics.test` inside the compose
+network: TLS handshakes would measure the proxy rather than the application.
+
+Measured on a MacBook (Docker Desktop, arm64, 60 s at ~100 rps over ~70k seeded
+events): collect avg 21 ms / p95 32 ms, reports avg 14 ms / p95 19 ms, no failed
+requests — both budgets met, with the caveats above.
+
 ## Deploy tooling
 
 ```bash
@@ -137,14 +180,17 @@ backend).
   with a warning until Infection supports PHPUnit 13.
 - `test-tracker-browser` is `test-e2e` filtered by `--grep @tracker`, so it only runs what the e2e
   specs have tagged.
-- Two dashboard issues are allow-listed in the e2e suite until they are fixed, each with a comment
-  next to the allowance: muted `[data-slot="label"]` text below 4.5:1 contrast (`a11y.spec.ts`) and a
-  wrong MFA code returning to the password form instead of showing "Invalid code" (`auth.spec.ts`).
-  WebKit alone also reports the consent banner buttons as low contrast, because axe cannot read
-  styles adopted into a shadow root there.
-- Screenshot baselines (`services/e2e/tests/visual.spec.ts-snapshots/`) were generated in the
-  Playwright container on arm64; if another architecture reports small antialiasing differences,
-  regenerate them with `make e2e-snapshots` and commit the result.
+- The only axe allowance left in `a11y.spec.ts` is WebKit-specific: it reports the consent banner
+  buttons as low contrast because it cannot read the styles adopted into the shadow root. The real
+  values are enforced by the backend (it refuses a theme below 4.5:1) and audited by the same test in
+  Chromium and Firefox.
+- The screenshot baselines follow the design: they were last regenerated when the primary colour
+  moved to green-700 and the report tabs became neutral pills.
+- Screenshot baselines (`services/e2e/tests/visual.spec.ts-snapshots/`) are generated in the
+  Playwright container on arm64 but are **not** arm64-only: the committed files also pass from the
+  `linux/amd64` image (verified with `docker run --platform linux/amd64 … npx playwright test
+  tests/visual.spec.ts`), because the comparison allows a 5% pixel ratio with a 0.3 per-pixel
+  threshold. Regenerate them with `make e2e-snapshots` after an intended design change.
 - Beacons sent while a page is going away are best-effort, so tracking assertions use a floor
   ("at least N batches") rather than exact counts.
 

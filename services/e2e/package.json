@@ -11,10 +11,16 @@
   "scripts": {
     "test": "playwright test",
     "test:smoke": "playwright test tests/smoke.spec.ts",
-    "report": "playwright show-report"
+    "report": "playwright show-report",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.10.2",
-    "@playwright/test": "1.55.0"
+    "@playwright/test": "1.55.0",
+    "@types/node": "^24.9.2",
+    "typescript": "~6.0.3"
+  },
+  "overrides": {
+    "playwright-core": "1.55.0"
   }
 }

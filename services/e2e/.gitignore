@@ -6,3 +6,6 @@ node_modules/
 test-results/
 playwright-report/
 blob-report/
+
+# k6 output
+perf/summary.json

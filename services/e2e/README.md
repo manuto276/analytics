@@ -51,6 +51,35 @@ matters after publishing a new consent version.
 | `a11y.spec.ts` | axe on the banner, the dashboard in English and Italian, a report table, the sign-in page |
 | `visual.spec.ts` | screenshot baselines of the sign-in page and the Overview KPI cards (Chromium) |
 
+## Load baseline (k6)
+
+```bash
+make perf                                  # ~200k seeded events, 100 rps for 60 s
+make perf SEED_EVENTS=5000000 PERF_DAYS=60 DURATION=300s   # the plan's baseline
+make perf PERF_SKIP_SEED=1                 # reuse the data already seeded
+```
+
+`deploy/docker/scripts/perf.sh` brings the stack up, creates the `perf` site,
+seeds it with `bin/analytics dev:seed` (the visits-per-day option is derived
+from `SEED_EVENTS`, about four events per visit) and then runs
+`perf/collect.js` in the `grafana/k6` container on the compose network.
+
+The script drives two scenarios — `POST /t/e` batches (mixed pageviews,
+engagement and custom events, a quarter of them consented, varied user agents,
+languages, paths, referrers and campaigns, each from a different /24 so the
+rate limiter is not what gets measured) ramping to `COLLECT_RPS`, and the
+overview, pages and sources reports at `REPORTS_RPS` with a real session cookie.
+The measurement phase runs the application in its production configuration
+(`deploy/docker/compose.perf.yml`: `APP_ENV=prod`, compiled container,
+production `php.ini`, Redis cache), because the test configuration rebuilds the
+DI container on every request.
+
+The plan's budgets (collect p95 < 50 ms, reports p95 < 500 ms) are k6
+thresholds, so they appear in the summary; the nightly job runs the whole thing
+with `continue-on-error`, because a shared runner is not a performance
+reference. Local reference numbers (MacBook, Docker Desktop, ~100 rps for 60 s):
+collect p95 32 ms, reports p95 19 ms.
+
 ## Support helpers
 
 | File | What it does |

@@ -1,0 +1,20 @@
+# Load-baseline overlay (deploy/docker/scripts/perf.sh), applied on top of
+# compose.base.yml + compose.test.yml for the measurement phase only.
+#
+# The test stack is tuned for fast feedback, not for measuring: `APP_ENV=test`
+# rebuilds the PHP-DI container on every request and the dev php.ini revalidates
+# every file (no JIT). This overlay runs the same code the production image
+# runs — `APP_ENV=prod` with a compiled container and the production php.ini —
+# against the database the test stack seeded.
+#
+# It is never used for the test suites: `dev:seed` refuses to run with
+# APP_ENV=prod, which is why perf.sh seeds first and applies this overlay after.
+services:
+  php:
+    environment:
+      APP_ENV: prod
+      APP_DEBUG: "0"
+    volumes:
+      - ../../services/api:/app
+      - ../../docs:/docs:ro
+      - ./php/prod.ini:/usr/local/etc/php/conf.d/zz-analytics.ini:ro

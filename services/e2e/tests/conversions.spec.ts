@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { Api, postConversions } from '../support/api'
 import { createApiKey, createSite, expectBannerVisible, hideWebdriver, rollup, trackedCookie } from '../support/tracking'
-import { expectToast, gotoReport, login, preparePage, reportUrl } from '../support/dashboard'
+import { expectToast, login, preparePage, reportUrl } from '../support/dashboard'
 
 /**
  * Goals, server-side conversions, attribution, funnels and campaign costs
@@ -167,15 +167,22 @@ test('importing campaign costs turns the conversions into CAC and ROAS', async (
   await page.getByTestId('csv-confirm').click()
   await expectToast(page, /imported|importate/i)
 
-  // The dashboard shows the imported cost and the derived numbers. The page
-  // groups by channel by default; the campaign breakdown is asserted on the API
-  // below, where the exact minor units are visible.
-  await gotoReport(page, '/attribution', 'attribution', { site: site.id, period: 'today' })
+  // The attribution page keeps its selectors in the URL, so the campaign
+  // breakdown can be deep-linked.
+  const attribution = page.waitForResponse(
+    r => r.url().includes('/reports/attribution') && r.url().includes('group=campaign') && r.status() === 200,
+    { timeout: 20_000 },
+  )
+  await page.goto(reportUrl('/attribution', { site: site.id, period: 'today' })
+    + '&model=last_non_direct&group=campaign&window=30')
+  await attribution
+
   await expect(page.getByText(/^Cost$|^Costo$/).first()).toBeVisible()
-  const emailRow = page.getByRole('row').filter({ hasText: /email/i }).first()
-  await expect(emailRow).toBeVisible()
-  await expect(emailRow).toContainText(/100/)
-  await expect(emailRow).toContainText(/[×x]/)
+  const campaignRow = page.getByRole('row').filter({ hasText: CAMPAIGN }).first()
+  await expect(campaignRow).toBeVisible()
+  // Cost 100.00 and ROAS 2× on the campaign that brought the conversions.
+  await expect(campaignRow).toContainText(/100/)
+  await expect(campaignRow).toContainText(/[×x]/)
 
   const report = await api.report(site.id, 'attribution', {
     period: 'today',

@@ -25,28 +25,25 @@ test('an admin creates a site with its domains', async ({ page }) => {
   await expect(dialog).toBeVisible()
   await dialog.getByLabel(/Site name|Nome del sito/).fill(siteName)
 
-  // One domain goes into the tag input; the second one is added from the site
-  // settings in the next test.
-  const domainInput = dialog.getByPlaceholder('example.com')
-  await domainInput.click()
-  await domainInput.pressSequentially('shop.example.com')
-  await domainInput.press('Enter')
-
-  // Engine difference (reported to the dashboard owner): in Firefox the Enter
-  // that commits a tag also submits the surrounding form, so the modal is
-  // already gone; in Chromium and WebKit the Create button still has to be
-  // pressed.
-  await page.waitForTimeout(800)
-  if (await dialog.isVisible()) {
-    await dialog.getByRole('button', { name: /^Create$|^Crea$/ }).click()
+  // Enter commits a tag without submitting the modal (the form has no implicit
+  // submit button), so both domains can be typed before creating the site.
+  for (const domain of ['shop.example.com', 'checkout.example.com']) {
+    const input = dialog.getByPlaceholder('example.com')
+    await input.click()
+    await input.pressSequentially(domain)
+    await input.press('Enter')
+    await expect(input).toHaveValue('')
   }
+  // Both tags survived: `site:list` in the next test asserts what was stored.
+
+  await dialog.getByRole('button', { name: /^Create$|^Crea$/ }).click()
 
   await expectToast(page, /Site created|Sito creato/)
   await expect(page).toHaveURL(/\/settings\?site=\d+/)
   await expect(page.getByRole('heading', { name: /Settings|Impostazioni/ })).toBeVisible()
 })
 
-test('the new site shows its public key and snippet, and accepts a second domain', async ({ page }) => {
+test('the new site shows its public key and snippet, and accepts another domain', async ({ page }) => {
   await preparePage(page, null)
   await login(page)
 
@@ -57,6 +54,7 @@ test('the new site shows its public key and snippet, and accepts a second domain
   const publicKey = line!.match(/pk_[A-Za-z0-9]{21}/)?.[0]
   expect(publicKey).toBeTruthy()
   expect(line).toContain('shop.example.com')
+  expect(line).toContain('checkout.example.com')
 
   await page.goto(`/settings?site=${siteId}`)
 
@@ -68,20 +66,21 @@ test('the new site shows its public key and snippet, and accepts a second domain
   const proxySnippet = page.getByLabel(/First-party proxy snippet|Snippet proxy/).first()
   expect(await proxySnippet.inputValue()).toContain(`/stats/${publicKey}.js`)
 
-  // A second domain is added from the site settings and saved.
+  // A third domain can be added from the site settings and saved.
   const domainFields = page.getByPlaceholder('example.com')
   const existing = await domainFields.count()
   await page.getByRole('button', { name: /Add domain|Aggiungi dominio/ }).click()
   await expect(domainFields).toHaveCount(existing + 1)
-  await domainFields.nth(existing).fill('checkout.example.com')
+  await domainFields.nth(existing).fill('help.example.com')
   await page.getByTestId('save-site').click()
   await expectToast(page, /Changes saved|Modifiche salvate/)
 
-  await expect.poll(async () => await console_('site:list')).toContain('checkout.example.com')
+  await expect.poll(async () => await console_('site:list')).toContain('help.example.com')
 
   const inputValues = await page.locator('input').evaluateAll(
     inputs => inputs.map(input => (input as HTMLInputElement).value),
   )
   expect(inputValues).toContain('shop.example.com')
   expect(inputValues).toContain('checkout.example.com')
+  expect(inputValues).toContain('help.example.com')
 })

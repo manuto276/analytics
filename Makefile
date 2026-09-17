@@ -40,7 +40,7 @@ PACKAGE = $(shell ls -1t $(DIST)/analytics-*.tar.gz 2>/dev/null | head -n1)
         test test-unit test-integration test-functional test-migrations \
         test-tracker test-tracker-browser test-dashboard test-e2e e2e-setup \
         test-deploy test-smoke test-image test-wordpress coverage mutation perf e2e-snapshots e2e-report \
-        stan deptrac cs cs-fix rector lint lint-js lint-infra typecheck openapi-types size package ci \
+        stan deptrac cs cs-fix rector lint lint-js lint-infra typecheck typecheck-e2e openapi-types size package ci \
         images build-images
 
 ## ---------------------------------------------------------------- stack ----
@@ -60,8 +60,8 @@ up: certs ## Start the development stack (add PROFILES=redis,mail,node for the o
 	@echo "Dashboard/API: https://analytics.test:8443  ·  http://127.0.0.1:8080"
 
 down: ## Stop both stacks (test volumes are removed)
-	-$(COMPOSE_DEV) down --remove-orphans
-	-$(COMPOSE_TEST) down -v --remove-orphans
+	-$(COMPOSE_DEV) --profile redis --profile mail --profile node down --remove-orphans
+	-$(COMPOSE_TEST) --profile redis down -v --remove-orphans
 
 logs: ## Follow the development stack logs
 	$(COMPOSE_DEV) logs -f --tail=100
@@ -118,7 +118,7 @@ test-e2e: node-init e2e-setup ## End-to-end suite (Playwright in the pinned cont
 	$(PLAYWRIGHT) sh -lc 'npm ci --no-audit --no-fund --silent || npm install --no-audit --no-fund --silent; npx playwright test $(E2E_ARGS)'
 
 e2e-snapshots: node-init e2e-setup ## Regenerate the screenshot baselines (after an intended design change)
-	$(PLAYWRIGHT) sh -lc 'npm ci --no-audit --no-fund --silent || npm install --no-audit --no-fund --silent; npx playwright test --project=chromium --update-snapshots tests/visual.spec.ts'
+	$(PLAYWRIGHT) sh -lc 'npm ci --no-audit --no-fund --silent || npm install --no-audit --no-fund --silent; npx playwright test --project=chromium tests/visual.spec.ts --update-snapshots=all'
 
 e2e-report: ## Open the last Playwright HTML report (serves it on 127.0.0.1:9323)
 	$(COMPOSE_TEST) run --rm --service-ports -T playwright npx playwright show-report --host 0.0.0.0
@@ -152,12 +152,8 @@ coverage: ## PHP coverage (pcov) with the plan's gates
 mutation: ## Infection mutation testing (nightly)
 	$(PHP) sh -lc 'test -x vendor/bin/infection || { echo "infection is not installed: composer require --dev infection/infection" >&2; exit 1; }; php -d pcov.enabled=1 vendor/bin/infection --threads=max --min-msi=80'
 
-perf: ## k6 load baseline (nightly, informative)
-	@if [ -f services/e2e/perf/collect.js ]; then \
-	  docker run --rm -i --network $(TEST_PROJECT)_default -v "$(CURDIR)/services/e2e/perf:/perf" grafana/k6 run /perf/collect.js; \
-	else \
-	  echo "No k6 scripts yet (services/e2e/perf/collect.js) — skipping."; \
-	fi
+perf: ## k6 load baseline: seed, then 100 rps collect + reports (nightly, informative)
+	TEST_PROJECT=$(TEST_PROJECT) ./$(DOCKER_DIR)/scripts/perf.sh
 
 ## ------------------------------------------------------------ static tools ---
 
@@ -177,7 +173,7 @@ cs-fix: ## PHP-CS-Fixer (write)
 rector: ## Rector (dry run)
 	$(PHP_NODEPS) vendor/bin/rector process --dry-run
 
-lint: cs lint-js lint-infra ## Lint everything: PHP CS, ESLint, workflows, Dockerfile, shell scripts
+lint: cs lint-js typecheck-e2e lint-infra ## Lint everything: PHP CS, ESLint, workflows, Dockerfile, shell scripts
 
 lint-js: node-init ## ESLint for the tracker and the dashboard
 	$(NODE) sh -lc 'cd services/tracker && $(PNPM) install --frozen-lockfile && $(PNPM) lint'
@@ -192,9 +188,12 @@ lint-infra: ## actionlint, hadolint and shellcheck on the infrastructure files
 	  deploy/manual/build.sh deploy/manual/publish.sh deploy/manual/smoke/smoke.sh deploy/manual/smoke/repack.sh \
 	  services/wordpress-plugin/analytics-connector/tests/smoke/smoke.sh
 
-typecheck: node-init ## TypeScript checks (tracker + dashboard)
+typecheck: node-init typecheck-e2e ## TypeScript checks (tracker + dashboard + e2e)
 	$(NODE) sh -lc 'cd services/tracker && $(PNPM) install --frozen-lockfile && $(PNPM) typecheck'
 	$(NODE) sh -lc 'cd services/dashboard && $(PNPM) install --frozen-lockfile && $(PNPM) typecheck'
+
+typecheck-e2e: node-init ## TypeScript check of the end-to-end specs (Playwright only transpiles)
+	$(NODE) sh -lc 'cd services/e2e && npm ci --no-audit --no-fund --silent && npm run typecheck'
 
 openapi-types: node-init ## Regenerate the dashboard API types from docs/api/openapi.yaml
 	$(NODE) sh -lc 'cd services/dashboard && $(PNPM) install --frozen-lockfile && $(PNPM) openapi-types'

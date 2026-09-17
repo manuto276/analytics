@@ -67,20 +67,13 @@ test('a wrong code is refused and a recovery code still works', async ({ page })
   await preparePage(page, null)
   await login(page, email, PASSWORD, { expectMfa: true })
 
+  // A mistyped code keeps the visitor on the step with a message: the backend
+  // answers 401 invalid_mfa_code and the pending session stays alive.
   await fillPin(page, '000000')
+  await expect(page.getByText(/not valid|non valido/i).first()).toBeVisible()
+  await expect(page).toHaveURL(/\/login\/mfa/)
 
-  // Current behaviour: app/pages/login/mfa.vue maps every 400/401 from
-  // /auth/mfa to "the sign-in attempt expired" and navigates to /login, where
-  // the message is lost with the page — so a mistyped digit silently sends the
-  // user back to the password form, although the backend answers 401
-  // invalid_mfa_code and keeps the pending session alive. Reported to the
-  // dashboard owner; when the page tells the two apart, this expectation
-  // becomes "stays on /login/mfa and shows the Invalid code alert".
-  await expect(page).toHaveURL(/\/login$/, { timeout: 15_000 })
-  await expect(page.getByRole('heading', { name: /Sign in|Accedi/ })).toBeVisible()
-
-  // A recovery code gets the user in.
-  await login(page, email, PASSWORD, { expectMfa: true })
+  // A recovery code gets the user in, without signing in again.
   await page.getByRole('button', { name: /Use a recovery code|Usa un codice di recupero/ }).click()
   await page.getByLabel(/Recovery code|Codice di recupero/).fill(recoveryCodes[0]!)
   await page.getByRole('button', { name: /Verify|Verifica/ }).click()
