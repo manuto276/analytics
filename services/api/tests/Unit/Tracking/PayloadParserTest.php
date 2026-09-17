@@ -115,7 +115,7 @@ final class PayloadParserTest extends TestCase
             ['a' => 999_999_999] + Payloads::pageview(),
             ['a' => 'x'] + Payloads::pageview(),
         ]));
-        self::assertSame([0, PayloadParser::MAX_AGE_MS, 0], array_map(static fn($e): int => $e->ageMs, $parsed->events));
+        self::assertSame([0, PayloadParser::MAX_AGE_MS, 0], array_map(static fn(\Analytics\Tracking\Application\Payload\ParsedEvent $e): int => $e->ageMs, $parsed->events));
     }
 
     public function testSeededFuzzNeverThrowsUnexpectedErrors(): void

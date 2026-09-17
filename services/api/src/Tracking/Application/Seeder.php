@@ -60,7 +60,7 @@ final readonly class Seeder
                 $consented = $site->cookieLevelEnabled && mt_rand(1, 100) <= (int) ($consentedShare * 100);
                 $hashKey = random_bytes(16);
                 $sessionKey = $consented ? random_bytes(16) : null;
-                $visitorId = $consented ? $this->pickVisitor($site, $seed, $visit) : null;
+                $visitorId = $consented ? $this->pickVisitor($site, $seed) : null;
                 $pageCount = mt_rand(1, 4);
                 $at = $start;
 
@@ -119,7 +119,7 @@ final readonly class Seeder
     }
 
     /** Reuses one of a few visitor ids so cohorts and returning visitors appear. */
-    private function pickVisitor(SiteSnapshot $site, int $seed, int $index): string
+    private function pickVisitor(SiteSnapshot $site, int $seed): string
     {
         $pool = 40;
         $slot = mt_rand(0, $pool - 1);

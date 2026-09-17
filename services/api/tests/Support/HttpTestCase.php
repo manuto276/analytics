@@ -113,7 +113,7 @@ abstract class HttpTestCase extends IntegrationTestCase
             $request = $request->withHeader($name, $value);
         }
         if ($this->cookies !== [] && !isset($headers['Cookie'])) {
-            $request = $request->withCookieParams($this->cookies)->withHeader('Cookie', implode('; ', array_map(static fn(string $k, string $v): string => $k . '=' . $v, array_keys($this->cookies), $this->cookies)));
+            return $request->withCookieParams($this->cookies)->withHeader('Cookie', implode('; ', array_map(static fn(string $k, string $v): string => $k . '=' . $v, array_keys($this->cookies), $this->cookies)));
         }
 
         return $request;

@@ -67,7 +67,7 @@ final class QueueModeTest extends IntegrationTestCase
         $container = $this->queueContainer;
         self::assertNotNull($container);
         $site = $this->factory->site([], ['www.site.test']);
-        $snapshot = SiteSnapshot::fromSite($site);
+        SiteSnapshot::fromSite($site);
 
         $collect = $container->get(CollectService::class);
         \assert($collect instanceof CollectService);

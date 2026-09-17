@@ -55,8 +55,6 @@ final class ConsentServiceTest extends HttpTestCase
     }
 
     /**
-     * @param mixed $value
-     *
      * @return array<string, mixed>
      */
     private static function asArray(mixed $value): array

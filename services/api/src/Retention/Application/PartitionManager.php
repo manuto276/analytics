@@ -98,7 +98,7 @@ final readonly class PartitionManager
                 continue;
             }
             // The lowest partition covers everything below its bound: split it into months.
-            $lowestName = (string) array_key_first($partitions);
+            $lowestName = array_key_first($partitions);
             $lowestBound = $partitions[$lowestName];
             if ($lowestBound === 'MAXVALUE') {
                 continue;

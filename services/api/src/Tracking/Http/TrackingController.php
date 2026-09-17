@@ -60,7 +60,7 @@ final readonly class TrackingController
         if (!\is_array($body)) {
             throw ApiProblem::badRequest('invalid_json', 'Expected a JSON payload.');
         }
-        $result = $this->collect->collect($body, $this->context($request));
+        $this->collect->collect($body, $this->context($request));
 
         return $this->cors($request, $this->responses->createResponse(202)->withHeader('Cache-Control', 'no-store'));
     }

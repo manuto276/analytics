@@ -68,9 +68,7 @@ final readonly class TimeseriesReport
                 Interval::Month => $date->format('Y-m-01'),
                 default => $date->format('Y-m-d'),
             };
-            if (!isset($buckets[$key])) {
-                $buckets[$key] = DailyMetrics::EMPTY;
-            }
+            $buckets[$key] ??= DailyMetrics::EMPTY;
             foreach ($metrics as $name => $value) {
                 $buckets[$key][$name] += $value;
             }

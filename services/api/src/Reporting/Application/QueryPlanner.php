@@ -56,7 +56,7 @@ final readonly class QueryPlanner
             throw new ApiProblem(422, 'filter_unsupported', 'Unprocessable entity', 'The ' . $report . ' report cannot be filtered.');
         }
         if ($report === 'tech' && $dimensions !== [] && $dimensions !== [$query->option('group', 'device')]) {
-            return $this->rawPlan($report, $query);
+            return $this->rawPlan($query);
         }
 
         $rollupDimensions = self::ROLLUP_DIMENSIONS[$report] ?? [];
@@ -65,11 +65,11 @@ final readonly class QueryPlanner
             return ['source' => 'rollup', 'interval' => $query->interval];
         }
 
-        return $this->rawPlan($report, $query);
+        return $this->rawPlan($query);
     }
 
     /** @return array{source: string, interval: Interval} */
-    private function rawPlan(string $report, ReportQuery $query): array
+    private function rawPlan(ReportQuery $query): array
     {
         $cutoff = $this->clock->now()->setTimezone($query->site->timezone())->modify('-' . $this->retentionMonths . ' months');
         if ($query->range->from < $cutoff->setTime(0, 0)) {

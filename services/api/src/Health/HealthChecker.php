@@ -36,7 +36,7 @@ final readonly class HealthChecker
         try {
             $this->connection->fetchOne('SELECT 1');
             $checks['database'] = ['status' => 'ok', 'detail' => 'connected'];
-        } catch (\Throwable $e) {
+        } catch (\Throwable) {
             $checks['database'] = ['status' => 'fail', 'detail' => 'unreachable'];
 
             return ['status' => 'fail', 'checks' => $checks];

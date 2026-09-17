@@ -50,7 +50,7 @@ final readonly class FunnelReport
         $byVisitor = $funnel->scope === 'visitor';
         $subjects = [];
         foreach ($steps as $index => $step) {
-            foreach ($this->occurrences($site, $step['goal'], $range, $byVisitor, $funnel->windowDays) as $subject => $timestamp) {
+            foreach ($this->occurrences($site, $step['goal'], $range, $byVisitor) as $subject => $timestamp) {
                 $subjects[$subject][$index] = $timestamp;
             }
         }
@@ -121,7 +121,7 @@ final readonly class FunnelReport
      *
      * @return array<string, string>
      */
-    private function occurrences(SiteSnapshot $site, Goal $goal, DateRange $range, bool $byVisitor, int $windowDays): array
+    private function occurrences(SiteSnapshot $site, Goal $goal, DateRange $range, bool $byVisitor): array
     {
         $params = ['site' => $site->id, 'from' => $range->fromDay(), 'to' => $range->toDay()];
         $subject = $byVisitor ? 'HEX(e.visitor_id)' : 'CAST(e.visit_id AS CHAR)';

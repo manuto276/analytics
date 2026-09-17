@@ -51,7 +51,7 @@ final readonly class SecurityHeadersMiddleware implements MiddlewareInterface
             ->withHeader('X-Frame-Options', 'DENY')
             ->withHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=(), browsing-topics=()');
         if ($this->https) {
-            $response = $response->withHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+            return $response->withHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
         }
 
         return $response;

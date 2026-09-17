@@ -379,7 +379,7 @@ final readonly class ConversionsAdminController
             $ids = $input->array('goal_ids', $creating) ?? [];
             $goalIds = [];
             foreach ($ids as $id) {
-                if (!\is_int($id) && !(\is_string($id) && ctype_digit($id))) {
+                if (!\is_int($id) && (!\is_string($id) || !ctype_digit($id))) {
                     $input->error('goal_ids', 'Must be a list of goal ids.');
                     continue;
                 }
