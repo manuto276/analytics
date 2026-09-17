@@ -576,7 +576,8 @@ Each milestone ends with a green `make ci` and a verifiable result.
 - [ ] Email reports, country map, automatic events (outbound links, downloads, forms) if confirmed; full dashboard accessibility audit
 
 ## 15. Verification checklist (release gate)
-- [ ] `make ci` green; coverage and MSI thresholds met
+- [x] Coverage gates met (overall 92.7%; Tracking 96.4%, Consent 96.8%, Identity 95.3%, Shared Net 95.6%, Shared Crypto 97.9%). Mutation testing (MSI) is not run: infection/infection cannot be installed next to PHPUnit 13 — see docs/development/testing.md
+- [ ] `make ci` green
 - [x] PrivacyInvariantsTest, NoSetCookie, tracker no-storage-before-choice green
 - [x] Tracker ≤ 5.0 KB gzip; axe no serious violations (banner, dashboard)
 - [x] OpenAPI types fresh; i18n parity
