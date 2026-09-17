@@ -28,19 +28,24 @@ final class QueueModeTest extends IntegrationTestCase
 {
     protected bool $useTransaction = false;
 
-    private const string REDIS_DSN = 'redis://127.0.0.1:63791';
-
     private ?Container $queueContainer = null;
+
+    private static function redisDsn(): string
+    {
+        $dsn = getenv('TEST_REDIS_DSN');
+
+        return \is_string($dsn) && $dsn !== '' ? $dsn : 'redis://127.0.0.1:63791';
+    }
 
     protected function setUp(): void
     {
         parent::setUp();
         try {
-            new \Predis\Client(self::REDIS_DSN)->ping();
+            new \Predis\Client(self::redisDsn())->ping();
         } catch (\Throwable $e) {
             self::markTestSkipped('Redis is not available: ' . $e->getMessage());
         }
-        $this->queueContainer = TestContainer::build(['INGEST_MODE' => 'queue', 'REDIS_DSN' => self::REDIS_DSN]);
+        $this->queueContainer = TestContainer::build(['INGEST_MODE' => 'queue', 'REDIS_DSN' => self::redisDsn()]);
         $redis = $this->queueContainer->get('redis');
         \assert($redis instanceof \Predis\ClientInterface);
         $redis->del([RedisQueueEventSink::KEY]);

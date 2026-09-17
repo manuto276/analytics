@@ -36,7 +36,22 @@ final class PartitionsMaintainCommand extends Command
             return self::SUCCESS;
         }
         $ahead = max(1, min(12, Types::int($input->getOption('ahead'), 3)));
-        $result = $this->jobs->run('partitions:maintain', fn(): array => $this->partitions->maintain($this->clock->now(), $ahead), 600);
+        $pastFrom = Types::string($input->getOption('past-from'));
+        if ($pastFrom !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $pastFrom) !== 1) {
+            $output->writeln('<error>--past-from must be a date (YYYY-MM-DD).</error>');
+
+            return self::INVALID;
+        }
+        $result = $this->jobs->run('partitions:maintain', function () use ($ahead, $pastFrom): array {
+            $stats = $this->partitions->maintain($this->clock->now(), $ahead);
+            if ($pastFrom !== '') {
+                foreach ($this->partitions->ensurePastMonths(new \DateTimeImmutable($pastFrom)) as $table => $created) {
+                    $stats[$table] = array_merge($stats[$table] ?? [], $created);
+                }
+            }
+
+            return $stats;
+        }, 600);
         $output->writeln('partitions:maintain ' . $result['status'] . ' ' . json_encode($result['stats'], \JSON_THROW_ON_ERROR));
 
         return $result['status'] === 'failed' ? self::FAILURE : self::SUCCESS;

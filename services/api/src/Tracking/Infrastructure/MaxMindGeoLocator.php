@@ -15,7 +15,8 @@ use MaxMind\Db\Reader;
 final class MaxMindGeoLocator implements GeoLocator
 {
     private ?Reader $reader = null;
-    private bool $unavailable = false;
+    /** Set only when the file exists but cannot be opened, to avoid retrying a corrupt database. */
+    private bool $broken = false;
     /** @var array<string, ?string> */
     private array $memo = [];
 
@@ -23,7 +24,7 @@ final class MaxMindGeoLocator implements GeoLocator
 
     public function country(?IpPrefix $ip): ?string
     {
-        if ($ip === null || $this->unavailable) {
+        if ($ip === null || $this->broken) {
             return null;
         }
         $key = $ip->packed;
@@ -57,15 +58,14 @@ final class MaxMindGeoLocator implements GeoLocator
         if ($this->reader !== null) {
             return $this->reader;
         }
+        // The file may be installed later by geo:update, so its absence is never cached.
         if (!is_file($this->path)) {
-            $this->unavailable = true;
-
             return null;
         }
         try {
             return $this->reader = new Reader($this->path);
         } catch (\Throwable) {
-            $this->unavailable = true;
+            $this->broken = true;
 
             return null;
         }

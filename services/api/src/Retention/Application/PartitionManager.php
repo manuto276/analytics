@@ -83,8 +83,8 @@ final readonly class PartitionManager
     }
 
     /**
-     * Splits the catch-all partition of old data into monthly partitions starting at $oldest,
-     * so imported or backfilled history can also be dropped a month at a time.
+     * Splits the lowest (catch-all) partition into monthly partitions starting at $oldest, so
+     * imported or backfilled history can also be dropped a month at a time.
      *
      * @return array<string, list<string>> table => created partitions
      */
@@ -94,21 +94,28 @@ final readonly class PartitionManager
         foreach (Partitioning::PARTITIONED_TABLES as $table) {
             $created[$table] = [];
             $partitions = $this->partitions($table);
-            $boundary = $partitions['p_old'] ?? null;
-            if ($boundary === null || $boundary === 'MAXVALUE') {
+            if ($partitions === []) {
+                continue;
+            }
+            // The lowest partition covers everything below its bound: split it into months.
+            $lowestName = (string) array_key_first($partitions);
+            $lowestBound = $partitions[$lowestName];
+            if ($lowestBound === 'MAXVALUE') {
                 continue;
             }
             $start = Partitioning::monthStart($oldest);
-            $end = new \DateTimeImmutable($boundary, new \DateTimeZone('UTC'));
+            $end = new \DateTimeImmutable($lowestBound, new \DateTimeZone('UTC'));
             if ($start >= $end) {
                 continue;
             }
-            $definitions = [\sprintf("PARTITION p_old VALUES LESS THAN ('%s')", $start->format('Y-m-d'))];
+            $definitions = [];
             for ($month = $start; $month < $end; $month = $month->modify('+1 month')) {
                 $definitions[] = Partitioning::definition($month);
                 $created[$table][] = Partitioning::partitionName($month);
             }
-            $this->connection->executeStatement(\sprintf('ALTER TABLE %s REORGANIZE PARTITION p_old INTO (%s)', $table, implode(', ', $definitions)));
+            // Keep the lowest partition itself as the catch-all below the first new month.
+            array_unshift($definitions, \sprintf("PARTITION %s VALUES LESS THAN ('%s')", $lowestName, $start->format('Y-m-d')));
+            $this->connection->executeStatement(\sprintf('ALTER TABLE %s REORGANIZE PARTITION %s INTO (%s)', $table, $lowestName, implode(', ', $definitions)));
         }
 
         return $created;
