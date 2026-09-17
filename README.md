@@ -41,7 +41,9 @@ make seed        # demo site with 60 days of data
 make test        # all test suites
 ```
 
-See [docs/development/setup.md](docs/development/setup.md).
+See [docs/development/setup.md](docs/development/setup.md). The full documentation
+(architecture, ADRs, privacy, API, integration, deployment, operations) starts at
+[docs/README.md](docs/README.md).
 
 ## License
 
