@@ -156,6 +156,11 @@ enabled.
 ### `no_draft`
 `409`. `POST …/consent/publish` (or discarding a draft) with no draft present.
 
+### `receipts_disabled`
+`409`. `GET …/consent/receipts` on a site whose `consent_receipts_enabled` is false: no receipt is
+stored, so there is nothing to look up. Turn receipts on in the site settings first; they only start
+covering decisions taken after that.
+
 ### `funnel_incomplete`
 `409`. The funnel report was requested for a funnel with fewer than two usable steps — for example
 because a goal was deleted.
@@ -236,7 +241,7 @@ them in `rejected[]` with their index and a message. See [conversions.md](conver
 | `not_found`, `unknown_site` | 404 |
 | `method_not_allowed` | 405 |
 | `csv_unavailable` | 406 |
-| `email_taken`, `last_admin`, `cannot_disable_self`, `cannot_demote_self`, `totp_already_enabled`, `totp_not_enabled`, `goal_name_taken`, `goal_in_use`, `no_draft`, `funnel_incomplete` | 409 |
+| `email_taken`, `last_admin`, `cannot_disable_self`, `cannot_demote_self`, `totp_already_enabled`, `totp_not_enabled`, `goal_name_taken`, `goal_in_use`, `no_draft`, `receipts_disabled`, `funnel_incomplete` | 409 |
 | `invitation_accepted`, `invitation_revoked`, `invitation_expired`, `reset_token_invalid` | 410 |
 | `payload_too_large` | 413 |
 | `validation_failed`, `filter_unsupported`, `filter_unavailable_for_range`, `range_too_large` | 422 |

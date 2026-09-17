@@ -102,7 +102,7 @@ deploy/docker/
 │                           release-tree, package, php-runtime, php-cron, nginx-runtime
 ├── compose.base.yml        mysql + php + nginx shared by dev and test
 ├── compose.dev.yml         ports, bind mounts, redis/mail/node profiles
-├── compose.test.yml        tmpfs mysql, fixtures, node, playwright
+├── compose.test.yml        tmpfs mysql, fixtures, console bridge, node, playwright
 ├── compose.prod.yml        migrate, app, web, scheduler, worker, mysql, redis
 ├── php/                    dev.ini, prod.ini, fpm-pool.conf
 ├── nginx/                  dev.conf, test.conf, prod.conf, fixtures.conf, snippets/
