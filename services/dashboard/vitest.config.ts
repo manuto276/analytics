@@ -10,6 +10,10 @@ export default defineVitestConfig({
     },
     include: ['test/**/*.{test,spec}.ts'],
     setupFiles: ['test/setup/global.ts'],
+    // Building the Nuxt environment for a suite takes well over the 10 s default on a loaded CI
+    // container, where these run next to the PHP suites and the Docker builds.
+    hookTimeout: 120_000,
+    testTimeout: 30_000,
     coverage: {
       provider: 'v8',
       include: ['app/**/*.{ts,vue}'],

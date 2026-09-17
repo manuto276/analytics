@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mountSuspended, registerEndpoint } from '@nuxt/test-utils/runtime'
 import ReportTable from '~/components/report/ReportTable.vue'
 import { getQuery, seedState } from '../support/api'
@@ -29,13 +29,21 @@ registerEndpoint('/api/v1/sites/1/reports/sources', {
   }
 })
 
+/**
+ * A click starts a navigation and a fetch that resolve over several ticks. Waiting a fixed number
+ * of milliseconds passes on an idle machine and fails on a loaded CI runner, so every assertion
+ * about what a click caused is retried until it holds.
+ */
+const until = (assertion: () => void) => vi.waitFor(assertion, { timeout: 5000, interval: 10 })
+
 async function mountTable(route = '/sources') {
   seedState()
   const wrapper = await mountSuspended(ReportTable, {
     props: { report: 'sources', columns: SOURCE_COLUMNS.channel, params: { group: 'channel' }, title: 'Channels' },
     route
   })
-  await new Promise(resolve => setTimeout(resolve, 30))
+  // The rows arrive from the mocked endpoint a few ticks after the component suspends.
+  await until(() => expect(wrapper.find('[data-testid="filter-value"]').exists()).toBe(true))
   await nextTick()
   return wrapper
 }
@@ -50,7 +58,7 @@ describe('ReportTable', () => {
   it('renders formatted rows and passes the report params', async () => {
     const wrapper = await mountTable()
 
-    expect(wrapper.text()).toContain('search')
+    await until(() => expect(wrapper.text()).toContain('search'))
     expect(wrapper.text()).toContain('120')
     expect(wrapper.text()).toContain('35%')
     expect(wrapper.text()).toContain('1m 05s')
@@ -61,20 +69,20 @@ describe('ReportTable', () => {
     const wrapper = await mountTable()
 
     await wrapper.get('[data-testid="filter-value"]').trigger('click')
-    await new Promise(resolve => setTimeout(resolve, 20))
 
-    expect(useRouter().currentRoute.value.query['filter[channel][is]']).toBe('search')
-    expect(requests.at(-1)).toMatchObject({ 'filter[channel][is]': 'search' })
+    await until(() => {
+      expect(useRouter().currentRoute.value.query['filter[channel][is]']).toBe('search')
+      expect(requests.at(-1)).toMatchObject({ 'filter[channel][is]': 'search' })
+    })
   })
 
   it('loads the next page with the cursor', async () => {
     const wrapper = await mountTable()
 
     await wrapper.get('[data-testid="load-more"]').trigger('click')
-    await new Promise(resolve => setTimeout(resolve, 20))
 
-    expect(requests.at(-1)).toMatchObject({ cursor: 'next' })
-    expect(wrapper.text()).toContain('social')
+    await until(() => expect(requests.at(-1)).toMatchObject({ cursor: 'next' }))
+    await until(() => expect(wrapper.text()).toContain('social'))
     expect(wrapper.find('[data-testid="load-more"]').exists()).toBe(false)
   })
 
@@ -83,6 +91,7 @@ describe('ReportTable', () => {
     expect(plain.find('[data-testid="availability-notice"]').exists()).toBe(false)
 
     const wrapper = await mountTable('/sources?period=year')
+    await until(() => expect(wrapper.find('[data-testid="availability-notice"]').exists()).toBe(true))
     const notice = wrapper.get('[data-testid="availability-notice"]')
     expect(notice.text()).toContain('Unique visitors are not counted')
     expect(notice.text()).toContain('Visit duration')
@@ -93,12 +102,10 @@ describe('ReportTable', () => {
     const header = wrapper.findAll('th button').find(b => b.text() === 'Visits')!
 
     await header.trigger('click')
-    await new Promise(resolve => setTimeout(resolve, 20))
-    expect(requests.at(-1)).toMatchObject({ sort: '-visits' })
+    await until(() => expect(requests.at(-1)).toMatchObject({ sort: '-visits' }))
 
     await header.trigger('click')
-    await new Promise(resolve => setTimeout(resolve, 20))
-    expect(requests.at(-1)).toMatchObject({ sort: 'visits' })
+    await until(() => expect(requests.at(-1)).toMatchObject({ sort: 'visits' }))
   })
 
   it('exports CSV', async () => {
@@ -107,8 +114,7 @@ describe('ReportTable', () => {
     URL.revokeObjectURL = () => {}
 
     await wrapper.get('[data-testid="csv-export"]').trigger('click')
-    await new Promise(resolve => setTimeout(resolve, 20))
 
-    expect(requests.at(-1)).toMatchObject({ limit: '1000' })
+    await until(() => expect(requests.at(-1)).toMatchObject({ limit: '1000' }))
   })
 })
