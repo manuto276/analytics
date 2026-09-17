@@ -74,8 +74,10 @@ that is deliberate ([architecture/ingestion.md](architecture/ingestion.md)).
 - **A global admin sees every site.** There is no hard tenancy boundary in a single installation —
   [privacy/controller-processor.md](privacy/controller-processor.md).
 - **No hardware-bound MFA.** TOTP and recovery codes only; no WebAuthn.
-- **`/_ops/` is reserved but unimplemented**, and `OPS_TOKEN` is unused; there is no remote OPcache
-  reset endpoint.
+- **`/_ops/opcache-reset` trusts the loopback interface.** It requires `OPS_TOKEN` as a bearer token
+  and refuses any non-loopback client, so anything able to make a request *from the server itself*
+  and holding the token can clear the opcode cache. Leave `OPS_TOKEN` unset if you do not need it:
+  without it the endpoint answers `404`.
 
 ## Security features
 

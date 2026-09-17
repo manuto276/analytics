@@ -32,6 +32,11 @@ make ci             # exactly what .github/workflows/ci.yml runs, in the same or
 | `test-wordpress` | plugin unit tests + a real WordPress smoke (nightly in CI) | `php:8.4-cli` + WordPress compose |
 | `lint` | PHP-CS-Fixer, ESLint, actionlint, hadolint, shellcheck | mixed |
 
+The tracker, dashboard and Playwright containers keep their own Linux
+`node_modules` in named volumes (the repository tree holds a host install that
+is not portable into the containers); `make node-init` makes those volumes
+writable and every JavaScript target depends on it. `make down` removes them.
+
 The test database is `analytics_test` on the stack's MySQL
 (`TEST_DATABASE_URL=mysql://root:root@mysql:3306/analytics_test`); ParaTest adds
 one database per worker (`analytics_test_{TEST_TOKEN}`). MySQL runs on tmpfs
@@ -79,10 +84,12 @@ is brittle); Node itself trusts the CA through `NODE_EXTRA_CA_CERTS`.
 Two things trip up every new e2e test:
 
 1. Playwright sets `navigator.webdriver` and the tracker skips automated
-   browsers, so a test that expects tracking must override it first
-   (`hideWebdriver` in `services/e2e/tests/smoke.spec.ts`).
+   browsers, so a test that expects tracking must call `hideWebdriver(page)`
+   (`services/e2e/support/tracking.ts`) first.
 2. The tracker batches events and flushes after ~1 s: assert on the `/t/e`
-   response, never on a fixed wait.
+   response or count the collected batches, never on a fixed wait. Request
+   bodies of `sendBeacon` are not readable in every engine, so do not filter
+   `waitForResponse` by post data.
 
 Reports and traces land in `services/e2e/playwright-report/` and
 `services/e2e/test-results/` (uploaded by CI when a job fails).
@@ -95,10 +102,9 @@ make test-deploy    # the console unit suite
 make test-smoke     # init → deploy → health → deploy → rollback → list/status/cleanup
 ```
 
-`test-smoke` generates fresh secrets and passes them to the smoke stack with
-`--env-file`, including an `https://` `APP_URL`: the smoke container serves plain
-HTTP, and `bin/analytics app:preflight` fails a production install whose
-`APP_URL` is not HTTPS.
+`test-smoke` generates fresh secrets (`APP_SECRET`, `APP_ENCRYPTION_KEYS`) and
+passes them to the smoke stack with `--env-file`; everything else comes from the
+`.env.example` inside the package.
 
 ## Continuous integration
 

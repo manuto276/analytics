@@ -121,4 +121,5 @@ deploy/docker/
 | Browser warns about the certificate | trust `deploy/docker/certs/ca.pem` (instructions printed by `make certs`) |
 | `/` returns 404 in the dev stack | the SPA has not been generated yet: `cd services/dashboard && pnpm generate:api` |
 | Files created by containers are not writable | the stacks run as your uid/gid (`DOCKER_UID`/`DOCKER_GID` exported by the Makefile); run commands through `make`, not plain `docker compose` |
+| `ERR_PNPM_PACKAGE_MANAGER_CREATE_SLOT_DIR` or missing files under `node_modules` | the JavaScript containers keep their own Linux `node_modules` in named volumes (the host tree is a macOS install); `make node-init` hands those volumes to your user, and every JS target depends on it |
 | `APP_SECRET is required` | `APP_ENV=prod` without secrets: use the dev/test stack or fill `.env` |

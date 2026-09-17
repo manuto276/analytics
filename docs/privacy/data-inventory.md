@@ -91,8 +91,11 @@ how acceptance rates are measured without recording who decided what. Retention 
 ### `consent_receipts` — optional, off by default
 
 `visitor_id`, `consent_version`, `decision`, `decided_at`, written on a consent upgrade when the site
-has `consent_receipts_enabled`. Retention 13 months; erased by forget. Nothing in the product reads
-them back yet (**not implemented**: there is no receipt export or lookup endpoint).
+has `consent_receipts_enabled`. Retention 13 months; erased by forget. A site admin can look a
+visitor up with `GET /api/v1/sites/{siteId}/consent/receipts?visitor_id=…` — the visitor supplies the
+id (their `an_vid` cookie, or `analytics.getVisitorId()`), so the lookup answers a data-subject
+request without exposing anyone else; every lookup is written to the audit log
+(`consent.receipts_read`). There is no bulk export.
 
 ### `daily_salts`
 
