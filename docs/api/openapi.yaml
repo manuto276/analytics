@@ -1614,7 +1614,13 @@ paths:
     get:
       tags: [reports]
       summary: Goal completions
-      parameters: *tableParams
+      parameters:
+        - $ref: '#/components/parameters/Period'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Sort'
       responses:
         default: { $ref: '#/components/responses/Problem' }
         '200':
@@ -1645,7 +1651,13 @@ paths:
     get:
       tags: [reports]
       summary: Conversions by name with value
-      parameters: *tableParams
+      parameters:
+        - $ref: '#/components/parameters/Period'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Sort'
       responses:
         default: { $ref: '#/components/responses/Problem' }
         '200':
@@ -2129,26 +2141,6 @@ components:
             required: [data]
             properties:
               data: { $ref: '#/components/schemas/CampaignCost' }
-    TableReport:
-      description: Table report (rows depend on the report, see ReportRow)
-      content:
-        application/json:
-          schema:
-            type: object
-            required: [data, meta]
-            properties:
-              data:
-                type: object
-                required: [rows, total_rows]
-                properties:
-                  rows:
-                    type: array
-                    items: { $ref: '#/components/schemas/ReportRow' }
-                  total_rows: { type: integer }
-                  totals: { $ref: '#/components/schemas/ReportRow' }
-              meta: { $ref: '#/components/schemas/ReportMeta' }
-        text/csv:
-          schema: { type: string }
   schemas:
     Problem:
       type: object
@@ -2579,10 +2571,6 @@ components:
         avg_duration_ms: { type: integer, nullable: true }
         conversions: { type: integer }
         revenue_minor: { type: integer }
-    ReportRow:
-      type: object
-      description: 'Columns depend on the report: dimension columns (host, path, channel, source, referrer_host, utm_*, value, country, name, prop_key, prop_value, content_key, goal_id...) plus metric columns.'
-      additionalProperties: true
     PagesRow:
       type: object
       required: [host, path, pageviews, visits, visitors, entries, exits, bounce_rate, avg_engagement_ms]

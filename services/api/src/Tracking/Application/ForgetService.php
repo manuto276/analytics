@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Analytics\Tracking\Application;
 
 use Analytics\Shared\Types;
-use Analytics\Sites\Application\SiteSnapshot;
+use Analytics\Sites\Domain\SiteSnapshot;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
 use Psr\Clock\ClockInterface;

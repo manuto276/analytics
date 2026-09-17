@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Analytics\Tracking\Application\Enrichment;
 
 use Analytics\Shared\Net\IpPrefix;
-use Analytics\Sites\Application\SiteSnapshot;
+use Analytics\Sites\Domain\SiteSnapshot;
 
 final class BotFilter
 {

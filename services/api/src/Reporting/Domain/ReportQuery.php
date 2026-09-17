@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Analytics\Reporting\Domain;
 
-use Analytics\Sites\Application\SiteSnapshot;
+use Analytics\Sites\Domain\SiteSnapshot;
 
 final readonly class ReportQuery
 {

@@ -29,8 +29,7 @@ final class Version20260917000002 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        $flag = $_ENV['DB_PARTITIONING'] ?? $_SERVER['DB_PARTITIONING'] ?? getenv('DB_PARTITIONING');
-        $partitioning = filter_var(\is_string($flag) && $flag !== '' ? $flag : 'true', \FILTER_VALIDATE_BOOL);
+        $partitioning = Partitioning::isEnabled();
         $partitions = $partitioning ? "\n" . Partitioning::createClause(new \DateTimeImmutable('now', new \DateTimeZone('UTC'))) : '';
         $o = self::TABLE_OPTIONS;
 

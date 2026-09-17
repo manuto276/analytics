@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Analytics\Tests\Support\Scenario;
 
 use Analytics\Reporting\Application\Rollup\RollupRunner;
-use Analytics\Sites\Application\SiteSnapshot;
 use Analytics\Sites\Domain\Site;
+use Analytics\Sites\Domain\SiteSnapshot;
 use Analytics\Tests\Support\Factory;
 use Analytics\Tracking\Application\Seeder;
 use DI\Container;

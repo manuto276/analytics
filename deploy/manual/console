@@ -2088,7 +2088,16 @@ TXT);
             }
         }
 
-        return (string) (getenv('USER') ?: get_current_user());
+        $name = (string) (getenv('USER') ?: get_current_user());
+        if ($name !== '') {
+            return $name;
+        }
+        // Containers often run under a uid with no passwd entry: record the numeric id.
+        if (\function_exists('posix_geteuid')) {
+            return 'uid:' . posix_geteuid();
+        }
+
+        return 'unknown';
     }
 
     /** @return array<string, string> */

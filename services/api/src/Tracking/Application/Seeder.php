@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Analytics\Tracking\Application;
 
 use Analytics\Shared\Types;
-use Analytics\Sites\Application\SiteSnapshot;
+use Analytics\Sites\Domain\SiteSnapshot;
 use Analytics\Tracking\Application\Enrichment\UrlSanitizer;
 use Analytics\Tracking\Domain\Channel;
 use Analytics\Tracking\Domain\EventType;

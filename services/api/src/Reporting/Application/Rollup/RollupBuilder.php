@@ -6,7 +6,7 @@ namespace Analytics\Reporting\Application\Rollup;
 
 use Analytics\Reporting\Application\DailyMetrics;
 use Analytics\Reporting\Domain\DateRange;
-use Analytics\Sites\Application\SiteSnapshot;
+use Analytics\Sites\Domain\SiteSnapshot;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Analytics\Tests\Unit\Sites;
 
-use Analytics\Sites\Application\DomainMatcher;
+use Analytics\Sites\Domain\DomainMatcher;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

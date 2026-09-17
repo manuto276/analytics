@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Analytics\Tracking\Application;
 
 use Analytics\Consent\Application\ConsentService;
-use Analytics\Sites\Application\SiteSnapshot;
+use Analytics\Sites\Domain\SiteSnapshot;
 use Psr\Cache\CacheItemPoolInterface;
 
 /**

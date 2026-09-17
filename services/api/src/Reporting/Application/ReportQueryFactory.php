@@ -9,7 +9,7 @@ use Analytics\Reporting\Domain\Filter;
 use Analytics\Reporting\Domain\FilterOperator;
 use Analytics\Reporting\Domain\ReportQuery;
 use Analytics\Shared\Http\ApiProblem;
-use Analytics\Sites\Application\SiteSnapshot;
+use Analytics\Sites\Domain\SiteSnapshot;
 use Psr\Clock\ClockInterface;
 
 /**

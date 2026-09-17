@@ -18,10 +18,9 @@ services/api/.env.local
 services/api/.phpunit.cache/
 services/api/.php-cs-fixer.cache
 services/api/coverage/
-services/api/public/_nuxt/
-services/api/public/index.html
-services/api/public/200.html
-services/api/public/404.html
+services/api/public/*
+!services/api/public/index.php
+services/api/config/csp.php
 services/api/resources/tracker/
 deploy/manual/tests/vendor/
 deploy/manual/.phpunit.cache/

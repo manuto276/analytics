@@ -12,6 +12,24 @@ final class Partitioning
 {
     public const array PARTITIONED_TABLES = ['events_raw', 'visits'];
 
+    /** Set from Settings when the container is built; migrations run outside the container's reach. */
+    private static ?bool $enabled = null;
+
+    public static function configure(bool $enabled): void
+    {
+        self::$enabled = $enabled;
+    }
+
+    public static function isEnabled(): bool
+    {
+        if (self::$enabled !== null) {
+            return self::$enabled;
+        }
+        $flag = $_ENV['DB_PARTITIONING'] ?? $_SERVER['DB_PARTITIONING'] ?? getenv('DB_PARTITIONING');
+
+        return filter_var(\is_string($flag) && $flag !== '' ? $flag : 'true', \FILTER_VALIDATE_BOOL);
+    }
+
     public static function partitionName(\DateTimeImmutable $month): string
     {
         return 'p' . $month->format('Ym');

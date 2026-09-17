@@ -10,7 +10,7 @@ use Analytics\Reporting\Application\ReportQueryFactory;
 use Analytics\Reporting\Application\ReportService;
 use Analytics\Shared\Http\ApiProblem;
 use Analytics\Shared\Http\JsonResponder;
-use Analytics\Sites\Application\SiteSnapshot;
+use Analytics\Sites\Domain\SiteSnapshot;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
@@ -99,6 +99,30 @@ final readonly class ReportsController
     public function conversions(ServerRequestInterface $request): ResponseInterface
     {
         return $this->respond($request, 'conversions');
+    }
+
+    public function funnel(ServerRequestInterface $request, string $funnelId): ResponseInterface
+    {
+        return $this->respond($request, 'funnels', [
+            'funnel' => $funnelId,
+            'breakdown' => $this->choice($request, 'breakdown', ['none', 'channel', 'device'], 'none'),
+        ]);
+    }
+
+    public function attribution(ServerRequestInterface $request): ResponseInterface
+    {
+        $params = $request->getQueryParams();
+        $name = static function (mixed $value): string {
+            return \is_string($value) && preg_match('/^[a-z0-9_:.-]{1,64}$/', $value) === 1 ? $value : '';
+        };
+
+        return $this->respond($request, 'attribution', [
+            'model' => $this->choice($request, 'model', \Analytics\Reporting\Application\Reports\AttributionReport::MODELS, 'first_touch'),
+            'group' => $this->choice($request, 'group', \Analytics\Reporting\Application\Reports\AttributionReport::GROUPS, 'channel'),
+            'window' => $this->choice($request, 'window', ['7', '30', '90'], '30'),
+            'base' => $name($params['base'] ?? ''),
+            'target' => $name($params['target'] ?? ''),
+        ]);
     }
 
     public function consent(ServerRequestInterface $request): ResponseInterface

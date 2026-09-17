@@ -8,8 +8,11 @@ use Analytics\Kernel\Module;
 
 final class RetentionModule extends Module
 {
-    public function entityPaths(): array
+    public function commands(): array
     {
-        return is_dir(__DIR__ . '/Domain') ? [__DIR__ . '/Domain'] : [];
+        return [
+            Console\PartitionsMaintainCommand::class,
+            Console\RetentionPurgeCommand::class,
+        ];
     }
 }

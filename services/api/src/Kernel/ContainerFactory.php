@@ -14,6 +14,8 @@ final class ContainerFactory
      */
     public static function create(Settings $settings, array $overrides = []): Container
     {
+        \Analytics\Shared\Doctrine\Partitioning::configure($settings->dbPartitioning);
+
         $builder = new ContainerBuilder();
         $builder->useAutowiring(true);
         $builder->useAttributes(false);

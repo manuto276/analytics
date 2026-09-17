@@ -6,7 +6,7 @@ namespace Analytics\Reporting\Application\Reports;
 
 use Analytics\Reporting\Domain\DateRange;
 use Analytics\Shared\Types;
-use Analytics\Sites\Application\SiteSnapshot;
+use Analytics\Sites\Domain\SiteSnapshot;
 use Doctrine\DBAL\Connection;
 
 final readonly class ConsentReport

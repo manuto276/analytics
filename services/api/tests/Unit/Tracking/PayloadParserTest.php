@@ -74,7 +74,8 @@ final class PayloadParserTest extends TestCase
     {
         $parser = new PayloadParser();
         $dup = Payloads::pageview();
-        $parsed = $parser->parse(Payloads::batch(self::KEY, [
+        /** @var list<array<string, mixed>> $events */
+        $events = [
             $dup,
             $dup,
             ['id' => 'short', 't' => 'pv', 'u' => 'https://www.site.test/'],
@@ -89,7 +90,8 @@ final class PayloadParserTest extends TestCase
             ['id' => Payloads::uid(), 't' => 'cs', 'u' => 'https://www.site.test/', 'cs' => 'maybe'],
             'not an object',
             Payloads::event('fine_event'),
-        ]));
+        ];
+        $parsed = $parser->parse(Payloads::batch(self::KEY, $events));
 
         self::assertCount(2, $parsed->events);
         self::assertSame(12, $parser->dropped);

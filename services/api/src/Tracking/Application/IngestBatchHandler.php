@@ -6,7 +6,7 @@ namespace Analytics\Tracking\Application;
 
 use Analytics\Shared\Types;
 use Analytics\Sites\Application\SiteRepository;
-use Analytics\Sites\Application\SiteSnapshot;
+use Analytics\Sites\Domain\SiteSnapshot;
 use Analytics\Tracking\Domain\EventType;
 use Analytics\Tracking\Domain\TrackingLevel;
 use Doctrine\DBAL\ArrayParameterType;

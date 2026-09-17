@@ -8,7 +8,7 @@ use Analytics\Kernel\Settings;
 use Analytics\Reporting\Application\Rollup\RollupRunner;
 use Analytics\Shared\Types;
 use Analytics\Sites\Application\SiteRepository;
-use Analytics\Sites\Application\SiteSnapshot;
+use Analytics\Sites\Domain\SiteSnapshot;
 use Analytics\Tracking\Application\Seeder;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Console\Attribute\AsCommand;

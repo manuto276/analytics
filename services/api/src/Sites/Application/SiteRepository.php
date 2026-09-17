@@ -6,6 +6,7 @@ namespace Analytics\Sites\Application;
 
 use Analytics\Shared\Http\ApiProblem;
 use Analytics\Sites\Domain\Site;
+use Analytics\Sites\Domain\SiteSnapshot;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 

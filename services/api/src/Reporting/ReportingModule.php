@@ -42,6 +42,8 @@ final class ReportingModule extends Module
         $routes->get($base . '/realtime', [ReportsController::class, 'realtime'], $view);
         $routes->get($base . '/goals', [ReportsController::class, 'goals'], $view);
         $routes->get($base . '/conversions', [ReportsController::class, 'conversions'], $view);
+        $routes->get($base . '/funnels/{funnelId:[0-9]+}', [ReportsController::class, 'funnel'], $view);
+        $routes->get($base . '/attribution', [ReportsController::class, 'attribution'], $view);
         $routes->get($base . '/cohorts', [ReportsController::class, 'cohorts'], $view);
         $routes->get($base . '/consent', [ReportsController::class, 'consent'], $view);
     }

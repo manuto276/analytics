@@ -7,6 +7,7 @@ namespace Analytics\Kernel;
 use Doctrine\DBAL\Connection;
 use Doctrine\Migrations\DependencyFactory;
 use Doctrine\ORM\EntityManagerInterface;
+use Slim\Interfaces\RouteCollectorProxyInterface;
 
 use function DI\factory;
 
@@ -17,6 +18,14 @@ final class KernelModule extends Module
         return [
             DependencyFactory::class => factory(static fn(Connection $c, Settings $s, EntityManagerInterface $em): DependencyFactory => ConsoleApplicationFactory::migrationsDependencyFactory($c, $s, $em)),
         ];
+    }
+
+    /** @param RouteCollectorProxyInterface<\Psr\Container\ContainerInterface|null> $group */
+    public function rootRoutes(RouteCollectorProxyInterface $group): void
+    {
+        $group->get('/robots.txt', [Http\SpaFallbackAction::class, 'robots']);
+        // Anything that is not the API or the tracker falls back to the dashboard SPA.
+        $group->get('/{path:(?!api/|t/).*}', Http\SpaFallbackAction::class);
     }
 
     public function commands(): array

@@ -53,6 +53,7 @@
         "brianium/paratest": "^7.24",
         "deptrac/deptrac": "^4.7",
         "friendsofphp/php-cs-fixer": "^3.95",
+        "infection/infection": "*",
         "league/openapi-psr7-validator": "^0.24.0",
         "opis/json-schema": "^2.6",
         "phpstan/phpstan": "^2.2",

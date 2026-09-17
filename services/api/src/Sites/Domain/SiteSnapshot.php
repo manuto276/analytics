@@ -2,11 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Analytics\Sites\Application;
-
-use Analytics\Sites\Domain\DntMode;
-use Analytics\Sites\Domain\Site;
-use Analytics\Sites\Domain\VisitorHashMode;
+namespace Analytics\Sites\Domain;
 
 /**
  * Immutable, cacheable view of a site's tracking configuration used on the ingestion hot path.

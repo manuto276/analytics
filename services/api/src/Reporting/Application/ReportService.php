@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Analytics\Reporting\Application;
 
+use Analytics\Reporting\Application\Reports\AttributionReport;
 use Analytics\Reporting\Application\Reports\CohortsReport;
 use Analytics\Reporting\Application\Reports\ConsentReport;
+use Analytics\Reporting\Application\Reports\FunnelReport;
 use Analytics\Reporting\Application\Reports\GoalsReport;
 use Analytics\Reporting\Application\Reports\RealtimeReport;
 use Analytics\Reporting\Application\Reports\TableReports;
@@ -33,6 +35,8 @@ final readonly class ReportService
         private TimeseriesReport $timeseries,
         private RealtimeReport $realtime,
         private GoalsReport $goals,
+        private FunnelReport $funnels,
+        private AttributionReport $attribution,
         private ConsentReport $consent,
         private CohortsReport $cohorts,
         private ReportCache $cache,
@@ -107,6 +111,16 @@ final readonly class ReportService
             ],
             'realtime' => $this->realtime->run($site),
             'goals' => $this->goals->run($site, $query->range, $useRollup),
+            'funnels' => $this->funnels->run($site, (int) $query->option('funnel'), $query->range, $query->option('breakdown', 'none')),
+            'attribution' => $this->attribution->run(
+                $site,
+                $query->range,
+                $query->option('model', 'first_touch'),
+                $query->option('group', 'channel'),
+                (int) $query->option('window', '30'),
+                $query->option('base') === '' ? null : $query->option('base'),
+                $query->option('target') === '' ? null : $query->option('target'),
+            ),
             'consent' => $this->consent->run($site, $query->range),
             'cohorts' => $this->cohorts->run($site, $query->option('cohort', 'month'), max(1, min(13, (int) $query->option('periods', '6')))),
             default => throw \Analytics\Shared\Http\ApiProblem::notFound('Unknown report ' . $report),

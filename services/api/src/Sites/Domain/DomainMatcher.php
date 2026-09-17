@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Analytics\Sites\Application;
+namespace Analytics\Sites\Domain;
 
 final class DomainMatcher
 {

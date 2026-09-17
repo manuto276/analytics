@@ -46,8 +46,12 @@ final class PreflightCommand extends Command
         }
         $add('argon2id', \defined('PASSWORD_ARGON2ID') || \function_exists('sodium_crypto_pwhash'), 'argon2id password hashing (password_hash or sodium fallback)');
         $add('app_url', filter_var($this->settings->appUrl, \FILTER_VALIDATE_URL) !== false, 'APP_URL=' . $this->settings->appUrl);
-        if ($this->settings->isProd()) {
+        $host = $this->settings->appHost();
+        $isLoopback = \in_array($host, ['localhost', '127.0.0.1', '::1'], true) || str_ends_with($host, '.localhost');
+        if ($this->settings->isProd() && !$isLoopback) {
             $add('app_url_https', $this->settings->usesHttps(), 'APP_URL uses https');
+        } elseif ($this->settings->isProd()) {
+            $add('app_url_https', $this->settings->usesHttps(), 'APP_URL is a loopback address (https not required)', false);
         }
         foreach ([$this->settings->cacheDir, $this->settings->logDir, $this->settings->storageDir] as $dir) {
             if (!is_dir($dir)) {

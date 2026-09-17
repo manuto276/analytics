@@ -123,7 +123,7 @@ final class CollectTest extends HttpTestCase
         $batch = Payloads::batch($this->site->publicKey, [Payloads::pageview(), Payloads::event('signup')]);
         $this->collect($batch);
         $this->collect($batch);
-        self::assertCount(2, $this->events());
+        self::assertCount(2, $this->events(), 'the repeated batch is ignored');
         $visits = $this->visits();
         self::assertCount(1, $visits);
         self::assertSame(1, (int) $visits[0]['pageviews']);
@@ -176,7 +176,7 @@ final class CollectTest extends HttpTestCase
         $this->container->get(\Symfony\Component\Cache\Adapter\AdapterInterface::class)->clear();
         $this->clock->sleep(60);
         $this->collect(Payloads::batch($key, [Payloads::pageview('https://www.site.test/?utm_source=other')]));
-        self::assertCount(2, $this->visits());
+        self::assertSame(2, \count($this->visits()), 'with the flag off the campaign change continues the visit');
     }
 
     public function testVisitorHashDependsOnNetworkUserAgentAndDay(): void
@@ -193,7 +193,7 @@ final class CollectTest extends HttpTestCase
         self::assertNotSame($hashes[0], $hashes[2]);
         self::assertNotSame($hashes[0], $hashes[3], 'the salt rotates daily');
         self::assertSame(1, (int) $this->db->fetchOne('SELECT COUNT(*) FROM daily_salts'), 'previous salt destroyed');
-        self::assertSame(3, \count($this->visits()));
+        self::assertCount(3, $this->visits());
     }
 
     public function testPageviewsOnlyModeStoresNoHashOrVisit(): void

@@ -34,10 +34,12 @@ final readonly class QueryPlanner
         'goals' => [],
         'consent' => [],
         'cohorts' => [],
+        'funnels' => [],
+        'attribution' => [],
     ];
 
     /** Reports that cannot be filtered at all. */
-    public const array UNFILTERABLE = ['conversions', 'goals', 'consent', 'cohorts', 'realtime'];
+    public const array UNFILTERABLE = ['conversions', 'goals', 'consent', 'cohorts', 'realtime', 'funnels', 'attribution'];
 
     public function __construct(private ClockInterface $clock, private int $retentionMonths) {}
 

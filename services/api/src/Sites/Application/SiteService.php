@@ -8,6 +8,7 @@ use Analytics\Shared\Crypto\TokenGenerator;
 use Analytics\Shared\Net\IpTruncator;
 use Analytics\Shared\Validation\Input;
 use Analytics\Sites\Domain\DntMode;
+use Analytics\Sites\Domain\DomainMatcher;
 use Analytics\Sites\Domain\Site;
 use Analytics\Sites\Domain\VisitorHashMode;
 use Doctrine\DBAL\Connection;

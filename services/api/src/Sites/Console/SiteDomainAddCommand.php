@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Analytics\Sites\Console;
 
 use Analytics\Shared\Types;
-use Analytics\Sites\Application\DomainMatcher;
 use Analytics\Sites\Application\SiteRepository;
+use Analytics\Sites\Domain\DomainMatcher;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
