@@ -7,8 +7,10 @@ of the License, or (at your option) any later version. See LICENSE.
 
 Source code: https://github.com/manuto276/analytics
 
-The wordmark, the icon (favicon and app icon) and the README banner in docs/assets/brand are
-original work of this project and carry the same licence as the rest of the repository.
+The wordmark, the icon (favicon and app icon) and the README banner are original work of this
+project and carry the same licence as the rest of the repository. Their source is the Sketch
+document docs/assets/brand/analytics-brand.sketch; docs/assets/brand/mark.svg is the vector the
+favicon, the app icon and the in-app logo are built from.
 
 Third-party components
 ----------------------
