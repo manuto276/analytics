@@ -33,6 +33,9 @@ test('an admin creates a site with its domains', async ({ page }) => {
     await input.pressSequentially(domain)
     await input.press('Enter')
     await expect(input).toHaveValue('')
+    // The field clearing is not proof the tag landed: assert the tag itself, or the next test
+    // fails instead of this one.
+    await expect(dialog.getByText(domain, { exact: true })).toBeVisible()
   }
   // Both tags survived: `site:list` in the next test asserts what was stored.
 

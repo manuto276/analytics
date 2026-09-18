@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /**
- * The project mark: the chart cut out of a lens, so whatever is behind it shows through the bars.
- * The source of truth is docs/assets/brand/mark.svg, which also produces the favicon, the app icon
- * and the README banner; it is inlined here so the interface never waits for a request to show its
+ * The project mark: three pills on a √2 grid, the tallest capped by a detached dot, standing on a
+ * rule that is itself a pill. The source of truth is the Sketch document in docs/assets/brand,
+ * exported to mark.svg; it is inlined here so the interface never waits for a request to show its
  * own logo.
  */
 withDefaults(defineProps<{ class?: string }>(), { class: 'size-6' })
@@ -11,14 +11,14 @@ withDefaults(defineProps<{ class?: string }>(), { class: 'size-6' })
 <template>
   <svg
     :class="$props.class"
-    viewBox="0 0 128 128"
+    viewBox="0 0 388.97 388.97"
     xmlns="http://www.w3.org/2000/svg"
     role="img"
     aria-hidden="true"
   >
     <defs>
       <linearGradient
-        id="app-logo-lens"
+        id="app-logo-chart"
         x1="0.15"
         y1="0"
         x2="0.85"
@@ -28,52 +28,39 @@ withDefaults(defineProps<{ class?: string }>(), { class: 'size-6' })
         <stop offset="0.5" stop-color="#00B268" />
         <stop offset="1" stop-color="#00663A" />
       </linearGradient>
-      <linearGradient
-        id="app-logo-rim"
-        x1="0.2"
-        y1="0"
-        x2="0.8"
-        y2="1"
-      >
-        <stop offset="0" stop-color="#ffffff" stop-opacity="0.85" />
-        <stop offset="0.5" stop-color="#ffffff" stop-opacity="0.18" />
-        <stop offset="1" stop-color="#ffffff" stop-opacity="0.04" />
-      </linearGradient>
-      <linearGradient
-        id="app-logo-sheen"
-        x1="0.3"
-        y1="0"
-        x2="0.7"
-        y2="1"
-      >
-        <stop offset="0" stop-color="#ffffff" stop-opacity="0.5" />
-        <stop offset="0.6" stop-color="#ffffff" stop-opacity="0.09" />
-        <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
-      </linearGradient>
-      <clipPath id="app-logo-disc">
-        <path d="M64,16 A48,48 0 1 0 64,112 A48,48 0 1 0 64,16 Z" />
-      </clipPath>
     </defs>
-    <path
-      fill="url(#app-logo-lens)"
-      fill-rule="evenodd"
-      d="M64,16 A48,48 0 1 0 64,112 A48,48 0 1 0 64,16 Z M44,68 H44 A6,6 0 0 1 50,74 V84 A6,6 0 0 1 44,90 H44 A6,6 0 0 1 38,84 V74 A6,6 0 0 1 44,68 Z M64,56 H64 A6,6 0 0 1 70,62 V84 A6,6 0 0 1 64,90 H64 A6,6 0 0 1 58,84 V62 A6,6 0 0 1 64,56 Z M84,50 H84 A6,6 0 0 1 90,56 V84 A6,6 0 0 1 84,90 H84 A6,6 0 0 1 78,84 V56 A6,6 0 0 1 84,50 Z M84,34 A6,6 0 1 0 84,46 A6,6 0 1 0 84,34 Z"
-    />
-    <ellipse
-      cx="64"
-      cy="14"
-      rx="62"
-      ry="46"
-      fill="url(#app-logo-sheen)"
-      clip-path="url(#app-logo-disc)"
-    />
-    <circle
-      cx="64"
-      cy="64"
-      r="46.5"
-      fill="none"
-      stroke="url(#app-logo-rim)"
-      stroke-width="3"
-    />
+    <g fill="url(#app-logo-chart)">
+      <rect
+        x="53.23"
+        y="210.45"
+        width="64"
+        height="90.5"
+        rx="32"
+      />
+      <rect
+        x="162.49"
+        y="172.99"
+        width="64"
+        height="127.96"
+        rx="32"
+      />
+      <rect
+        x="271.75"
+        y="120.01"
+        width="64"
+        height="180.94"
+        rx="32"
+      />
+      <circle cx="303.75" cy="56" r="32" />
+    </g>
+    <g fill="url(#app-logo-chart)" opacity="0.55">
+      <rect
+        x="53.23"
+        y="332.96"
+        width="282.52"
+        height="32.01"
+        rx="16.01"
+      />
+    </g>
   </svg>
 </template>
