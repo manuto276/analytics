@@ -26,6 +26,9 @@ test('icons are Tabler and come from the installation, never from a remote servi
     expect(await page.locator('svg.iconify--tabler').count(), `Tabler icons on ${path}`).toBeGreaterThan(0)
     expect(await page.locator('.iconify:not(svg)').count(), `icons that rendered empty on ${path}`).toBe(0)
     expect(await page.locator('svg.iconify--lucide').count(), `Lucide icons left on ${path}`).toBe(0)
+    // An <svg> with nothing in it is an icon the bundle did not carry: that is how the sidebar
+    // toggles disappeared, and their markup had no .iconify class to catch them by.
+    expect(await page.locator('svg:empty').count(), `empty <svg> on ${path}`).toBe(0)
   }
 
   expect(remote, 'requests that left the installation').toEqual([])

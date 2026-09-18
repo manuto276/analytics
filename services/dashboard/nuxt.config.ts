@@ -66,6 +66,12 @@ export default defineNuxtConfig({
   icon: {
     mode: 'svg',
     provider: 'none',
-    clientBundle: { scan: true, includeCustomCollections: true }
+    clientBundle: {
+      // The default scan misses app.config.ts, where the Nuxt UI icon map lives, so the icons only
+      // named there (the sidebar toggles, the loader, the pagination chevrons) rendered as empty
+      // <svg> elements. Include .ts sources as well.
+      scan: { globInclude: ['**/*.{vue,jsx,tsx,ts,mjs,js}'], globExclude: ['node_modules', 'dist', '.nuxt', '.output', 'test'] },
+      includeCustomCollections: true
+    }
   }
 })
