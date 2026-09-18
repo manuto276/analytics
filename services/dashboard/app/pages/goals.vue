@@ -13,7 +13,7 @@ useHead({ title: () => t('nav.goals') })
           <UButton
             v-if="canManage"
             :label="t('goals.manage')"
-            icon="i-lucide-settings-2"
+            icon="i-tabler-adjustments"
             color="neutral"
             variant="subtle"
             :to="{ path: '/settings/goals', query: { site: route.query.site } }"

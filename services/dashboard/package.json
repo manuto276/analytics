@@ -19,7 +19,6 @@
     "openapi-types:check": "node scripts/openapi-types-check.mjs"
   },
   "dependencies": {
-    "@iconify-json/lucide": "^1.2.131",
     "@iconify-json/simple-icons": "^1.2.95",
     "@internationalized/date": "^3.12.4",
     "@nuxt/ui": "^4.11.1",
@@ -36,6 +35,7 @@
     "zod": "^4.6.4"
   },
   "devDependencies": {
+    "@iconify-json/tabler": "^1.2.38",
     "@nuxt/eslint": "^1.17.0",
     "@nuxt/test-utils": "^4.3.2",
     "@nuxtjs/i18n": "^10.6.0",

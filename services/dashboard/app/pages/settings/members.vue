@@ -109,7 +109,7 @@ async function remove(member: Member) {
     v-else-if="!canManage"
     color="neutral"
     variant="subtle"
-    icon="i-lucide-lock"
+    icon="i-tabler-lock"
     :title="t('errors.adminOnly')"
   />
   <div v-else>
@@ -135,7 +135,7 @@ async function remove(member: Member) {
       <template #header>
         <UInput
           v-model="q"
-          icon="i-lucide-search"
+          icon="i-tabler-search"
           :placeholder="t('settings.members.search')"
           class="w-full"
         />
@@ -183,7 +183,7 @@ async function remove(member: Member) {
             />
             <UButton
               v-if="!member.inherited && member.user_id !== user?.id"
-              icon="i-lucide-user-minus"
+              icon="i-tabler-user-minus"
               color="error"
               variant="ghost"
               :aria-label="t('settings.members.remove')"
@@ -233,7 +233,7 @@ async function remove(member: Member) {
           <UAlert
             color="success"
             variant="subtle"
-            icon="i-lucide-mail-check"
+            icon="i-tabler-mail-check"
             :title="t('settings.members.linkReady')"
             :description="t('settings.members.linkHint')"
           />

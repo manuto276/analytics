@@ -23,13 +23,13 @@ interface StatDef {
 }
 
 const defs: StatDef[] = [
-  { key: 'visitors', icon: 'i-lucide-users', requires: 'visitors', format: fmt.compact },
-  { key: 'visits', icon: 'i-lucide-log-in', format: fmt.compact },
-  { key: 'pageviews', icon: 'i-lucide-eye', format: fmt.compact },
-  { key: 'bounce_rate', icon: 'i-lucide-undo-2', requires: 'bounce', invert: true, format: fmt.percent },
-  { key: 'avg_duration_ms', icon: 'i-lucide-timer', requires: 'duration', format: fmt.duration },
-  { key: 'conversions', icon: 'i-lucide-target', format: fmt.compact },
-  { key: 'revenue_minor', icon: 'i-lucide-circle-dollar-sign', format: v => fmt.money(v) }
+  { key: 'visitors', icon: 'i-tabler-users', requires: 'visitors', format: fmt.compact },
+  { key: 'visits', icon: 'i-tabler-login', format: fmt.compact },
+  { key: 'pageviews', icon: 'i-tabler-eye', format: fmt.compact },
+  { key: 'bounce_rate', icon: 'i-tabler-arrow-back-up', requires: 'bounce', invert: true, format: fmt.percent },
+  { key: 'avg_duration_ms', icon: 'i-tabler-stopwatch', requires: 'duration', format: fmt.duration },
+  { key: 'conversions', icon: 'i-tabler-target', format: fmt.compact },
+  { key: 'revenue_minor', icon: 'i-tabler-coin', format: v => fmt.money(v) }
 ]
 
 const stats = computed(() => defs.map((def) => {

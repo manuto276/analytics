@@ -94,9 +94,9 @@ async function onSubmit() {
       currency: s.currency.toUpperCase()
     }
     const site = await updateSite(currentSiteId.value, input)
-    toast.add({ title: t('common.saved'), color: 'success', icon: 'i-lucide-check' })
+    toast.add({ title: t('common.saved'), color: 'success', icon: 'i-tabler-check' })
     if (site.timezone_changed) {
-      toast.add({ title: t('settings.site.timezoneChanged'), description: t('settings.site.timezoneChangedHint'), color: 'warning', icon: 'i-lucide-clock', duration: 0 })
+      toast.add({ title: t('settings.site.timezoneChanged'), description: t('settings.site.timezoneChangedHint'), color: 'warning', icon: 'i-tabler-clock', duration: 0 })
     }
   } catch (error) {
     if (isApiError(error) && error.isValidation) {
@@ -196,7 +196,7 @@ async function archive() {
               <UCheckbox v-model="domain.include_subdomains" :label="t('settings.site.subdomains')" />
               <UButton
                 v-if="canManage"
-                icon="i-lucide-x"
+                icon="i-tabler-x"
                 color="neutral"
                 variant="ghost"
                 :aria-label="t('common.remove')"
@@ -206,7 +206,7 @@ async function archive() {
             <UButton
               v-if="canManage"
               :label="t('settings.site.addDomain')"
-              icon="i-lucide-plus"
+              icon="i-tabler-plus"
               size="xs"
               color="neutral"
               variant="subtle"
@@ -246,7 +246,7 @@ async function archive() {
           v-if="state.visitor_hash_mode === 'daily_hash'"
           color="warning"
           variant="subtle"
-          icon="i-lucide-scale"
+          icon="i-tabler-scale"
           :title="t('settings.site.legalTitle')"
           :description="t('settings.site.legalNotice')"
         />

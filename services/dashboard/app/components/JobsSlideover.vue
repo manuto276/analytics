@@ -108,7 +108,7 @@ defineExpose({ issues })
         </div>
       </div>
 
-      <UEmpty v-else icon="i-lucide-server-off" :title="t('jobs.unavailable')" />
+      <UEmpty v-else icon="i-tabler-server-off" :title="t('jobs.unavailable')" />
     </template>
   </USlideover>
 </template>

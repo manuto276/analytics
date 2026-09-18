@@ -58,5 +58,14 @@ export default defineNuxtConfig({
       cookieKey: 'i18n_locale',
       redirectOn: 'root'
     }
+  },
+
+  // The SPA is served by the installation itself, so every icon has to be in the bundle: there is
+  // no Nitro server to answer /api/_nuxt_icon, and asking the Iconify API would send a request to a
+  // third party from the page an operator signs into.
+  icon: {
+    mode: 'svg',
+    provider: 'none',
+    clientBundle: { scan: true, includeCustomCollections: true }
   }
 })

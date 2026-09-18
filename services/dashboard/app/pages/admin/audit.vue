@@ -79,7 +79,7 @@ const columns = computed<TableColumn<AuditEntry>[]>(() => [
           />
           <UInput
             v-model="action"
-            icon="i-lucide-search"
+            icon="i-tabler-search"
             :placeholder="t('admin.audit.actionFilter')"
             class="max-w-xs"
           />

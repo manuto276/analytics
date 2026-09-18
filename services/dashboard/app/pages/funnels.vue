@@ -45,7 +45,7 @@ function barWidth(count: number) {
           <UButton
             v-if="canManage"
             :label="t('funnels.manage')"
-            icon="i-lucide-settings-2"
+            icon="i-tabler-adjustments"
             color="neutral"
             variant="subtle"
             :to="{ path: '/settings/funnels', query: { site: route.query.site } }"
@@ -70,7 +70,7 @@ function barWidth(count: number) {
       <NoSiteNotice v-if="!currentSite" />
       <UEmpty
         v-else-if="!funnels.length"
-        icon="i-lucide-filter"
+        icon="i-tabler-filter"
         :title="t('funnels.emptyTitle')"
         :description="t('funnels.emptyDescription')"
       />

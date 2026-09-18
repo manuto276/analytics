@@ -40,7 +40,7 @@ const xTicks = (i: number) => (i % 5 === 0 && minutes.value[i] ? minuteLabel(min
     <template #header>
       <PageNavbar :title="t('nav.realtime')">
         <template #right>
-          <UBadge color="success" variant="subtle" icon="i-lucide-radio">
+          <UBadge color="success" variant="subtle" icon="i-tabler-broadcast">
             {{ t('realtime.live') }}
           </UBadge>
         </template>
@@ -52,7 +52,7 @@ const xTicks = (i: number) => (i % 5 === 0 && minutes.value[i] ? minuteLabel(min
       <template v-else>
         <UPageGrid class="lg:grid-cols-3 gap-4">
           <UPageCard
-            icon="i-lucide-users"
+            icon="i-tabler-users"
             :title="t('realtime.active')"
             :description="t('realtime.activeHint')"
             variant="subtle"

@@ -39,7 +39,7 @@ async function onSubmit() {
       v-if="!config?.mailer_enabled"
       color="neutral"
       variant="subtle"
-      icon="i-lucide-mail-x"
+      icon="i-tabler-mail-x"
       :title="t('auth.forgot.unavailable')"
       :description="t('auth.forgot.askAdmin')"
     />
@@ -47,7 +47,7 @@ async function onSubmit() {
       v-else-if="sent"
       color="success"
       variant="subtle"
-      icon="i-lucide-mail-check"
+      icon="i-tabler-mail-check"
       :title="t('auth.forgot.sent')"
     />
     <template v-else>

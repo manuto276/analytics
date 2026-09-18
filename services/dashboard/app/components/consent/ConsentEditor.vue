@@ -78,7 +78,7 @@ defineExpose({ contrast })
             :aria-label="t('consent.addLocale')"
           />
           <UButton
-            icon="i-lucide-plus"
+            icon="i-tabler-plus"
             size="xs"
             color="neutral"
             variant="subtle"
@@ -133,7 +133,7 @@ defineExpose({ contrast })
           <UButton
             v-if="!props.readonly && activeLocale !== model.default_locale && locales.length > 1"
             :label="t('consent.removeLocale')"
-            icon="i-lucide-trash"
+            icon="i-tabler-trash"
             size="xs"
             color="error"
             variant="ghost"
@@ -173,14 +173,14 @@ defineExpose({ contrast })
         <UAlert
           :color="contrast.textOk ? 'success' : 'error'"
           variant="subtle"
-          :icon="contrast.textOk ? 'i-lucide-check' : 'i-lucide-triangle-alert'"
+          :icon="contrast.textOk ? 'i-tabler-check' : 'i-tabler-alert-triangle'"
           :title="t('consent.contrastText', { ratio: Number.isNaN(contrast.text) ? '—' : contrast.text.toFixed(2) })"
           :description="contrast.textOk ? undefined : t('consent.contrastFail')"
         />
         <UAlert
           :color="contrast.actionOk ? 'success' : 'error'"
           variant="subtle"
-          :icon="contrast.actionOk ? 'i-lucide-check' : 'i-lucide-triangle-alert'"
+          :icon="contrast.actionOk ? 'i-tabler-check' : 'i-tabler-alert-triangle'"
           :title="t('consent.contrastAction', { ratio: Number.isNaN(contrast.action) ? '—' : contrast.action.toFixed(2) })"
           :description="contrast.actionOk ? undefined : t('consent.contrastFail')"
         />

@@ -60,7 +60,7 @@ async function exportCsv() {
       <ReportToolbar :compare="false" :filters="false">
         <template #right>
           <UButton
-            icon="i-lucide-download"
+            icon="i-tabler-download"
             :label="t('report.csv')"
             color="neutral"
             variant="ghost"

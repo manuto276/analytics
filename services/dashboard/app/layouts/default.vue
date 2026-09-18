@@ -29,26 +29,26 @@ function link(label: string, icon: string, path: string, extra: Partial<Navigati
 }
 
 const reportLinks = computed<NavigationMenuItem[]>(() => [
-  link(t('nav.overview'), 'i-lucide-layout-dashboard', '/', { exact: true }),
-  link(t('nav.pages'), 'i-lucide-file-text', '/pages'),
-  link(t('nav.sources'), 'i-lucide-share-2', '/sources'),
-  link(t('nav.campaigns'), 'i-lucide-megaphone', '/campaigns'),
-  link(t('nav.audience'), 'i-lucide-users', '/audience'),
-  link(t('nav.events'), 'i-lucide-mouse-pointer-click', '/events'),
-  link(t('nav.goals'), 'i-lucide-target', '/goals'),
-  link(t('nav.funnels'), 'i-lucide-filter', '/funnels'),
-  link(t('nav.attribution'), 'i-lucide-git-fork', '/attribution'),
-  link(t('nav.retention'), 'i-lucide-repeat', '/retention'),
-  link(t('nav.realtime'), 'i-lucide-activity', '/realtime'),
-  link(t('nav.settings'), 'i-lucide-settings', '/settings')
+  link(t('nav.overview'), 'i-tabler-layout-dashboard', '/', { exact: true }),
+  link(t('nav.pages'), 'i-tabler-file-text', '/pages'),
+  link(t('nav.sources'), 'i-tabler-share', '/sources'),
+  link(t('nav.campaigns'), 'i-tabler-speakerphone', '/campaigns'),
+  link(t('nav.audience'), 'i-tabler-users', '/audience'),
+  link(t('nav.events'), 'i-tabler-pointer', '/events'),
+  link(t('nav.goals'), 'i-tabler-target', '/goals'),
+  link(t('nav.funnels'), 'i-tabler-filter', '/funnels'),
+  link(t('nav.attribution'), 'i-tabler-git-fork', '/attribution'),
+  link(t('nav.retention'), 'i-tabler-repeat', '/retention'),
+  link(t('nav.realtime'), 'i-tabler-activity', '/realtime'),
+  link(t('nav.settings'), 'i-tabler-settings', '/settings')
 ])
 
 const adminLinks = computed<NavigationMenuItem[]>(() => isGlobalAdmin.value
   ? [
       { label: t('nav.admin'), type: 'label' },
-      { label: t('nav.users'), icon: 'i-lucide-user-cog', to: '/admin/users', onSelect: close },
-      { label: t('nav.sites'), icon: 'i-lucide-globe', to: '/admin/sites', onSelect: close },
-      { label: t('nav.audit'), icon: 'i-lucide-scroll-text', to: '/admin/audit', onSelect: close }
+      { label: t('nav.users'), icon: 'i-tabler-user-cog', to: '/admin/users', onSelect: close },
+      { label: t('nav.sites'), icon: 'i-tabler-world', to: '/admin/sites', onSelect: close },
+      { label: t('nav.audit'), icon: 'i-tabler-file-text', to: '/admin/audit', onSelect: close }
     ]
   : [])
 

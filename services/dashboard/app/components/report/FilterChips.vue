@@ -17,7 +17,7 @@ const { state, removeFilter, clearFilters } = useReportQuery()
       <span>{{ t(`filters.ops.${filter.op}`) }}</span>
       <span class="font-medium truncate max-w-48">{{ filter.value }}</span>
       <UButton
-        icon="i-lucide-x"
+        icon="i-tabler-x"
         size="xs"
         color="primary"
         variant="link"

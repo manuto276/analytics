@@ -6,10 +6,10 @@ const { isSiteModalOpen } = useDashboard()
 
 <template>
   <UEmpty
-    icon="i-lucide-globe"
+    icon="i-tabler-world"
     :title="t('sites.emptyTitle')"
     :description="isGlobalAdmin ? t('sites.emptyAdmin') : t('sites.emptyMember')"
-    :actions="isGlobalAdmin ? [{ label: t('sites.add'), icon: 'i-lucide-circle-plus', onClick: () => { isSiteModalOpen = true } }] : []"
+    :actions="isGlobalAdmin ? [{ label: t('sites.add'), icon: 'i-tabler-circle-plus', onClick: () => { isSiteModalOpen = true } }] : []"
     class="flex-1"
   />
 </template>

@@ -40,7 +40,7 @@ async function onSubmit(event: FormSubmitEvent<{ name: string, domains: string[]
       timezone: event.data.timezone,
       domains: event.data.domains.map(host => ({ host: host.trim().toLowerCase(), include_subdomains: false }))
     })
-    toast.add({ title: t('sites.created'), color: 'success', icon: 'i-lucide-check' })
+    toast.add({ title: t('sites.created'), color: 'success', icon: 'i-tabler-check' })
     isSiteModalOpen.value = false
     state.name = ''
     state.domains = []

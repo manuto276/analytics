@@ -14,7 +14,7 @@ const description = computed(() => props.missing.map(key => t(`availability.${ke
     v-if="missing.length"
     color="warning"
     variant="subtle"
-    icon="i-lucide-info"
+    icon="i-tabler-info-circle"
     :title="t('availability.title')"
     :description="description"
     data-testid="availability-notice"

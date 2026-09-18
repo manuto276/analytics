@@ -71,7 +71,7 @@ async function revoke(key: ApiKey) {
     v-else-if="!canManage"
     color="neutral"
     variant="subtle"
-    icon="i-lucide-lock"
+    icon="i-tabler-lock"
     :title="t('errors.adminOnly')"
   />
   <div v-else>
@@ -84,7 +84,7 @@ async function revoke(key: ApiKey) {
     >
       <UButton
         :label="t('settings.apiKeys.create')"
-        icon="i-lucide-plus"
+        icon="i-tabler-plus"
         color="neutral"
         class="w-fit lg:ms-auto"
         @click="openCreate"
@@ -133,7 +133,7 @@ async function revoke(key: ApiKey) {
           <UAlert
             color="warning"
             variant="subtle"
-            icon="i-lucide-key-round"
+            icon="i-tabler-key"
             :title="t('settings.apiKeys.secretOnce')"
           />
           <CopyField :value="secret" :label="t('settings.apiKeys.secret')" />

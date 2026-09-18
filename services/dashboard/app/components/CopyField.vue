@@ -14,7 +14,7 @@ const { copy, copied } = useClipboard({ legacy: true })
 
 async function onCopy() {
   await copy(props.value)
-  toast.add({ title: t('common.copied'), color: 'success', icon: 'i-lucide-clipboard-check' })
+  toast.add({ title: t('common.copied'), color: 'success', icon: 'i-tabler-clipboard-check' })
 }
 </script>
 
@@ -37,7 +37,7 @@ async function onCopy() {
       class="w-full font-mono"
     />
     <UButton
-      :icon="copied ? 'i-lucide-clipboard-check' : 'i-lucide-clipboard'"
+      :icon="copied ? 'i-tabler-clipboard-check' : 'i-tabler-clipboard'"
       color="neutral"
       variant="subtle"
       :aria-label="t('common.copy')"

@@ -79,12 +79,12 @@ export function formatDelta(delta: number | null | undefined, locale: string, in
   const sign = rounded > 0 ? '+' : ''
   const text = sign + new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 1, signDisplay: 'never' }).format(Math.abs(rounded))
   const signed = rounded < 0 ? `-${text}` : text
-  if (rounded === 0) return { text: signed, tone: 'neutral', icon: 'i-lucide-minus' }
+  if (rounded === 0) return { text: signed, tone: 'neutral', icon: 'i-tabler-minus' }
   const good = invert ? rounded < 0 : rounded > 0
   return {
     text: signed,
     tone: good ? 'success' : 'error',
-    icon: rounded > 0 ? 'i-lucide-trending-up' : 'i-lucide-trending-down'
+    icon: rounded > 0 ? 'i-tabler-trending-up' : 'i-tabler-trending-down'
   }
 }
 

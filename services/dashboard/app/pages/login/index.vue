@@ -39,7 +39,7 @@ async function onSubmit() {
       v-if="error"
       color="error"
       variant="subtle"
-      icon="i-lucide-circle-alert"
+      icon="i-tabler-alert-circle"
       :title="error"
     />
 

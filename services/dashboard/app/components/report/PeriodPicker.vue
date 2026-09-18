@@ -52,14 +52,14 @@ function choose(period: Period) {
     <UButton
       color="neutral"
       variant="ghost"
-      icon="i-lucide-calendar"
+      icon="i-tabler-calendar"
       class="data-[state=open]:bg-elevated group"
       data-testid="period-picker"
     >
       <span class="truncate">{{ label }}</span>
 
       <template #trailing>
-        <UIcon name="i-lucide-chevron-down" class="shrink-0 text-dimmed size-5 group-data-[state=open]:rotate-180 transition-transform duration-200" />
+        <UIcon name="i-tabler-chevron-down" class="shrink-0 text-dimmed size-5 group-data-[state=open]:rotate-180 transition-transform duration-200" />
       </template>
     </UButton>
 

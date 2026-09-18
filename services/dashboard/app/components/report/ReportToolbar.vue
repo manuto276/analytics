@@ -54,7 +54,7 @@ const compareModel = computed({
         v-model="compareModel"
         :items="compareItems"
         variant="ghost"
-        icon="i-lucide-git-compare"
+        icon="i-tabler-git-compare"
         class="data-[state=open]:bg-elevated"
         :aria-label="t('compare.label')"
         :ui="{ trailingIcon: 'group-data-[state=open]:rotate-180 transition-transform duration-200' }"

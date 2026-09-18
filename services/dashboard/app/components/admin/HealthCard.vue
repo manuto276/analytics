@@ -36,7 +36,7 @@ defineExpose({ refresh })
           {{ t('user.version', { version: data.version, commit: data.commit.slice(0, 7) }) }}
         </span>
         <UButton
-          icon="i-lucide-refresh-cw"
+          icon="i-tabler-refresh"
           size="xs"
           color="neutral"
           variant="ghost"
@@ -51,7 +51,7 @@ defineExpose({ refresh })
     <ul v-else-if="data" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
       <li v-for="(check, name) in data.checks" :key="name" class="flex items-start gap-2 text-sm">
         <UIcon
-          :name="check.status === 'ok' ? 'i-lucide-circle-check' : check.status === 'warn' ? 'i-lucide-circle-alert' : 'i-lucide-circle-x'"
+          :name="check.status === 'ok' ? 'i-tabler-circle-check' : check.status === 'warn' ? 'i-tabler-alert-circle' : 'i-tabler-circle-x'"
           class="size-4 mt-0.5 shrink-0"
           :class="check.status === 'ok' ? 'text-success' : check.status === 'warn' ? 'text-warning' : 'text-error'"
         />

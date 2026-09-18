@@ -47,7 +47,7 @@ async function onSubmit() {
       v-if="done"
       color="success"
       variant="subtle"
-      icon="i-lucide-check"
+      icon="i-tabler-check"
       :title="t('auth.reset.done')"
     />
     <template v-else>

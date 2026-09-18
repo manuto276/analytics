@@ -26,13 +26,13 @@ const items = computed<DropdownMenuItem[][]>(() => {
   if (isGlobalAdmin.value) {
     groups.push([{
       label: t('sites.add'),
-      icon: 'i-lucide-circle-plus',
+      icon: 'i-tabler-circle-plus',
       onSelect() {
         isSiteModalOpen.value = true
       }
     }, {
       label: t('sites.manage'),
-      icon: 'i-lucide-cog',
+      icon: 'i-tabler-settings-cog',
       to: '/admin/sites'
     }])
   }
@@ -52,7 +52,7 @@ const buttonLabel = computed(() => currentSite.value?.name ?? t('sites.none'))
     <UButton
       :avatar="{ alt: buttonLabel }"
       :label="collapsed ? undefined : buttonLabel"
-      :trailing-icon="collapsed ? undefined : 'i-lucide-chevrons-up-down'"
+      :trailing-icon="collapsed ? undefined : 'i-tabler-selector'"
       color="neutral"
       variant="ghost"
       block

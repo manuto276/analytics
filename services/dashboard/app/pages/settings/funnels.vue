@@ -86,7 +86,7 @@ async function remove(funnel: Funnel) {
       <UButton
         v-if="canManage"
         :label="t('settings.funnels.add')"
-        icon="i-lucide-plus"
+        icon="i-tabler-plus"
         color="neutral"
         class="w-fit lg:ms-auto"
         :disabled="goals.length < 2"
@@ -107,14 +107,14 @@ async function remove(funnel: Funnel) {
           </div>
           <div v-if="canManage" class="flex items-center gap-1">
             <UButton
-              icon="i-lucide-pencil"
+              icon="i-tabler-pencil"
               color="neutral"
               variant="ghost"
               :aria-label="t('common.edit')"
               @click="openEditor(funnel)"
             />
             <UButton
-              icon="i-lucide-trash"
+              icon="i-tabler-trash"
               color="error"
               variant="ghost"
               :aria-label="t('common.delete')"
@@ -155,7 +155,7 @@ async function remove(funnel: Funnel) {
                 class="flex-1"
               />
               <UButton
-                icon="i-lucide-arrow-up"
+                icon="i-tabler-arrow-up"
                 color="neutral"
                 variant="ghost"
                 :disabled="index === 0"
@@ -163,7 +163,7 @@ async function remove(funnel: Funnel) {
                 @click="move(index, -1)"
               />
               <UButton
-                icon="i-lucide-arrow-down"
+                icon="i-tabler-arrow-down"
                 color="neutral"
                 variant="ghost"
                 :disabled="index === state.goal_ids.length - 1"
@@ -171,7 +171,7 @@ async function remove(funnel: Funnel) {
                 @click="move(index, 1)"
               />
               <UButton
-                icon="i-lucide-x"
+                icon="i-tabler-x"
                 color="neutral"
                 variant="ghost"
                 :disabled="state.goal_ids.length <= 2"
@@ -181,7 +181,7 @@ async function remove(funnel: Funnel) {
             </div>
             <UButton
               :label="t('settings.funnels.addStep')"
-              icon="i-lucide-plus"
+              icon="i-tabler-plus"
               size="xs"
               color="neutral"
               variant="subtle"

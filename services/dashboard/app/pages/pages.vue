@@ -41,7 +41,7 @@ const prefixDebounced = refDebounced(prefix, 400)
           <template #header>
             <UInput
               v-model="prefix"
-              icon="i-lucide-search"
+              icon="i-tabler-search"
               size="xs"
               :placeholder="t('pages.contentPrefix')"
               :aria-label="t('pages.contentPrefix')"

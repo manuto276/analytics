@@ -147,7 +147,7 @@ async function publish(materialChange: boolean) {
       :key="warning"
       color="warning"
       variant="subtle"
-      icon="i-lucide-triangle-alert"
+      icon="i-tabler-alert-triangle"
       :title="warning"
     />
 

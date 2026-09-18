@@ -45,9 +45,9 @@ const missing = computed(() => unavailableMetrics(props.columns, availability.va
 const totalRows = computed(() => (report.data.value as { data?: { total_rows?: number } } | null)?.data?.total_rows ?? rows.value.length)
 
 function sortIcon(key: string) {
-  if (sort.value === `-${key}`) return 'i-lucide-arrow-down-wide-narrow'
-  if (sort.value === key) return 'i-lucide-arrow-up-narrow-wide'
-  return 'i-lucide-arrow-up-down'
+  if (sort.value === `-${key}`) return 'i-tabler-sort-descending'
+  if (sort.value === key) return 'i-tabler-sort-ascending'
+  return 'i-tabler-arrows-sort'
 }
 
 const tableColumns = computed<TableColumn<ReportRow>[]>(() => props.columns.map((column) => {
@@ -116,7 +116,7 @@ defineExpose({ refresh: report.refresh })
         </div>
         <UButton
           v-if="csv"
-          icon="i-lucide-download"
+          icon="i-tabler-download"
           :label="t('report.csv')"
           size="xs"
           color="neutral"

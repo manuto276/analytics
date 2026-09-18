@@ -55,7 +55,7 @@ const columns = computed<TableColumn<Site>[]>(() => [
     <template #header>
       <PageNavbar :title="t('nav.sites')">
         <template #right>
-          <UButton :label="t('sites.add')" icon="i-lucide-circle-plus" @click="isSiteModalOpen = true" />
+          <UButton :label="t('sites.add')" icon="i-tabler-circle-plus" @click="isSiteModalOpen = true" />
         </template>
       </PageNavbar>
     </template>

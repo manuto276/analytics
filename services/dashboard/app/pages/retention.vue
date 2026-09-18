@@ -101,7 +101,7 @@ function cellClass(value: number | null | undefined) {
           </table>
           <UEmpty
             v-else
-            icon="i-lucide-repeat"
+            icon="i-tabler-repeat"
             :title="t('report.empty')"
             :description="t('retention.consentOnly')"
           />

@@ -9,5 +9,5 @@ enableAutoUnmount(afterEach)
 // EnvironmentTeardownError and fails the run although every test passed. Yield a few macrotasks at
 // the end of each file so those imports land first.
 afterAll(async () => {
-  for (let i = 0; i < 5; i++) await new Promise(resolve => setTimeout(resolve, 20))
+  for (let i = 0; i < 12; i++) await new Promise(resolve => setTimeout(resolve, 30))
 })

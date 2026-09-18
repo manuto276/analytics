@@ -15,7 +15,7 @@ const tabs = computed(() => (['channel', 'source', 'referrer'] as const).map(val
         <template #right>
           <UButton
             :label="t('sources.campaignsLink')"
-            icon="i-lucide-megaphone"
+            icon="i-tabler-speakerphone"
             color="neutral"
             variant="subtle"
             :to="{ path: '/campaigns', query: navQuery }"

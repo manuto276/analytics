@@ -33,7 +33,7 @@ function clearCode() {
 }
 
 async function restart(message: string) {
-  toast.add({ title: message, color: 'warning', icon: 'i-lucide-clock' })
+  toast.add({ title: message, color: 'warning', icon: 'i-tabler-clock' })
   await navigateTo('/login')
 }
 
@@ -91,7 +91,7 @@ function toggleRecovery() {
       v-if="error"
       color="error"
       variant="subtle"
-      icon="i-lucide-circle-alert"
+      icon="i-tabler-alert-circle"
       :title="error"
       data-testid="mfa-error"
       role="alert"

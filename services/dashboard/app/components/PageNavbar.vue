@@ -22,7 +22,7 @@ const { isJobsSlideoverOpen } = useDashboard()
           color="neutral"
           variant="ghost"
           square
-          icon="i-lucide-server-cog"
+          icon="i-tabler-server-cog"
           :aria-label="t('jobs.title')"
           @click="isJobsSlideoverOpen = true"
         />

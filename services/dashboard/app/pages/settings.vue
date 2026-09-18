@@ -8,14 +8,14 @@ const { canManage } = useSites()
 const links = computed<NavigationMenuItem[][]>(() => {
   const query = { site: route.query.site }
   const items: NavigationMenuItem[] = [
-    { label: t('settings.nav.site'), icon: 'i-lucide-globe', to: { path: '/settings', query }, exact: true },
-    ...(canManage.value ? [{ label: t('settings.nav.members'), icon: 'i-lucide-users', to: { path: '/settings/members', query } }] : []),
-    { label: t('settings.nav.consent'), icon: 'i-lucide-cookie', to: { path: '/settings/consent', query } },
-    { label: t('settings.nav.goals'), icon: 'i-lucide-target', to: { path: '/settings/goals', query } },
-    { label: t('settings.nav.funnels'), icon: 'i-lucide-filter', to: { path: '/settings/funnels', query } },
-    { label: t('settings.nav.costs'), icon: 'i-lucide-receipt', to: { path: '/settings/costs', query } },
-    ...(canManage.value ? [{ label: t('settings.nav.apiKeys'), icon: 'i-lucide-key-round', to: { path: '/settings/api-keys', query } }] : []),
-    { label: t('settings.nav.security'), icon: 'i-lucide-shield', to: { path: '/settings/security', query } }
+    { label: t('settings.nav.site'), icon: 'i-tabler-world', to: { path: '/settings', query }, exact: true },
+    ...(canManage.value ? [{ label: t('settings.nav.members'), icon: 'i-tabler-users', to: { path: '/settings/members', query } }] : []),
+    { label: t('settings.nav.consent'), icon: 'i-tabler-cookie', to: { path: '/settings/consent', query } },
+    { label: t('settings.nav.goals'), icon: 'i-tabler-target', to: { path: '/settings/goals', query } },
+    { label: t('settings.nav.funnels'), icon: 'i-tabler-filter', to: { path: '/settings/funnels', query } },
+    { label: t('settings.nav.costs'), icon: 'i-tabler-receipt', to: { path: '/settings/costs', query } },
+    ...(canManage.value ? [{ label: t('settings.nav.apiKeys'), icon: 'i-tabler-key', to: { path: '/settings/api-keys', query } }] : []),
+    { label: t('settings.nav.security'), icon: 'i-tabler-shield', to: { path: '/settings/security', query } }
   ]
   return [items]
 })

@@ -84,7 +84,7 @@ async function disable() {
       <UAlert
         color="warning"
         variant="subtle"
-        icon="i-lucide-life-buoy"
+        icon="i-tabler-lifebuoy"
         :title="t('security.totp.recoveryTitle')"
         :description="t('security.totp.recoveryHint')"
       />
@@ -132,7 +132,7 @@ async function disable() {
     <div v-else-if="!enabled" class="flex">
       <UButton
         :label="t('security.totp.enable')"
-        icon="i-lucide-smartphone"
+        icon="i-tabler-device-mobile"
         :loading="busy"
         data-testid="totp-start"
         @click="start"
@@ -143,7 +143,7 @@ async function disable() {
       <UBadge
         color="success"
         variant="subtle"
-        icon="i-lucide-shield-check"
+        icon="i-tabler-shield-check"
         :label="t('security.totp.active')"
       />
       <UButton

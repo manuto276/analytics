@@ -30,7 +30,7 @@ const nextVersion = computed(() => (props.currentVersion ?? 0) + (materialChange
           v-if="materialChange"
           color="warning"
           variant="subtle"
-          icon="i-lucide-refresh-ccw"
+          icon="i-tabler-refresh-dot"
           :title="t('consent.materialWarning')"
         />
         <p class="text-sm text-muted" data-testid="next-version">

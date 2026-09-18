@@ -61,7 +61,7 @@ async function submit() {
         <UAlert
           color="success"
           variant="subtle"
-          icon="i-lucide-mail-check"
+          icon="i-tabler-mail-check"
           :title="t('settings.members.linkReady')"
           :description="t('settings.members.linkHint')"
         />
@@ -98,7 +98,7 @@ async function submit() {
             />
             <USelect v-model="row.role" :items="siteRoleItems" class="w-32" />
             <UButton
-              icon="i-lucide-x"
+              icon="i-tabler-x"
               color="neutral"
               variant="ghost"
               :aria-label="t('common.remove')"
@@ -107,7 +107,7 @@ async function submit() {
           </div>
           <UButton
             :label="t('admin.users.addSiteAccess')"
-            icon="i-lucide-plus"
+            icon="i-tabler-plus"
             size="xs"
             color="neutral"
             variant="subtle"

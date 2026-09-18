@@ -123,7 +123,7 @@ const pendingInvitations = computed(() => invitations.value.filter(i => i.status
     <template #header>
       <PageNavbar :title="t('nav.users')">
         <template #right>
-          <UButton :label="t('admin.users.invite')" icon="i-lucide-user-plus" @click="inviteOpen = true" />
+          <UButton :label="t('admin.users.invite')" icon="i-tabler-user-plus" @click="inviteOpen = true" />
         </template>
       </PageNavbar>
     </template>
@@ -131,7 +131,7 @@ const pendingInvitations = computed(() => invitations.value.filter(i => i.status
     <template #body>
       <UInput
         v-model="q"
-        icon="i-lucide-search"
+        icon="i-tabler-search"
         :placeholder="t('admin.users.search')"
         class="max-w-sm"
       />

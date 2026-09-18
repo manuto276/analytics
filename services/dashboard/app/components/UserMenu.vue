@@ -25,11 +25,11 @@ const items = computed<DropdownMenuItem[][]>(() => {
     avatar: { alt: displayName.value }
   }], [{
     label: t('user.security'),
-    icon: 'i-lucide-shield',
+    icon: 'i-tabler-shield',
     to: { path: '/settings/security', query: { site: route.query.site } }
   }, {
     label: t('user.language'),
-    icon: 'i-lucide-languages',
+    icon: 'i-tabler-language',
     children: locales.value.map(l => ({
       label: l.name ?? l.code,
       type: 'checkbox' as const,
@@ -41,10 +41,10 @@ const items = computed<DropdownMenuItem[][]>(() => {
     }))
   }, {
     label: t('user.appearance'),
-    icon: 'i-lucide-sun-moon',
+    icon: 'i-tabler-sun-moon',
     children: (['system', 'light', 'dark'] as const).map(mode => ({
       label: t(`user.mode.${mode}`),
-      icon: mode === 'light' ? 'i-lucide-sun' : mode === 'dark' ? 'i-lucide-moon' : 'i-lucide-monitor',
+      icon: mode === 'light' ? 'i-tabler-sun' : mode === 'dark' ? 'i-tabler-moon' : 'i-tabler-device-desktop',
       type: 'checkbox' as const,
       checked: colorMode.preference === mode,
       onSelect(e: Event) {
@@ -65,7 +65,7 @@ const items = computed<DropdownMenuItem[][]>(() => {
     about.push({
       label: t('user.source'),
       description: t('user.sourceLicense'),
-      icon: 'i-lucide-code',
+      icon: 'i-tabler-code',
       to: config.value.source_url,
       target: '_blank'
     })
@@ -74,7 +74,7 @@ const items = computed<DropdownMenuItem[][]>(() => {
 
   groups.push([{
     label: t('user.logout'),
-    icon: 'i-lucide-log-out',
+    icon: 'i-tabler-logout',
     onSelect() {
       void logout()
     }
@@ -93,7 +93,7 @@ const items = computed<DropdownMenuItem[][]>(() => {
     <UButton
       :avatar="{ alt: displayName }"
       :label="collapsed ? undefined : displayName"
-      :trailing-icon="collapsed ? undefined : 'i-lucide-chevrons-up-down'"
+      :trailing-icon="collapsed ? undefined : 'i-tabler-selector'"
       color="neutral"
       variant="ghost"
       block

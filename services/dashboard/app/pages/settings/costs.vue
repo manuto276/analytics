@@ -110,8 +110,8 @@ const columns = computed<TableColumn<CampaignCost>[]>(() => [
     id: 'actions',
     cell: ({ row }) => canManage.value
       ? h('div', { class: 'flex justify-end gap-1' }, [
-          h(UButton, { 'icon': 'i-lucide-pencil', 'color': 'neutral', 'variant': 'ghost', 'aria-label': t('common.edit'), 'onClick': () => openEditor(row.original) }),
-          h(UButton, { 'icon': 'i-lucide-trash', 'color': 'error', 'variant': 'ghost', 'aria-label': t('common.delete'), 'onClick': () => remove(row.original) })
+          h(UButton, { 'icon': 'i-tabler-pencil', 'color': 'neutral', 'variant': 'ghost', 'aria-label': t('common.edit'), 'onClick': () => openEditor(row.original) }),
+          h(UButton, { 'icon': 'i-tabler-trash', 'color': 'error', 'variant': 'ghost', 'aria-label': t('common.delete'), 'onClick': () => remove(row.original) })
         ])
       : null
   }
@@ -131,14 +131,14 @@ const columns = computed<TableColumn<CampaignCost>[]>(() => [
       <div v-if="canManage" class="flex gap-2 lg:ms-auto">
         <UButton
           :label="t('settings.costs.import')"
-          icon="i-lucide-upload"
+          icon="i-tabler-upload"
           color="neutral"
           variant="subtle"
           @click="importOpen = true"
         />
         <UButton
           :label="t('settings.costs.add')"
-          icon="i-lucide-plus"
+          icon="i-tabler-plus"
           color="neutral"
           @click="openEditor()"
         />

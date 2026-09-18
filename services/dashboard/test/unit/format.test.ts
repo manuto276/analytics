@@ -19,11 +19,11 @@ import {
 
 describe('formatDelta', () => {
   it('formats positive growth as success with a plus sign', () => {
-    expect(formatDelta(0.125, 'en')).toEqual({ text: '+12.5%', tone: 'success', icon: 'i-lucide-trending-up' })
+    expect(formatDelta(0.125, 'en')).toEqual({ text: '+12.5%', tone: 'success', icon: 'i-tabler-trending-up' })
   })
 
   it('formats decreases as error with a minus sign', () => {
-    expect(formatDelta(-0.3, 'en')).toEqual({ text: '-30%', tone: 'error', icon: 'i-lucide-trending-down' })
+    expect(formatDelta(-0.3, 'en')).toEqual({ text: '-30%', tone: 'error', icon: 'i-tabler-trending-down' })
   })
 
   it('inverts the tone for metrics where lower is better', () => {
@@ -32,7 +32,7 @@ describe('formatDelta', () => {
   })
 
   it('treats zero as neutral and missing values as null', () => {
-    expect(formatDelta(0, 'en')).toEqual({ text: '0%', tone: 'neutral', icon: 'i-lucide-minus' })
+    expect(formatDelta(0, 'en')).toEqual({ text: '0%', tone: 'neutral', icon: 'i-tabler-minus' })
     expect(formatDelta(0.0001, 'en')?.tone).toBe('neutral')
     expect(formatDelta(null, 'en')).toBeNull()
     expect(formatDelta(undefined, 'en')).toBeNull()

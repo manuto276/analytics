@@ -77,7 +77,7 @@ async function lookup() {
       v-if="error"
       color="error"
       variant="subtle"
-      icon="i-lucide-circle-alert"
+      icon="i-tabler-alert-circle"
       :title="error"
       data-testid="receipt-error"
     />

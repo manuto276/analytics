@@ -61,7 +61,7 @@ const loadMessage = computed(() => {
       v-if="loadError"
       color="error"
       variant="subtle"
-      icon="i-lucide-circle-alert"
+      icon="i-tabler-alert-circle"
       :title="loadMessage"
     />
 

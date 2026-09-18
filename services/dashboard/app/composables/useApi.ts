@@ -89,7 +89,7 @@ export function useApi(): ApiClient {
           title: t('errors.forbidden'),
           description: apiError.message,
           color: 'error',
-          icon: 'i-lucide-shield-alert'
+          icon: 'i-tabler-shield-exclamation'
         })
       }
       throw apiError
