@@ -115,12 +115,26 @@ as user name is the usual one (`stats@example.net` → `stats%40example.net`).
 | `+` | `%2B` | space | `%20` |
 | `&` | `%26` | `=` | `%3D` |
 
-Encode the whole value rather than guessing:
+Encode **the user name and the password, each on its own** — never the scheme, the host, the port
+or the whole DSN, whose `:`, `@` and `/` are what separate the parts. Let PHP do it rather than
+guessing:
 
 ```bash
-php -r 'echo rawurlencode($argv[1]), PHP_EOL;' 'p@ss:w/rd#1'
+php -r 'echo rawurlencode($argv[1]), PHP_EOL;' 'analytics@example.net'   # user name
+# analytics%40example.net
+php -r 'echo rawurlencode($argv[1]), PHP_EOL;' 'p@ss:w/rd#1'             # password
 # p%40ss%3Aw%2Frd%231
 ```
+
+Then put the two results into the DSN:
+
+```dotenv
+#               scheme  user name               password            host        port
+MAILER_DSN=smtps://analytics%40example.net:p%40ss%3Aw%2Frd%231@ssl0.ovh.net:465
+```
+
+The single quotes stop the shell from interpreting `$`, `!` or spaces. A password that itself
+contains a single quote is written as `'it'\''s'` (close the quotes, an escaped quote, reopen).
 
 Once encoded, the value contains no `#`, spaces or `$` (`rawurlencode` turns `$` into `%24`), so it
 needs no quoting in `.env` and no `$$` escaping in `compose.*.yml`.
