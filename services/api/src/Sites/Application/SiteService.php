@@ -240,12 +240,13 @@ final readonly class SiteService
                 $input->error('domains.' . $i, 'Must be an object with host and include_subdomains.');
                 continue;
             }
-            $host = DomainMatcher::normalizeHost($entry['host']);
-            if ($host === null) {
-                $input->error('domains.' . $i . '.host', 'Must be a valid host name.');
+            $parsed = DomainMatcher::parseEntry($entry['host'], (bool) ($entry['include_subdomains'] ?? false));
+            if ($parsed === null) {
+                $input->error('domains.' . $i . '.host', 'Must be a valid host name (optionally prefixed with "*." to include subdomains).');
                 continue;
             }
-            $wanted[$host] = (bool) ($entry['include_subdomains'] ?? false);
+            // "*.example.com" and "example.com" in the same list are one domain: subdomains win.
+            $wanted[$parsed['host']] = ($wanted[$parsed['host']] ?? false) || $parsed['include_subdomains'];
         }
         $now = $this->clock->now();
         foreach ($site->domains->toArray() as $existing) {

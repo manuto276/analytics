@@ -50,7 +50,7 @@ Optional services come with profiles:
 
 ```bash
 make up PROFILES=redis        # REDIS_DSN=redis://redis:6379/0
-make up PROFILES=mail         # Mailpit UI on http://127.0.0.1:8025
+make up PROFILES=mail         # Mailpit UI on http://127.0.0.1:8025; php sends to it (MAILER_DSN=smtp://mailpit:1025)
 make up PROFILES=node         # the Nuxt dev server inside the stack, port 3000
 ```
 

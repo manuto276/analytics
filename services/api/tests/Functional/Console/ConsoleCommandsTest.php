@@ -97,6 +97,12 @@ final class ConsoleCommandsTest extends ConsoleTestCase
 
         self::assertStringContainsString('added', $this->console('site:domain:add', ['site' => (string) $site->id(), 'host' => 'blog.example.com', '--include-subdomains' => true]));
         self::assertStringContainsString('removed', $this->console('site:domain:remove', ['site' => (string) $site->id(), 'host' => 'blog.example.com']));
+        self::assertStringContainsString('Domain news.example.com added', $this->console('site:domain:add', ['site' => (string) $site->id(), 'host' => '*.news.example.com']));
+        $news = array_values(array_filter($site->domains->toArray(), static fn(\Analytics\Sites\Domain\SiteDomain $d): bool => $d->host === 'news.example.com'));
+        self::assertCount(1, $news);
+        self::assertTrue($news[0]->includeSubdomains, 'site:domain:add parses the *. prefix like site:create and the API');
+        self::assertStringContainsString('removed', $this->console('site:domain:remove', ['site' => (string) $site->id(), 'host' => '*.news.example.com']));
+        $this->console('site:domain:add', ['site' => (string) $site->id(), 'host' => '*.'], Command::FAILURE);
         $this->console('site:domain:remove', ['site' => (string) $site->id(), 'host' => 'unknown.example.com'], Command::FAILURE);
     }
 

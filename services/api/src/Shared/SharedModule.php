@@ -18,6 +18,8 @@ use Analytics\Shared\Http\Middleware\SameOriginMiddleware;
 use Analytics\Shared\Http\Middleware\SecurityHeadersMiddleware;
 use Analytics\Shared\Http\ProblemDetailsErrorHandler;
 use Analytics\Shared\Log\IpScrubbingProcessor;
+use Analytics\Shared\Mail\Mailer;
+use Analytics\Shared\Mail\SymfonyMailer;
 use Analytics\Shared\Net\ClientIpResolver;
 use Analytics\Shared\RateLimit\RateLimiter;
 use Doctrine\DBAL\Connection;
@@ -120,6 +122,7 @@ final class SharedModule extends Module
             RateLimiter::class => factory(static function (AdapterInterface $pool, Settings $s): RateLimiter {
                 return new RateLimiter(new CacheStorage($pool), [], true);
             }),
+            Mailer::class => factory(static fn(Settings $s): Mailer => new SymfonyMailer($s->mailerDsn, $s->mailFrom, $s->mailFromName)),
             SecretBox::class => factory(static fn(Settings $s): SecretBox => new SecretBox($s->encryptionKeys)),
             KeyDerivation::class => factory(static fn(Settings $s): KeyDerivation => new KeyDerivation($s->hmacSecret)),
             ClientIpResolver::class => factory(static fn(Settings $s): ClientIpResolver => new ClientIpResolver($s->trustedProxies)),

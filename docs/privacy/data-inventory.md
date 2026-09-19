@@ -127,8 +127,9 @@ to be deleted after 13 months while historic charts stay intact.
 | `recovery_codes` | sha256 hashes, `used_at` | MFA recovery | until regenerated |
 | `invitations` | email, token hash, roles, expiry | onboarding | 30 days after acceptance or expiry |
 | `password_resets` | token hash, expiry | password reset (mailer only) | on expiry |
+| `email_changes` | token hash, requested address, expiry, use time | email change confirmation (mailer only) | on expiry |
 | `api_keys` | prefix, secret hash, scopes, last used | server API authentication | until revoked and deleted by hand |
-| `audit_log` | action, actor, target, `ip_prefix`, redacted metadata | accountability | 24 months |
+| `audit_log` | action, actor, target, `ip_prefix`, redacted metadata (`user.email_changed` keeps the previous address, to investigate a hijacked account) | accountability | 24 months |
 | `job_runs` | job, status, timings, stats | operations | 90 days |
 
 `AuditLogger::redact()` replaces any metadata key containing `password`, `secret`, `token`, `code`,

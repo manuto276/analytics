@@ -31,7 +31,7 @@ final class SiteDomainRemoveCommand extends Command
     {
         $ref = Types::string($input->getArgument('site'));
         $site = ctype_digit($ref) ? $this->sites->find((int) $ref) : $this->sites->findByPublicKey($ref);
-        $host = DomainMatcher::normalizeHost(Types::string($input->getArgument('host')));
+        $host = DomainMatcher::parseEntry(Types::string($input->getArgument('host')))['host'] ?? null;
         if ($site === null || $host === null || !$site->removeDomain($host)) {
             $output->writeln('<error>Site or domain not found.</error>');
 

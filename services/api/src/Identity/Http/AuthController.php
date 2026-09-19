@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Analytics\Identity\Http;
 
+use Analytics\Audit\Application\Actor;
 use Analytics\Audit\Application\AuditLogger;
+use Analytics\Identity\Application\EmailChangeService;
 use Analytics\Identity\Application\LoginResult;
 use Analytics\Identity\Application\LoginService;
 use Analytics\Identity\Application\PasswordHasher;
@@ -32,6 +34,7 @@ final readonly class AuthController
         private TotpService $totp,
         private PasswordHasher $hasher,
         private PasswordResetService $resets,
+        private EmailChangeService $emailChanges,
         private AuditLogger $audit,
         private RateLimiter $rateLimiter,
         private Settings $settings,
@@ -91,7 +94,7 @@ final readonly class AuthController
         $session = RequestContext::session($request);
 
         return $this->responder->data([
-            'user' => UserService::toArray($user, $this->totp->isEnabled($user->id()), $this->users->siteRoles($user->id())),
+            'user' => UserService::toArray($user, $this->totp->isEnabled($user->id()), $this->users->siteRoles($user->id()), $this->users->pendingEmail($user->id())),
             'csrf_token' => $session->csrfSecret,
             'session' => ['id' => SessionManager::publicId($session), 'absolute_expires_at' => $session->absoluteExpiresAt->format(\DATE_ATOM)],
         ]);
@@ -120,7 +123,7 @@ final readonly class AuthController
         $current = $input->secret('current_password');
         $new = $input->secret('new_password');
         $input->assertValid();
-        $this->rateLimiter->enforce('login_email', 'pwchange:' . $user->id());
+        $this->rateLimiter->enforce('login_email', self::passwordCheckKey($user->id()));
         if (!$this->hasher->verify($current, $user->passwordHash)) {
             throw ApiProblem::validation(['current_password' => ['Current password is incorrect.']]);
         }
@@ -129,6 +132,62 @@ final readonly class AuthController
         $this->audit->log('user.password_changed', RequestContext::actor($request), null, 'user', $user->id(), ['revoked_sessions' => $revoked]);
 
         return $this->responder->noContent();
+    }
+
+    /**
+     * Starts an email change. The current-password check shares the `login_email` budget with
+     * POST /auth/password (same key), so a stolen session cannot double the guesses by alternating
+     * endpoints; the same budget also caps how many confirmation mails one account can trigger.
+     */
+    public function requestEmailChange(ServerRequestInterface $request): ResponseInterface
+    {
+        $user = RequestContext::user($request);
+        $input = RequestContext::body($request);
+        $email = $input->email('email');
+        $current = $input->secret('current_password');
+        $input->assertValid();
+        $this->emailChanges->assertAvailable();
+        $this->rateLimiter->enforce('login_email', self::passwordCheckKey($user->id()));
+        if (!$this->hasher->verify($current, $user->passwordHash)) {
+            throw ApiProblem::validation(['current_password' => ['Current password is incorrect.']]);
+        }
+        $pending = $this->emailChanges->request($user, $email);
+        $this->audit->log('user.email_change_requested', RequestContext::actor($request), null, 'user', $user->id());
+
+        return $this->responder->json(['data' => ['pending_email' => $pending]], 202);
+    }
+
+    public function cancelEmailChange(ServerRequestInterface $request): ResponseInterface
+    {
+        $this->emailChanges->cancel(RequestContext::user($request));
+
+        return $this->responder->noContent();
+    }
+
+    /**
+     * Public: the link may be opened on a device without a session. If the request does carry an
+     * active session of the same user, that one survives; every other session is revoked.
+     */
+    public function confirmEmailChange(ServerRequestInterface $request): ResponseInterface
+    {
+        $ipPrefix = RequestContext::ipPrefixString($request);
+        $this->rateLimiter->enforce('public', 'email-confirm:' . ($ipPrefix ?? '-'));
+        $input = RequestContext::body($request);
+        $token = $input->string('token', 64);
+        $input->assertValid();
+
+        $cookie = SessionMiddleware::token($request, $this->sessions->cookieName());
+        $session = $cookie === null ? null : $this->sessions->resolve($cookie);
+        $keep = $session !== null && $session->state === SessionState::Active ? $session : null;
+
+        $result = $this->emailChanges->confirm($token, $keep);
+        $user = $result['user'];
+        $this->audit->log('user.email_changed', new Actor('user', $user->id(), $ipPrefix), null, 'user', $user->id(), [
+            'previous_email' => $result['old_email'],
+            'revoked_sessions' => $result['revoked_sessions'],
+        ]);
+
+        return $this->responder->data(['email' => $user->email]);
     }
 
     public function forgotPassword(ServerRequestInterface $request): ResponseInterface
@@ -247,13 +306,19 @@ final readonly class AuthController
         return $this->responder->data(['revoked' => $count]);
     }
 
+    /** Rate-limit key for "prove you know the current password" checks of a signed-in user. */
+    private static function passwordCheckKey(int $userId): string
+    {
+        return 'pwchange:' . $userId;
+    }
+
     private function sessionResponse(LoginResult $result): ResponseInterface
     {
         $body = $result->mfaRequired
             ? ['status' => 'mfa_required']
             : [
                 'status' => 'ok',
-                'user' => UserService::toArray($result->user, $this->totp->isEnabled($result->user->id()), $this->users->siteRoles($result->user->id())),
+                'user' => UserService::toArray($result->user, $this->totp->isEnabled($result->user->id()), $this->users->siteRoles($result->user->id()), $this->users->pendingEmail($result->user->id())),
                 'csrf_token' => $result->session->csrfSecret,
             ];
 

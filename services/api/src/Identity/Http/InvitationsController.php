@@ -151,7 +151,7 @@ final readonly class InvitationsController
 
         return $this->responder->json(['data' => [
             'status' => 'ok',
-            'user' => UserService::toArray($user, false),
+            'user' => UserService::toArray($user, false, [], null),
             'csrf_token' => $session->csrfSecret,
         ]], 201)->withAddedHeader('Set-Cookie', $this->sessions->cookieHeader($sessionToken, $session));
     }

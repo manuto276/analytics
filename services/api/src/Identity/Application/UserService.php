@@ -124,16 +124,28 @@ final readonly class UserService
         );
     }
 
+    /** The address requested with POST /auth/email and not yet confirmed (unexpired), if any. */
+    public function pendingEmail(int $userId): ?string
+    {
+        $value = $this->connection->fetchOne(
+            'SELECT new_email FROM email_changes WHERE user_id = ? AND used_at IS NULL AND expires_at > ? ORDER BY created_at DESC LIMIT 1',
+            [$userId, $this->clock->now()->format('Y-m-d H:i:s')],
+        );
+
+        return \is_string($value) ? $value : null;
+    }
+
     /**
      * @param list<array{site_id: int, role: string}> $siteRoles
      *
      * @return array<string, mixed>
      */
-    public static function toArray(User $user, bool $mfaEnabled, array $siteRoles = []): array
+    public static function toArray(User $user, bool $mfaEnabled, array $siteRoles, ?string $pendingEmail): array
     {
         return [
             'id' => $user->id(),
             'email' => $user->email,
+            'pending_email' => $pendingEmail,
             'display_name' => $user->displayName,
             'global_role' => $user->globalRole->value,
             'locale' => $user->locale,

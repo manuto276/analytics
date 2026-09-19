@@ -9,10 +9,11 @@ namespace Analytics\Shared\Mail;
  */
 final class RecordingMailer implements Mailer
 {
-    /** @var list<array{to: string, subject: string, text: string}> */
+    /** @var list<array{to: string, subject: string, text: string, html: string}> */
     public array $sent = [];
 
-    public function __construct(private readonly bool $enabled = true) {}
+    /** $enabled is public so a test can switch the mailer off and on again. */
+    public function __construct(public bool $enabled = true) {}
 
     public function reset(): void
     {
@@ -24,8 +25,8 @@ final class RecordingMailer implements Mailer
         return $this->enabled;
     }
 
-    public function send(string $to, string $subject, string $text): void
+    public function send(MailMessage $message): void
     {
-        $this->sent[] = ['to' => $to, 'subject' => $subject, 'text' => $text];
+        $this->sent[] = ['to' => $message->to, 'subject' => $message->subject, 'text' => $message->text, 'html' => $message->html];
     }
 }

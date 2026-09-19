@@ -84,8 +84,9 @@ No special-category data, no criminal-offence data, no data of children targeted
 - **Runtime recipients:** none. All processing happens on the operator's own infrastructure.
 - **Server-to-server:** `bin/analytics geo:update` downloads a country database from `db-ip.com`
   monthly. No visitor data is sent.
-- **Mailer:** if `MAILER_DSN` is configured, invitation and password-reset messages go to the
-  configured provider. Operators only.
+- **Mailer:** if `MAILER_DSN` is configured, password-reset and email-change messages go to the
+  configured provider. Operators only; the messages contain no tracking (see
+  [../operations/mail.md](../operations/mail.md)).
 - **International transfers:** none introduced by the software. Determined entirely by where the
   operator hosts it.
 

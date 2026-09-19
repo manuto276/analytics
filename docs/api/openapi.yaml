@@ -184,6 +184,97 @@ paths:
         '403': { $ref: '#/components/responses/Problem' }
         '422': { $ref: '#/components/responses/Problem' }
         '429': { $ref: '#/components/responses/Problem' }
+  /auth/email:
+    post:
+      tags: [auth]
+      summary: Start changing the own email address (a confirmation link goes to the new address)
+      description: |
+        The current password is required. Nothing changes until the link sent to the new address is
+        opened; until then the account keeps signing in with the old address and `pending_email` on
+        the user shows the requested one. A new request replaces the previous one. Requires a
+        configured mailer.
+
+        The link is `{APP_URL}/account/email/confirm?token=…` and is valid for 24 hours.
+        Errors: `422` on `current_password` for a wrong password, on `email` for an invalid address
+        or the current one; `409 email_taken`; `501 mailer_disabled`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, current_password]
+              properties:
+                email: { type: string }
+                current_password: { type: string }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '202':
+          description: Confirmation link sent to the new address
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [pending_email]
+                    properties:
+                      pending_email: { type: string }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+        '501': { $ref: '#/components/responses/Problem' }
+    delete:
+      tags: [auth]
+      summary: Cancel a pending email change
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '204': { description: Cancelled (or nothing was pending) }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /auth/email/confirm:
+    post:
+      tags: [auth]
+      summary: Confirm an email change with the token from the link
+      description: |
+        Public on purpose: the link is opened from the mailbox, possibly on another device, and the
+        token is the proof. Every other session of the account is revoked when the address changes
+        (a session of the same user making this request is kept), and a notice is sent to the
+        previous address. Errors: `410 email_change_token_invalid` for an unknown, used, expired,
+        replaced or cancelled token; `409 email_taken` when the address was taken meanwhile.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: Address changed
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [email]
+                    properties:
+                      email: { type: string }
+        '409': { $ref: '#/components/responses/Problem' }
+        '410': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
   /auth/password/forgot:
     post:
       tags: [auth]
@@ -2205,10 +2296,14 @@ components:
       enum: [admin, viewer]
     User:
       type: object
-      required: [id, email, display_name, global_role, locale, status, mfa_enabled, last_login_at, created_at, site_roles]
+      required: [id, email, pending_email, display_name, global_role, locale, status, mfa_enabled, last_login_at, created_at, site_roles]
       properties:
         id: { type: integer }
         email: { type: string }
+        pending_email:
+          type: string
+          nullable: true
+          description: Address requested with POST /auth/email and not yet confirmed.
         display_name: { type: string }
         global_role: { $ref: '#/components/schemas/GlobalRole' }
         locale: { type: string }
@@ -2294,7 +2389,11 @@ components:
       type: object
       required: [host, include_subdomains]
       properties:
-        host: { type: string }
+        host:
+          type: string
+          description: |
+            A host name, or a URL whose host is taken. On input a leading `*.` means "this domain and
+            its subdomains" and sets `include_subdomains`; responses always return the bare host.
         include_subdomains: { type: boolean }
     Site:
       type: object

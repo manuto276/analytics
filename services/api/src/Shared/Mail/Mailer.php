@@ -8,5 +8,9 @@ interface Mailer
 {
     public function isEnabled(): bool;
 
-    public function send(string $to, string $subject, string $text): void;
+    /**
+     * Sends the message now. A disabled mailer drops it silently; a failing transport throws
+     * (Symfony\Component\Mailer\Exception\TransportExceptionInterface).
+     */
+    public function send(MailMessage $message): void;
 }

@@ -38,6 +38,7 @@ partitioned tables. Referential integrity is maintained by the application and a
 | `totp_credentials` (O) | TOTP secret, encrypted | `secret_ciphertext`, `key_id`, `confirmed_at`, `last_used_step` | PK `user_id` |
 | `recovery_codes` (O) | one-time MFA recovery codes | `user_id`, `code_hash BINARY(32)`, `used_at` | PK `id`; IDX `user_id` |
 | `password_resets` (O) | reset tokens (mailer only) | `token_hash BINARY(32)`, `user_id`, `expires_at`, `used_at` | PK `token_hash`; IDX `user_id` |
+| `email_changes` (O) | pending sign-in address changes (mailer only), 24 h tokens | `token_hash BINARY(32)`, `user_id`, `new_email`, `expires_at`, `used_at`, `created_at` | PK `token_hash`; IDX `user_id` |
 | `api_keys` (O) | server API keys | `site_id`, `name`, `prefix CHAR(8)`, `secret_hash BINARY(32)`, `scopes` JSON, `created_by`, `created_at`, `last_used_at`, `expires_at`, `revoked_at` | PK `id`; UNIQUE `prefix`; IDX `site_id` |
 | `goals` (O) | goal definitions | `site_id`, `name`, `type` (`pageview`/`event`/`conversion`), `` `match` `` JSON | PK `id`; UNIQUE (`site_id`,`name`) |
 | `funnels` (O) | funnel definitions | `site_id`, `name`, `scope` (`visit`/`visitor`), `window_days` | PK `id`; UNIQUE (`site_id`,`name`) |
@@ -137,6 +138,7 @@ Enforced by `bin/analytics retention:purge` (see [../operations/retention.md](..
 | `auth_sessions` | expired or revoked | `absolute_expires_at` / `idle_expires_at` / `revoked_at` |
 | `invitations` | 30 days after acceptance or expiry | `accepted_at` / `expires_at` |
 | `password_resets` | on expiry | `expires_at` |
+| `email_changes` | on expiry | `expires_at` |
 | `daily_salts` | one day; older rows deleted on every salt read and by `salt:rotate` | `day` |
 | rollup tables | kept indefinitely | — |
 

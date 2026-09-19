@@ -101,6 +101,10 @@ that is deliberate ([architecture/ingestion.md](architecture/ingestion.md)).
   stored as SHA-256 hashes.
 - Password reset needs a configured mailer; without one, `501 mailer_disabled` and the operator uses
   `bin/analytics user:set-password`.
+- Changing the sign-in address needs the current password (sharing the `login_email` budget with
+  password changes) and a confirmation link sent to the new address (24 hours, single use, only the
+  SHA-256 stored). Until it is opened nothing changes. Confirming revokes every other session and
+  sends a notice to the previous address.
 
 ### Sessions
 
@@ -131,7 +135,7 @@ that is deliberate ([architecture/ingestion.md](architecture/ingestion.md)).
 Sliding windows, backed by Redis when `REDIS_DSN` is set and by the `cache_items` table otherwise:
 `collect` 300/min per site + shortened IP, `collect_site` 30 000/min per site, `script` 600/min,
 `login_ip` 30/15 min, `login_email` 10/15 min, `dashboard` 600/min per user, `server` 1200/min per API
-key prefix, `public` 60/min for `/t/forget`.
+key prefix, `public` 60/min for `/t/forget`, public invitation routes and `POST /auth/email/confirm`.
 
 ### Headers
 

@@ -21,8 +21,8 @@ final readonly class PasswordResetService
         private UserService $users,
         private SessionManager $sessions,
         private Mailer $mailer,
+        private IdentityMails $mails,
         private ClockInterface $clock,
-        private string $appUrl,
     ) {}
 
     public function isAvailable(): bool
@@ -43,11 +43,7 @@ final readonly class PasswordResetService
         $token = TokenGenerator::base64Url(32);
         $this->em->persist(new PasswordReset(TokenHasher::hash($token), $user->id(), $this->clock->now()->add(new \DateInterval(self::TTL))));
         $this->em->flush();
-        $this->mailer->send(
-            $user->email,
-            'Reset your analytics password',
-            "Someone asked to reset the password of your analytics account.\n\nOpen this link within one hour to choose a new password:\n" . $this->appUrl . '/password/reset/' . $token . "\n\nIf this was not you, ignore this email.",
-        );
+        $this->mailer->send($this->mails->passwordReset($user, $token));
     }
 
     public function reset(string $token, string $password): void

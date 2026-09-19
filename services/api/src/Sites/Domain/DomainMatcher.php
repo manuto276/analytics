@@ -36,6 +36,25 @@ final class DomainMatcher
     }
 
     /**
+     * Parses a domain as the API, the CLI and the docs write it: a host or URL, where a leading "*."
+     * means "this domain and its subdomains" ("*.example.com" → example.com + subdomains). The prefix
+     * forces include_subdomains on; without it the given flag is kept. Returns null when invalid.
+     *
+     * @return array{host: string, include_subdomains: bool}|null
+     */
+    public static function parseEntry(string $input, bool $includeSubdomains = false): ?array
+    {
+        $input = trim($input);
+        if (str_starts_with($input, '*.')) {
+            $input = substr($input, 2);
+            $includeSubdomains = true;
+        }
+        $host = self::normalizeHost($input);
+
+        return $host === null ? null : ['host' => $host, 'include_subdomains' => $includeSubdomains];
+    }
+
+    /**
      * @param list<array{host: string, include_subdomains: bool}> $domains
      */
     public static function matches(string $host, array $domains): bool

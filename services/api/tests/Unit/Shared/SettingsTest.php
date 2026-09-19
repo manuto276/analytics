@@ -45,6 +45,8 @@ final class SettingsTest extends TestCase
         self::assertTrue($settings->usesHttps());
         self::assertSame('stats:', $settings->redisPrefix, 'the separator is added once, whether or not it was given');
         self::assertSame('an:', Settings::fromEnvironment(['APP_ENV' => 'dev'], '/app')->redisPrefix);
+        self::assertSame('Analytics', $settings->mailFromName, 'MAIL_FROM_NAME defaults to "Analytics"');
+        self::assertSame('Example Stats', Settings::fromEnvironment(['APP_ENV' => 'dev', 'MAIL_FROM_NAME' => 'Example Stats'], '/app')->mailFromName);
         self::assertSame('an:', Settings::fromEnvironment(['APP_ENV' => 'dev', 'REDIS_PREFIX' => 'an:'], '/app')->redisPrefix);
     }
 

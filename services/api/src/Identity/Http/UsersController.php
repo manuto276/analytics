@@ -33,7 +33,7 @@ final readonly class UsersController
     {
         /** @var list<User> $users */
         $users = $this->em->getRepository(User::class)->findBy([], ['email' => 'ASC']);
-        $data = array_map(fn(User $u): array => UserService::toArray($u, $this->totp->isEnabled($u->id()), $this->users->siteRoles($u->id())), $users);
+        $data = array_map(fn(User $u): array => UserService::toArray($u, $this->totp->isEnabled($u->id()), $this->users->siteRoles($u->id()), $this->users->pendingEmail($u->id())), $users);
 
         return $this->responder->data($data);
     }
@@ -42,7 +42,7 @@ final readonly class UsersController
     {
         $user = $this->users->get((int) $userId);
 
-        return $this->responder->data(UserService::toArray($user, $this->totp->isEnabled($user->id()), $this->users->siteRoles($user->id())));
+        return $this->responder->data(UserService::toArray($user, $this->totp->isEnabled($user->id()), $this->users->siteRoles($user->id()), $this->users->pendingEmail($user->id())));
     }
 
     public function update(ServerRequestInterface $request, string $userId): ResponseInterface

@@ -59,6 +59,7 @@ final readonly class RetentionPurger
             'auth_sessions' => 0,
             'invitations' => 0,
             'password_resets' => 0,
+            'email_changes' => 0,
             'audit_log' => 0,
             'job_runs' => 0,
         ];
@@ -95,6 +96,7 @@ final readonly class RetentionPurger
             [$now->modify('-' . self::ACCEPTED_INVITATION_DAYS . ' days')->format('Y-m-d H:i:s'), $now->modify('-' . self::ACCEPTED_INVITATION_DAYS . ' days')->format('Y-m-d H:i:s')],
         ));
         $stats['password_resets'] = Types::int($this->connection->executeStatement('DELETE FROM password_resets WHERE expires_at < ?', [$now->format('Y-m-d H:i:s')]));
+        $stats['email_changes'] = Types::int($this->connection->executeStatement('DELETE FROM email_changes WHERE expires_at < ?', [$now->format('Y-m-d H:i:s')]));
         if ($stats['events_raw'] > 0 || $stats['visits'] > 0 || $stats['conversions'] > 0 || $stats['dropped_partitions'] !== []) {
             // Reports cached before the purge would still show the removed data.
             $this->connection->executeStatement('UPDATE sites SET rollup_version = rollup_version + 1');

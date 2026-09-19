@@ -41,8 +41,8 @@ final class SiteCreateCommand extends Command
         $rawDomains = $input->getOption('domain');
         $domains = [];
         foreach ($rawDomains as $domain) {
-            $sub = str_starts_with($domain, '*.');
-            $domains[] = ['host' => $sub ? substr($domain, 2) : $domain, 'include_subdomains' => $sub];
+            // SiteService parses the "*." prefix (DomainMatcher::parseEntry), exactly as for the API.
+            $domains[] = ['host' => $domain, 'include_subdomains' => false];
         }
         $mode = VisitorHashMode::tryFrom(Types::string($input->getOption('hash-mode')));
         if ($mode === null) {

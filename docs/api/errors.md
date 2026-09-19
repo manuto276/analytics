@@ -116,9 +116,16 @@ enumerated.
 ### `reset_token_invalid`
 `410`. The password-reset token is unknown, already used or expired.
 
+### `email_change_token_invalid`
+`410`. `POST /api/v1/auth/email/confirm` got a token that is unknown, malformed, already used, expired
+(24 hours), replaced by a newer request or cancelled, or that belongs to a disabled account.
+**Client:** tell the user to request the change again from the account settings.
+
 ### `mailer_disabled`
-`501`. `POST /api/v1/auth/password/forgot` was called without `MAILER_DSN`.
-**Operator:** set a password with `bin/analytics user:set-password` instead.
+`501`. `POST /api/v1/auth/password/forgot` or `POST /api/v1/auth/email` was called without
+`MAILER_DSN`.
+**Operator:** set a password with `bin/analytics user:set-password` instead; configure a mailer to let
+users change their address ([../operations/mail.md](../operations/mail.md)).
 
 ---
 
@@ -132,7 +139,9 @@ contrast rule), conversions, goals, funnels, costs, passwords, API key scopes.
 **Client:** show the messages next to the fields; do not retry unchanged.
 
 ### `email_taken`
-`409`. A user or an invitation already exists for that e-mail address.
+`409`. A user or an invitation already exists for that e-mail address. `POST /api/v1/auth/email` and
+`POST /api/v1/auth/email/confirm` answer it too when another account uses the requested address (at
+request time, or taken meanwhile before the link was opened).
 
 ### `last_admin`
 `409`. The change would leave the installation without a global administrator.
@@ -242,7 +251,7 @@ them in `rejected[]` with their index and a message. See [conversions.md](conver
 | `method_not_allowed` | 405 |
 | `csv_unavailable` | 406 |
 | `email_taken`, `last_admin`, `cannot_disable_self`, `cannot_demote_self`, `totp_already_enabled`, `totp_not_enabled`, `goal_name_taken`, `goal_in_use`, `no_draft`, `receipts_disabled`, `funnel_incomplete` | 409 |
-| `invitation_accepted`, `invitation_revoked`, `invitation_expired`, `reset_token_invalid` | 410 |
+| `invitation_accepted`, `invitation_revoked`, `invitation_expired`, `reset_token_invalid`, `email_change_token_invalid` | 410 |
 | `payload_too_large` | 413 |
 | `validation_failed`, `filter_unsupported`, `filter_unavailable_for_range`, `range_too_large` | 422 |
 | `rate_limited`, `account_locked` | 429 |

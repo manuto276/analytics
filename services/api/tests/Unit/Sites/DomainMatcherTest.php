@@ -31,6 +31,20 @@ final class DomainMatcherTest extends TestCase
         self::assertSame($expected, DomainMatcher::normalizeHost($input));
     }
 
+    public function testParseEntryUnderstandsTheWildcardPrefix(): void
+    {
+        self::assertSame(['host' => 'frascella.dev', 'include_subdomains' => true], DomainMatcher::parseEntry('*.frascella.dev'));
+        self::assertSame(['host' => 'frascella.dev', 'include_subdomains' => true], DomainMatcher::parseEntry(' *.Frascella.DEV '));
+        self::assertSame(['host' => 'frascella.dev', 'include_subdomains' => true], DomainMatcher::parseEntry('*.frascella.dev', false), 'the prefix forces subdomains on');
+        self::assertSame(['host' => 'skeda.fit', 'include_subdomains' => false], DomainMatcher::parseEntry('skeda.fit'));
+        self::assertSame(['host' => 'skeda.fit', 'include_subdomains' => true], DomainMatcher::parseEntry('skeda.fit', true), 'an explicit flag is kept');
+        self::assertSame(['host' => 'www.example.com', 'include_subdomains' => false], DomainMatcher::parseEntry('https://www.example.com/path'));
+        self::assertNull(DomainMatcher::parseEntry('*.'));
+        self::assertNull(DomainMatcher::parseEntry('*.*.example.com'));
+        self::assertNull(DomainMatcher::parseEntry('*example.com'));
+        self::assertNull(DomainMatcher::parseEntry('*.com'));
+    }
+
     public function testMatches(): void
     {
         $domains = [['host' => 'example.com', 'include_subdomains' => true], ['host' => 'shop.example.net', 'include_subdomains' => false]];

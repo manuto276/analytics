@@ -19,6 +19,23 @@ services:
       - mysql-dev-data:/var/lib/mysql
 
   php:
+    # `make up PROFILES=mail`: when MAILER_DSN is empty and the mailpit service is up, php-fpm starts
+    # with MAILER_DSN=smtp://mailpit:1025, so reset and email-change messages land in Mailpit
+    # (http://127.0.0.1:8025). Without the profile nothing changes: no mailer, no "forgot password".
+    # CLI commands started with `docker compose exec` do not inherit it; pass it explicitly there:
+    #   MAILER_DSN=smtp://mailpit:1025 php bin/analytics mail:test --to=you@example.com
+    depends_on:
+      mailpit:
+        condition: service_started
+        required: false
+    command:
+      - sh
+      - -c
+      - |
+        if [ -z "$${MAILER_DSN:-}" ] && getent hosts mailpit >/dev/null 2>&1; then
+          export MAILER_DSN=smtp://mailpit:1025
+        fi
+        exec php-fpm
     environment:
       APP_ENV: dev
       APP_DEBUG: "1"

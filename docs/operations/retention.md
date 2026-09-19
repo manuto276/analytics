@@ -24,6 +24,7 @@ The command is `bin/analytics retention:purge`, run daily from cron
 | `auth_sessions` | expired or revoked | `absolute_expires_at`, `idle_expires_at`, `revoked_at` | delete |
 | `invitations` | 30 days after acceptance or expiry (`ACCEPTED_INVITATION_DAYS`) | `accepted_at`, `expires_at` | delete |
 | `password_resets` | on expiry | `expires_at` | delete |
+| `email_changes` | on expiry | `expires_at` | delete |
 | `daily_salts` | one day | `day` | deleted on every salt read and by `salt:rotate`, not by this command |
 | every `rollup_*` table | **kept** | — | — |
 

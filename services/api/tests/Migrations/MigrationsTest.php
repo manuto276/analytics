@@ -62,7 +62,7 @@ final class MigrationsTest extends TestCase
         $tables = $this->connection()->fetchFirstColumn("SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE'");
         $expected = [
             'sites', 'site_domains', 'users', 'user_site_roles', 'invitations', 'auth_sessions', 'totp_credentials',
-            'recovery_codes', 'password_resets', 'api_keys', 'goals', 'funnels', 'funnel_steps', 'campaign_costs',
+            'recovery_codes', 'password_resets', 'email_changes', 'api_keys', 'goals', 'funnels', 'funnel_steps', 'campaign_costs',
             'audit_log', 'consent_configs', 'doctrine_migration_versions',
             ...SchemaAssets::DBAL_TABLES,
         ];

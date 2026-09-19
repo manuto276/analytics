@@ -33,6 +33,7 @@ final class KernelModule extends Module
     {
         return [
             Console\PreflightCommand::class,
+            Console\MailTestCommand::class,
             Console\CacheWarmupCommand::class,
             Console\CacheClearCommand::class,
             Console\SecretsGenerateCommand::class,

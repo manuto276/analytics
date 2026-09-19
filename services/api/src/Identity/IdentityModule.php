@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Analytics\Identity;
 
+use Analytics\Identity\Application\IdentityMails;
 use Analytics\Identity\Application\InvitationService;
 use Analytics\Identity\Application\PasswordHasher;
-use Analytics\Identity\Application\PasswordResetService;
 use Analytics\Identity\Application\Permission;
 use Analytics\Identity\Application\SessionManager;
 use Analytics\Identity\Application\TotpService;
@@ -16,8 +16,6 @@ use Analytics\Identity\Http\UsersController;
 use Analytics\Kernel\Module;
 use Analytics\Kernel\Routing\SecuredRoutes;
 use Analytics\Kernel\Settings;
-use Analytics\Shared\Mail\Mailer;
-use Analytics\Shared\Mail\SymfonyMailer;
 use Slim\Interfaces\RouteCollectorProxyInterface;
 
 use function DI\autowire;
@@ -32,8 +30,7 @@ final class IdentityModule extends Module
             SessionManager::class => autowire()->constructorParameter('secureCookie', $settings->usesHttps()),
             TotpService::class => autowire()->constructorParameter('issuer', 'Analytics (' . $settings->appHost() . ')'),
             InvitationService::class => autowire()->constructorParameter('appUrl', $settings->appUrl),
-            PasswordResetService::class => autowire()->constructorParameter('appUrl', $settings->appUrl),
-            Mailer::class => factory(static fn(Settings $s): Mailer => new SymfonyMailer($s->mailerDsn, $s->mailFrom)),
+            IdentityMails::class => autowire()->constructorParameter('appUrl', $settings->appUrl),
         ];
     }
 
@@ -46,6 +43,7 @@ final class IdentityModule extends Module
         $group->post('/auth/mfa', [AuthController::class, 'mfa']);
         $group->post('/auth/password/forgot', [AuthController::class, 'forgotPassword']);
         $group->post('/auth/password/reset', [AuthController::class, 'resetPassword']);
+        $group->post('/auth/email/confirm', [AuthController::class, 'confirmEmailChange']);
         $group->get('/invitations/{token:[A-Za-z0-9_-]{43}}', [InvitationsController::class, 'showPublic']);
         $group->post('/invitations/{token:[A-Za-z0-9_-]{43}}/accept', [InvitationsController::class, 'accept']);
     }
@@ -57,6 +55,8 @@ final class IdentityModule extends Module
         $routes->get('/auth/me', [AuthController::class, 'me'], $auth);
         $routes->patch('/auth/me', [AuthController::class, 'updateProfile'], $auth);
         $routes->post('/auth/password', [AuthController::class, 'changePassword'], $auth);
+        $routes->post('/auth/email', [AuthController::class, 'requestEmailChange'], $auth);
+        $routes->delete('/auth/email', [AuthController::class, 'cancelEmailChange'], $auth);
         $routes->post('/auth/totp/setup', [AuthController::class, 'totpSetup'], $auth);
         $routes->post('/auth/totp/confirm', [AuthController::class, 'totpConfirm'], $auth);
         $routes->delete('/auth/totp', [AuthController::class, 'totpDisable'], $auth);

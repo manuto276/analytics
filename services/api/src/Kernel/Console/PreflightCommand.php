@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Analytics\Kernel\Console;
 
 use Analytics\Kernel\Settings;
+use Analytics\Shared\Mail\SymfonyMailer;
 use Analytics\Shared\Types;
 use Doctrine\DBAL\Connection;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -53,6 +54,7 @@ final class PreflightCommand extends Command
         } elseif ($this->settings->isProd()) {
             $add('app_url_https', $this->settings->usesHttps(), 'APP_URL is a loopback address (https not required)', false);
         }
+        $add('mailer', ...$this->mailerCheck());
         foreach ([$this->settings->cacheDir, $this->settings->logDir, $this->settings->storageDir] as $dir) {
             if (!is_dir($dir)) {
                 @mkdir($dir, 0750, true);
@@ -81,5 +83,29 @@ final class PreflightCommand extends Command
         }
 
         return $failed === [] ? self::SUCCESS : self::FAILURE;
+    }
+
+    /**
+     * The mailer is optional, so every outcome is a warning at most: without it the "forgot password"
+     * link is hidden and email changes are refused.
+     *
+     * @return array{ok: bool, detail: string, required: false}
+     */
+    private function mailerCheck(): array
+    {
+        $dsn = $this->settings->mailerDsn;
+        if ($dsn === null) {
+            return ['ok' => false, 'detail' => 'not configured: set MAILER_DSN to enable password reset by email and email changes (docs/operations/mail.md)', 'required' => false];
+        }
+        $problem = SymfonyMailer::dsnProblem($dsn);
+        if ($problem !== null) {
+            return ['ok' => false, 'detail' => 'MAILER_DSN cannot be used: ' . $problem, 'required' => false];
+        }
+        $from = $this->settings->mailFrom;
+        if (filter_var($from, \FILTER_VALIDATE_EMAIL) === false || str_ends_with($from, '@localhost')) {
+            return ['ok' => false, 'detail' => 'configured (' . SymfonyMailer::describeDsn($dsn) . '), but MAIL_FROM=' . $from . ' is not a deliverable sender address', 'required' => false];
+        }
+
+        return ['ok' => true, 'detail' => 'configured: ' . SymfonyMailer::describeDsn($dsn) . ' as ' . $this->settings->mailFromName . ' <' . $from . '> (verify with mail:test)', 'required' => false];
     }
 }

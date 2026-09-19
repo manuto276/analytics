@@ -27,7 +27,7 @@ final class SiteDomainAddCommand extends Command
     protected function configure(): void
     {
         $this->addArgument('site', InputArgument::REQUIRED, 'Site id or public key')
-            ->addArgument('host', InputArgument::REQUIRED)
+            ->addArgument('host', InputArgument::REQUIRED, 'Host name; prefix with "*." to include subdomains')
             ->addOption('include-subdomains', null, InputOption::VALUE_NONE);
     }
 
@@ -35,13 +35,14 @@ final class SiteDomainAddCommand extends Command
     {
         $ref = Types::string($input->getArgument('site'));
         $site = ctype_digit($ref) ? $this->sites->find((int) $ref) : $this->sites->findByPublicKey($ref);
-        $host = DomainMatcher::normalizeHost(Types::string($input->getArgument('host')));
-        if ($site === null || $host === null) {
+        $entry = DomainMatcher::parseEntry(Types::string($input->getArgument('host')), $input->getOption('include-subdomains') === true);
+        if ($site === null || $entry === null) {
             $output->writeln('<error>' . ($site === null ? 'Site not found.' : 'Invalid host.') . '</error>');
 
             return self::FAILURE;
         }
-        $site->addDomain($host, $input->getOption('include-subdomains') === true, $this->clock->now());
+        $host = $entry['host'];
+        $site->addDomain($host, $entry['include_subdomains'], $this->clock->now());
         $this->em->flush();
         $this->sites->forgetSnapshot($site);
         $output->writeln(\sprintf('Domain %s added to %s.', $host, $site->name));
