@@ -77,7 +77,16 @@ RETENTION_MONTHS=13
 TRUSTED_PROXIES=
 STORAGE_DIR=/home/site/htdocs/stats.example.net/shared/var/storage
 LOG_DIR=/home/site/htdocs/stats.example.net/shared/var/log
+
+# Optional: password reset and email changes. Without it the "forgot password" link is hidden.
+MAILER_DSN=smtps://stats%40example.net:password@smtp.example.net:465
+MAIL_FROM=stats@example.net
+MAIL_FROM_NAME=Analytics
 ```
+
+`MAILER_DSN` examples for common providers, and how to encode special characters in the password,
+are in [../operations/mail.md](../operations/mail.md). After the first deploy, check the account
+with `./console app mail:test --to=you@example.com`.
 
 Generate the secrets with `php8.4 -r 'echo base64_encode(random_bytes(32)), PHP_EOL;'`, or after the
 first deploy with `./console app secrets:generate`.

@@ -82,6 +82,20 @@ MAILER_DSN=smtps://you%40fastmail.com:app-password@smtp.fastmail.com:465
 MAIL_FROM=stats@your-domain.example   # an alias or domain configured in Fastmail
 ```
 
+OVHcloud mailboxes (MX Plan, Email Pro, Exchange) — the username is the full address of the
+mailbox, and `MAIL_FROM` must be that mailbox or one of its aliases, otherwise OVH refuses or
+rewrites the sender:
+
+```dotenv
+MAILER_DSN=smtps://analytics%40example.net:password@ssl0.ovh.net:465
+# or STARTTLS: smtp://analytics%40example.net:password@ssl0.ovh.net:587
+MAIL_FROM=analytics@example.net
+```
+
+Exchange accounts use `ex.mail.ovh.net` (or `ex3.mail.ovh.net`, as shown in the OVH control panel)
+on 587 instead of `ssl0.ovh.net`. For deliverability, publish `include:mx.ovh.com` in the domain's
+SPF record and enable DKIM for the domain in the OVH control panel.
+
 Local sendmail/Postfix on the same host:
 
 ```dotenv
