@@ -62,7 +62,9 @@
     "passwordDifferent": "La nuova password deve essere diversa",
     "passwordLength": "Usa almeno 12 caratteri",
     "passwordMatch": "Le password non coincidono",
-    "required": "Obbligatorio"
+    "required": "Obbligatorio",
+    "domainInvalid": "Dominio non valido: {hosts}",
+    "email": "Inserisci un indirizzo email valido"
   },
   "periods": {
     "today": "Oggi",
@@ -313,10 +315,11 @@
   "site": {
     "name": "Nome del sito",
     "domains": "Domini",
-    "domainsHint": "Host autorizzati a inviare dati, ad es. example.com.",
+    "domainsHint": "Host autorizzati a inviare dati: example.com per quel solo host, *.example.com per includere i sottodomini. Separa i domini con Invio, una virgola o uno spazio.",
     "domainPlaceholder": "example.com",
     "timezone": "Fuso orario",
-    "currency": "Valuta"
+    "currency": "Valuta",
+    "domainN": "Dominio {n}"
   },
   "settings": {
     "nav": {
@@ -327,7 +330,8 @@
       "funnels": "Funnel",
       "costs": "Costi",
       "apiKeys": "Chiavi API",
-      "security": "Sicurezza"
+      "security": "Sicurezza",
+      "profile": "Profilo"
     },
     "site": {
       "title": "Impostazioni del sito",
@@ -652,6 +656,17 @@
       "submit": "Imposta password",
       "done": "Password modificata. Ora puoi accedere.",
       "expired": "Questo link di reimpostazione è scaduto."
+    },
+    "emailConfirm": {
+      "title": "Conferma indirizzo email",
+      "confirming": "Conferma del nuovo indirizzo in corso…",
+      "done": "Il tuo indirizzo email ora è {email}.",
+      "signedOut": "Le altre sessioni sono state disconnesse. Usa il nuovo indirizzo al prossimo accesso.",
+      "expired": "Questo link di conferma è scaduto o è già stato usato. Richiedi di nuovo la modifica dal tuo profilo.",
+      "taken": "Nel frattempo l'indirizzo è stato preso da un altro account. Richiedi di nuovo la modifica con un indirizzo diverso.",
+      "missing": "Questo link di conferma è incompleto. Apri di nuovo il link dall'email.",
+      "signIn": "Accedi",
+      "toProfile": "Torna al profilo"
     }
   },
   "user": {
@@ -666,7 +681,8 @@
       "system": "Sistema",
       "light": "Chiaro",
       "dark": "Scuro"
-    }
+    },
+    "profile": "Profilo"
   },
   "roles": {
     "global": {
@@ -754,5 +770,31 @@
       "allSites": "Tutti i siti",
       "actionFilter": "Filtra per azione"
     }
+  },
+  "profile": {
+    "title": "Profilo",
+    "details": "I tuoi dati",
+    "detailsDescription": "Come ti vedono gli altri membri e la lingua dell'interfaccia.",
+    "displayName": "Nome visualizzato",
+    "language": "Lingua",
+    "saved": "Profilo aggiornato",
+    "email": "Indirizzo email",
+    "emailDescription": "Serve per accedere e per le notifiche.",
+    "currentEmail": "Indirizzo attuale",
+    "newEmail": "Nuovo indirizzo",
+    "changeEmail": "Cambia email",
+    "changeEmailHint": "Inviamo un link di conferma al nuovo indirizzo. Non cambia nulla finché non lo apri.",
+    "pending": "Abbiamo inviato un link di conferma a {email}: la modifica si applica quando lo apri.",
+    "pendingTitle": "Cambio email in attesa",
+    "cancelPending": "Annulla",
+    "cancelled": "Cambio email annullato",
+    "requested": "Link di conferma inviato a {email}",
+    "emailTaken": "Questo indirizzo è già usato da un altro account.",
+    "wrongPassword": "La password attuale non è corretta.",
+    "retryAfter": "Troppi tentativi. Riprova tra {seconds} secondi.",
+    "mailerDisabled": "Per cambiare indirizzo email il server deve avere un servizio di posta configurato. Chiedi a un amministratore.",
+    "securityTitle": "Password, due fattori e sessioni",
+    "securityDescription": "Gestisci l'accesso dalla pagina Sicurezza.",
+    "securityLink": "Vai a Sicurezza"
   }
 }

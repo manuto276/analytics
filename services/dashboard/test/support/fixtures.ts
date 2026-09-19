@@ -4,6 +4,7 @@ export function makeUser(overrides: Partial<User> = {}): User {
   return {
     id: 1,
     email: 'admin@example.com',
+    pending_email: null,
     display_name: 'Ada Admin',
     global_role: 'admin',
     locale: 'en',

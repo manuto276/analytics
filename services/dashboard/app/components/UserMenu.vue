@@ -24,6 +24,10 @@ const items = computed<DropdownMenuItem[][]>(() => {
     description: user.value?.email,
     avatar: { alt: displayName.value }
   }], [{
+    label: t('user.profile'),
+    icon: 'i-tabler-user',
+    to: { path: '/settings/profile', query: { site: route.query.site } }
+  }, {
     label: t('user.security'),
     icon: 'i-tabler-shield',
     to: { path: '/settings/security', query: { site: route.query.site } }

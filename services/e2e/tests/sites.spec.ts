@@ -87,3 +87,70 @@ test('the new site shows its public key and snippet, and accepts another domain'
   expect(inputValues).toContain('checkout.example.com')
   expect(inputValues).toContain('help.example.com')
 })
+
+test('domains are committed without Enter, and *. means "with subdomains"', async ({ page }, testInfo) => {
+  const name = `Blog ${testInfo.project.name} ${Date.now()}`
+  await preparePage(page, null)
+  await login(page)
+
+  await page.getByTestId('sites-menu').click()
+  await page.getByRole('menuitem', { name: /Add site|Aggiungi sito/ }).click()
+
+  const dialog = page.getByRole('dialog')
+  await expect(dialog).toBeVisible()
+  const siteName = dialog.getByLabel(/Site name|Nome del sito/)
+  await siteName.fill(name)
+
+  const input = dialog.getByPlaceholder('example.com')
+  // 1. Typed, then focus moves elsewhere: the blur commits the tag.
+  await input.click()
+  await input.pressSequentially('*.frascella.dev')
+  await siteName.click()
+  await expect(dialog.getByText('*.frascella.dev', { exact: true })).toBeVisible()
+
+  // 2. A comma commits the tag as well.
+  await input.click()
+  await input.pressSequentially('skeda.fit,')
+  await expect(dialog.getByText('skeda.fit', { exact: true })).toBeVisible()
+  await expect(input).toHaveValue('')
+
+  // 3. Still in the field when Create is clicked: it is sent too.
+  await input.pressSequentially('analytics.frascella.dev')
+  await dialog.getByRole('button', { name: /^Create$|^Crea$/ }).click()
+
+  await expectToast(page, /Site created|Sito creato/)
+  await expect(page).toHaveURL(/\/settings\?site=\d+/)
+
+  const line = (await console_('site:list')).split('\n').find(row => row.includes(name))
+  expect(line, 'the new site is listed by the console').toBeTruthy()
+  // site:list prints `*.host` for a domain that includes its subdomains.
+  expect(line).toContain('*.frascella.dev')
+  expect(line).toMatch(/(^|[\s,|])skeda\.fit([\s,|]|$)/)
+  expect(line).toMatch(/(^|[\s,|])analytics\.frascella\.dev([\s,|]|$)/)
+  expect(line).not.toContain('*.skeda.fit')
+  expect(line).not.toContain('*.analytics.frascella.dev')
+})
+
+test('an invalid domain is flagged in the modal before anything is sent', async ({ page }) => {
+  await preparePage(page, null)
+  await login(page)
+
+  await page.getByTestId('sites-menu').click()
+  await page.getByRole('menuitem', { name: /Add site|Aggiungi sito/ }).click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByLabel(/Site name|Nome del sito/).fill('Never created')
+
+  let posted = false
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && request.url().endsWith('/api/v1/sites')) posted = true
+  })
+
+  const input = dialog.getByPlaceholder('example.com')
+  await input.click()
+  await input.pressSequentially('bad_host.com')
+  await dialog.getByRole('button', { name: /^Create$|^Crea$/ }).click()
+
+  await expect(dialog.getByText(/Not a valid domain: bad_host\.com|Dominio non valido: bad_host\.com/)).toBeVisible()
+  await expect(dialog).toBeVisible()
+  expect(posted).toBe(false)
+})

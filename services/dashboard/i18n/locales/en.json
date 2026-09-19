@@ -62,7 +62,9 @@
     "passwordDifferent": "The new password must be different",
     "passwordLength": "Use at least 12 characters",
     "passwordMatch": "Passwords do not match",
-    "required": "Required"
+    "required": "Required",
+    "domainInvalid": "Not a valid domain: {hosts}",
+    "email": "Enter a valid email address"
   },
   "periods": {
     "today": "Today",
@@ -313,10 +315,11 @@
   "site": {
     "name": "Site name",
     "domains": "Domains",
-    "domainsHint": "Hostnames allowed to send data, e.g. example.com.",
+    "domainsHint": "Hostnames allowed to send data: example.com for that host only, *.example.com to include its subdomains. Press Enter, a comma or a space between domains.",
     "domainPlaceholder": "example.com",
     "timezone": "Time zone",
-    "currency": "Currency"
+    "currency": "Currency",
+    "domainN": "Domain {n}"
   },
   "settings": {
     "nav": {
@@ -327,7 +330,8 @@
       "funnels": "Funnels",
       "costs": "Costs",
       "apiKeys": "API keys",
-      "security": "Security"
+      "security": "Security",
+      "profile": "Profile"
     },
     "site": {
       "title": "Site settings",
@@ -652,6 +656,17 @@
       "submit": "Set password",
       "done": "Password changed. You can now sign in.",
       "expired": "This reset link has expired."
+    },
+    "emailConfirm": {
+      "title": "Confirm email address",
+      "confirming": "Confirming your new address…",
+      "done": "Your email address is now {email}.",
+      "signedOut": "Your other sessions were signed out. Use the new address the next time you sign in.",
+      "expired": "This confirmation link has expired or was already used. Request the change again from your profile.",
+      "taken": "That address was taken by another account in the meantime. Request the change again with a different address.",
+      "missing": "This confirmation link is incomplete. Open the link from the email again.",
+      "signIn": "Sign in",
+      "toProfile": "Back to your profile"
     }
   },
   "user": {
@@ -666,7 +681,8 @@
       "system": "System",
       "light": "Light",
       "dark": "Dark"
-    }
+    },
+    "profile": "Profile"
   },
   "roles": {
     "global": {
@@ -754,5 +770,31 @@
       "allSites": "All sites",
       "actionFilter": "Filter by action"
     }
+  },
+  "profile": {
+    "title": "Profile",
+    "details": "Your details",
+    "detailsDescription": "How you appear to other members, and the language of the interface.",
+    "displayName": "Display name",
+    "language": "Language",
+    "saved": "Profile updated",
+    "email": "Email address",
+    "emailDescription": "Used to sign in and for notifications.",
+    "currentEmail": "Current address",
+    "newEmail": "New address",
+    "changeEmail": "Change email",
+    "changeEmailHint": "We send a confirmation link to the new address. Nothing changes until you open it.",
+    "pending": "We sent a confirmation link to {email} — the change applies when you open it.",
+    "pendingTitle": "Email change pending",
+    "cancelPending": "Cancel",
+    "cancelled": "Email change cancelled",
+    "requested": "Confirmation link sent to {email}",
+    "emailTaken": "That address is already used by another account.",
+    "wrongPassword": "The current password is not correct.",
+    "retryAfter": "Too many attempts. Try again in {seconds} seconds.",
+    "mailerDisabled": "Changing the email address needs a configured mailer on this server. Ask an administrator.",
+    "securityTitle": "Password, two-factor and sessions",
+    "securityDescription": "Manage how you sign in on the Security page.",
+    "securityLink": "Go to Security"
   }
 }

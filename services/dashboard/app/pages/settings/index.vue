@@ -80,16 +80,55 @@ function addDomain() {
 
 function removeDomain(index: number) {
   state.value?.domains.splice(index, 1)
+  serverInvalid.value = []
+}
+
+/** Rows the API rejected on the last save, by index. */
+const serverInvalid = ref<number[]>([])
+watch(() => state.value?.domains.map(d => d.host).join('\n'), () => {
+  serverInvalid.value = []
+})
+
+function isInvalidRow(index: number) {
+  const host = state.value?.domains[index]?.host.trim() ?? ''
+  return serverInvalid.value.includes(index) || (host !== '' && !parseDomain(host))
+}
+
+/** `*.example.com` is the notation for "with subdomains": turn it into the checkbox. */
+function normalizeRow(index: number) {
+  const row = state.value?.domains[index]
+  if (!row) return
+  const parsed = parseDomain(row.host)
+  if (parsed?.include_subdomains) {
+    row.host = parsed.host
+    row.include_subdomains = true
+  }
+}
+
+function validate(s: SiteForm) {
+  const hosts = s.domains.map(d => d.host.trim()).filter(Boolean)
+  if (!hosts.length) return [{ name: 'domains', message: t('validation.domainRequired') }]
+  const invalid = hosts.filter(host => !parseDomain(host))
+  return invalid.length ? [{ name: 'domains', message: t('validation.domainInvalid', { hosts: invalid.join(', ') }) }] : []
+}
+
+function domainInput(row: DomainRow) {
+  const parsed = parseDomain(row.host)
+  if (!parsed) return { host: row.host.trim().toLowerCase(), include_subdomains: row.include_subdomains }
+  const include = parsed.include_subdomains || row.include_subdomains
+  return { host: parsed.include_subdomains ? formatDomain(parsed) : parsed.host, include_subdomains: include }
 }
 
 async function onSubmit() {
   if (!state.value || !currentSiteId.value) return
   saving.value = true
+  serverInvalid.value = []
+  const s = state.value
+  const rows = s.domains.filter(d => d.host.trim())
   try {
-    const s = state.value
     const input: SiteInput = {
       ...s,
-      domains: s.domains.filter(d => d.host.trim()).map(d => ({ host: d.host.trim().toLowerCase(), include_subdomains: d.include_subdomains })),
+      domains: rows.map(domainInput),
       cookie_domain: s.cookie_domain.trim() || null,
       currency: s.currency.toUpperCase()
     }
@@ -100,7 +139,10 @@ async function onSubmit() {
     }
   } catch (error) {
     if (isApiError(error) && error.isValidation) {
-      form.value?.setErrors(error.fieldErrors())
+      const { domains, rest, invalidIndexes } = domainFieldErrors(error.errors, rows.map(r => r.host.trim()))
+      // Indexes refer to the rows sent (blank rows are skipped); map them back to the form rows.
+      serverInvalid.value = invalidIndexes.map(i => s.domains.indexOf(rows[i]!)).filter(i => i >= 0)
+      form.value?.setErrors([...rest, ...(domains ? [{ name: 'domains', message: domains }] : [])])
       toast.add({ title: t('errors.validation'), color: 'error' })
     } else {
       toast.add({ title: t('errors.generic'), description: (error as Error).message, color: 'error' })
@@ -131,6 +173,7 @@ async function archive() {
     id="site-settings"
     ref="form"
     :state="state"
+    :validate="validate"
     :disabled="!canManage"
     class="flex flex-col gap-4 sm:gap-6 lg:gap-12"
     @submit="onSubmit"
@@ -192,7 +235,17 @@ async function archive() {
         >
           <div class="space-y-2 w-full">
             <div v-for="(domain, index) in state.domains" :key="index" class="flex items-center gap-2">
-              <UInput v-model="domain.host" :placeholder="t('site.domainPlaceholder')" class="flex-1" />
+              <UInput
+                v-model="domain.host"
+                :placeholder="t('site.domainPlaceholder')"
+                :aria-label="t('site.domainN', { n: index + 1 })"
+                :trailing-icon="isInvalidRow(index) ? 'i-tabler-alert-circle' : undefined"
+                :ui="{ trailingIcon: 'text-error' }"
+                :data-invalid="isInvalidRow(index) ? '' : undefined"
+                class="flex-1"
+                data-testid="domain-host"
+                @blur="normalizeRow(index)"
+              />
               <UCheckbox v-model="domain.include_subdomains" :label="t('settings.site.subdomains')" />
               <UButton
                 v-if="canManage"

@@ -44,7 +44,8 @@ matters after publishing a new consent version.
 | `smoke.spec.ts` | health endpoint, one collected visit, no `Set-Cookie` on `/t/*`, tracker bundle |
 | `auth.spec.ts` | console-created admin signs in, TOTP enrolment, sign-in with a code, wrong code, recovery code, redirect to `/login` |
 | `members.spec.ts` | invite a viewer, accept the link, viewer reads reports but cannot manage (UI and API) |
-| `sites.spec.ts` | create a site with domains from the dashboard, snippet and public key, add a second domain |
+| `sites.spec.ts` | create a site with domains from the dashboard, snippet and public key, add a second domain; domains committed without Enter (blur, comma, pending text on Create), `*.` for subdomains, invalid host flagged before sending |
+| `profile.spec.ts` | display name and language saved from the profile page persist across a reload and on the account (the email change needs a mailer; the test stack has none) |
 | `tracking.spec.ts` | base-level visits on the fixtures, forbidden origin, first-party proxy, `rollup:run` → Overview/Pages/Sources, realtime |
 | `consent.spec.ts` | banner before any storage, accept → `an_vid` shared across subdomains, reject → remembered, material change → asked again, reopen link, `/t/forget`, consent report |
 | `conversions.spec.ts` | goals, server-side conversions (idempotency, `customer_ref` follow-up), attribution by campaign, funnel counts, cost CSV import → CAC/ROAS |

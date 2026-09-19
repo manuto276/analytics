@@ -343,6 +343,149 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start changing the own email address (a confirmation link goes to the new address)
+         * @description The current password is required. Nothing changes until the link sent to the new address is
+         *     opened; until then the account keeps signing in with the old address and `pending_email` on
+         *     the user shows the requested one. A new request replaces the previous one. Requires a
+         *     configured mailer.
+         *
+         *     The link is `{APP_URL}/account/email/confirm?token=…` and is valid for 24 hours.
+         *     Errors: `422` on `current_password` for a wrong password, on `email` for an invalid address
+         *     or the current one; `409 email_taken`; `501 mailer_disabled`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        email: string;
+                        current_password: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Confirmation link sent to the new address */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                pending_email: string;
+                            };
+                        };
+                    };
+                };
+                401: components["responses"]["Problem"];
+                403: components["responses"]["Problem"];
+                409: components["responses"]["Problem"];
+                422: components["responses"]["Problem"];
+                429: components["responses"]["Problem"];
+                501: components["responses"]["Problem"];
+                default: components["responses"]["Problem"];
+            };
+        };
+        /** Cancel a pending email change */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Cancelled (or nothing was pending) */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                401: components["responses"]["Problem"];
+                403: components["responses"]["Problem"];
+                default: components["responses"]["Problem"];
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/email/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm an email change with the token from the link
+         * @description Public on purpose: the link is opened from the mailbox, possibly on another device, and the
+         *     token is the proof. Every other session of the account is revoked when the address changes
+         *     (a session of the same user making this request is kept), and a notice is sent to the
+         *     previous address. Errors: `410 email_change_token_invalid` for an unknown, used, expired,
+         *     replaced or cancelled token; `409 email_taken` when the address was taken meanwhile.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        token: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Address changed */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                email: string;
+                            };
+                        };
+                    };
+                };
+                409: components["responses"]["Problem"];
+                410: components["responses"]["Problem"];
+                422: components["responses"]["Problem"];
+                429: components["responses"]["Problem"];
+                default: components["responses"]["Problem"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/password/forgot": {
         parameters: {
             query?: never;
@@ -3909,6 +4052,8 @@ export interface components {
         User: {
             id: number;
             email: string;
+            /** @description Address requested with POST /auth/email and not yet confirmed. */
+            pending_email: string | null;
             display_name: string;
             global_role: components["schemas"]["GlobalRole"];
             locale: string;
@@ -3979,6 +4124,10 @@ export interface components {
             inherited: boolean;
         };
         SiteDomain: {
+            /**
+             * @description A host name, or a URL whose host is taken. On input a leading `*.` means "this domain and
+             *     its subdomains" and sets `include_subdomains`; responses always return the bare host.
+             */
             host: string;
             include_subdomains: boolean;
         };

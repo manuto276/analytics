@@ -15,6 +15,7 @@ const links = computed<NavigationMenuItem[][]>(() => {
     { label: t('settings.nav.funnels'), icon: 'i-tabler-filter', to: { path: '/settings/funnels', query } },
     { label: t('settings.nav.costs'), icon: 'i-tabler-receipt', to: { path: '/settings/costs', query } },
     ...(canManage.value ? [{ label: t('settings.nav.apiKeys'), icon: 'i-tabler-key', to: { path: '/settings/api-keys', query } }] : []),
+    { label: t('settings.nav.profile'), icon: 'i-tabler-user', to: { path: '/settings/profile', query } },
     { label: t('settings.nav.security'), icon: 'i-tabler-shield', to: { path: '/settings/security', query } }
   ]
   return [items]

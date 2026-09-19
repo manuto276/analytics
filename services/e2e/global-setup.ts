@@ -23,6 +23,7 @@ const keyFile = join(fixtures, 'site-key.js')
 const baseURL = process.env.E2E_BASE_URL ?? 'https://analytics.test'
 const serviceUrl = process.env.E2E_SERVICE_URL ?? baseURL
 const KEY_PATTERN = /pk_[A-Za-z0-9]{21}/
+const SITE_NAME = process.env.E2E_SITE_NAME ?? 'e2e'
 
 function fromKeyFile(): string | undefined {
   if (!existsSync(keyFile)) return undefined
@@ -48,10 +49,13 @@ function fromDocker(): string | undefined {
     } catch {
       // the admin already exists
     }
-    let key = run(['exec', '-T', 'php', 'php', 'bin/analytics', 'site:list']).match(KEY_PATTERN)?.[0]
+    // Found by name: the suite creates other sites, and the first one listed need not cover *.site.test.
+    const fixtureKey = (): string | undefined => run(['exec', '-T', 'php', 'php', 'bin/analytics', 'site:list'])
+      .split('\n').find(line => line.includes(`| ${SITE_NAME} `))?.match(KEY_PATTERN)?.[0]
+    let key = fixtureKey()
     if (!key) {
-      run(['exec', '-T', 'php', 'php', 'bin/analytics', 'site:create', '--name=e2e', '--domain=*.site.test', '--timezone=UTC'])
-      key = run(['exec', '-T', 'php', 'php', 'bin/analytics', 'site:list']).match(KEY_PATTERN)?.[0]
+      run(['exec', '-T', 'php', 'php', 'bin/analytics', 'site:create', `--name=${SITE_NAME}`, '--domain=*.site.test', '--timezone=UTC'])
+      key = fixtureKey()
     }
     return key
   } catch {

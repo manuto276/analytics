@@ -49,15 +49,18 @@ else
 fi
 
 echo "==> Site"
-sites="$(dc exec -T php php bin/analytics site:list)"
-public_key="$(printf '%s\n' "$sites" | grep -oE 'pk_[A-Za-z0-9]{21}' | head -n1 || true)"
+# The fixture site is found by name: the suite creates other sites with other domains, so "the first
+# site listed" is not necessarily the one that covers *.site.test.
+fixture_key() {
+  dc exec -T php php bin/analytics site:list | grep -F "| ${site_name} " | grep -oE 'pk_[A-Za-z0-9]{21}' | head -n1 || true
+}
+public_key="$(fixture_key)"
 if [ -z "$public_key" ]; then
   # *.site.test covers www/app/proxy; other.test stays unregistered on purpose
   # (the suite checks that collect refuses a foreign origin).
   dc exec -T php php bin/analytics site:create \
     --name="$site_name" --domain='*.site.test' --timezone=UTC >/dev/null
-  sites="$(dc exec -T php php bin/analytics site:list)"
-  public_key="$(printf '%s\n' "$sites" | grep -oE 'pk_[A-Za-z0-9]{21}' | head -n1)"
+  public_key="$(fixture_key)"
 fi
 [ -n "$public_key" ] || { echo "ERROR: could not determine the site public key" >&2; exit 1; }
 

@@ -15,7 +15,7 @@ function isFetchError(error: unknown): error is FetchErrorLike {
 }
 
 export const API_BASE = '/api/v1'
-export const PUBLIC_ROUTES = ['/login', '/login/mfa', '/password/forgot']
+export const PUBLIC_ROUTES = ['/login', '/login/mfa', '/password/forgot', '/account/email/confirm']
 export const PUBLIC_ROUTE_PREFIXES = ['/invite/', '/password/reset/']
 
 export function isPublicRoute(path: string): boolean {

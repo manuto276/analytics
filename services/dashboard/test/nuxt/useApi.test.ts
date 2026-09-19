@@ -112,6 +112,7 @@ describe('useApi', () => {
     expect(isPublicRoute('/invite/abc')).toBe(true)
     expect(isPublicRoute('/password/forgot')).toBe(true)
     expect(isPublicRoute('/password/reset/xyz')).toBe(true)
+    expect(isPublicRoute('/account/email/confirm')).toBe(true)
     expect(isPublicRoute('/settings')).toBe(false)
   })
 })
