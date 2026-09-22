@@ -1075,6 +1075,7 @@ TXT);
 
         $this->removeStaleTmp();
         $tmp = $this->root . '/releases/.tmp-' . $ts;
+        $building = $tmp;
         $started = microtime(true);
         $manifest = null;
         try {
@@ -1103,11 +1104,21 @@ TXT);
             if (!@rename($tmp, $releaseDir)) {
                 throw new DeployError(sprintf('Cannot rename %s to %s', $tmp, $releaseDir));
             }
+            $building = $releaseDir;
+
+            // The warmup above compiled the application container in releases/.tmp-<TS>, and a
+            // compiled container keeps absolute paths: left as it is, every request would look for the
+            // tracker, the dashboard and the migrations under a directory that no longer exists (the
+            // tracker then silently falls back to its no-op stub). Compile it again where the release
+            // now lives, before it becomes current.
+            Out::step(sprintf('Running bin/analytics cache:warmup in releases/%s', $ts));
+            $this->clearReleaseCache($releaseDir);
+            $this->runApp($config, $releaseDir, ['cache:warmup']);
         } catch (DeployError $e) {
             try {
-                Fs::rmTree($tmp);
+                Fs::rmTree($building);
             } catch (DeployError) {
-                Out::warn('Could not fully remove ' . $tmp);
+                Out::warn('Could not fully remove ' . $building);
             }
             $this->history('deploy', $ts, $manifest?->commit, $previous, 'failed', $e->getMessage());
             Out::error($e->getMessage());
@@ -1521,6 +1532,21 @@ TXT);
     }
 
     /** @param list<string> $args */
+    /** Empties the release's own var/cache; a cache directory shared through a symlink is left alone. */
+    private function clearReleaseCache(string $release): void
+    {
+        $cache = $release . '/var/cache';
+        if (is_link($cache)) {
+            Out::warn('var/cache is a shared symlink; not clearing it (the application keys its compiled container by release path)');
+
+            return;
+        }
+        Fs::rmTree($cache);
+        if (!@mkdir($cache, 0750, true) && !is_dir($cache)) {
+            throw new DeployError('Cannot create ' . $cache);
+        }
+    }
+
     private function runApp(Config $config, string $release, array $args): void
     {
         $code = Proc::passthru(array_merge([$config->phpBinary, 'bin/analytics'], $args), $release);
@@ -1763,6 +1789,7 @@ TXT);
             Out::detail('back up the database into shared/var/storage/backups/');
         }
         Out::detail($migrate ? sprintf('run bin/analytics migrations:migrate (%d migration(s) in the package)', \count($manifest->migrations)) : 'skip migrations');
+        Out::detail(sprintf('rename to releases/%s and run bin/analytics cache:warmup there', $ts));
         Out::detail(sprintf('switch current: %s -> %s', $current ?? 'none', $ts));
         Out::detail($health ? sprintf('health check %s (%d tries, %ss apart), auto_rollback %s', $config->healthUrl, $config->healthTries, $config->healthInterval, $config->autoRollback ? 'on' : 'off') : 'skip health check');
         Out::detail(sprintf('clean up keeping %d release(s) and %d package(s)', $config->keepReleases, $config->keepPackages));

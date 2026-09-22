@@ -2,7 +2,8 @@
 <?php
 
 // Fake per-release app console used by the deploy console tests.
-// FAKE_APP_LOG: JSON line per invocation; FAKE_APP_FAIL: comma list of commands that exit 1.
+// FAKE_APP_LOG: JSON line per invocation; FAKE_APP_FAIL: comma list of commands that exit 1;
+// FAKE_APP_FAIL_FINAL: the same, but only once the release has its final name (not .tmp-*).
 
 declare(strict_types=1);
 
@@ -18,6 +19,9 @@ if (is_string($log) && $log !== '') {
 }
 
 $fail = array_filter(explode(',', (string) getenv('FAKE_APP_FAIL')));
+if (!str_starts_with(basename(dirname(__DIR__)), '.tmp-')) {
+    $fail = [...$fail, ...array_filter(explode(',', (string) getenv('FAKE_APP_FAIL_FINAL')))];
+}
 if (in_array($cmd, $fail, true)) {
     fwrite(STDERR, "fake {$cmd} failed\n");
     exit(1);

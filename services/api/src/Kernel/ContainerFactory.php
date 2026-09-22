@@ -21,7 +21,7 @@ final class ContainerFactory
         $builder->useAttributes(false);
 
         if ($settings->isProd() && $overrides === []) {
-            $builder->enableCompilation($settings->cacheDir . '/container');
+            $builder->enableCompilation(self::compilationDir($settings), self::compiledClass($settings));
         }
 
         $builder->addDefinitions([Settings::class => $settings]);
@@ -33,5 +33,28 @@ final class ContainerFactory
         }
 
         return $builder->build();
+    }
+
+    /**
+     * The compiled container holds absolute paths (the tracker bundle, the SPA, the migrations), and
+     * PHP-DI reuses a compiled file for as long as it exists. Keying the directory by the project
+     * directory means a container compiled somewhere else is never picked up: not one compiled in the
+     * deploy's temporary releases/.tmp-<TS> before it was renamed, and not one left in a CACHE_DIR
+     * shared across releases.
+     */
+    public static function compilationDir(Settings $settings): string
+    {
+        return $settings->cacheDir . '/container/' . self::pathKey($settings);
+    }
+
+    /** The class name carries the same key, so two compiled containers never clash in one process. */
+    public static function compiledClass(Settings $settings): string
+    {
+        return 'CompiledContainer_' . self::pathKey($settings);
+    }
+
+    private static function pathKey(Settings $settings): string
+    {
+        return substr(hash('sha256', $settings->projectDir), 0, 16);
     }
 }

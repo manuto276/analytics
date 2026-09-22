@@ -25,8 +25,11 @@ final class RedisDailySaltProvider implements DailySaltProvider
             return $this->salt;
         }
         $key = 'salt:' . $day;
-        $this->redis->set($key, random_bytes(32), 'EX', 90000, 'NX');
-        $this->redis->expireat($key, $utc->modify('tomorrow')->getTimestamp());
+        // A relative TTL up to the next UTC midnight, measured on our clock. An absolute EXPIREAT
+        // would be measured on Redis's clock instead, and wherever the two disagree by more than the
+        // time left in the day the salt would be deleted the moment it was written.
+        $ttl = max(1, $utc->modify('tomorrow')->getTimestamp() - $utc->getTimestamp());
+        $this->redis->set($key, random_bytes(32), 'EX', $ttl, 'NX');
         $salt = $this->redis->get($key);
         if (!\is_string($salt) || \strlen($salt) !== 32) {
             throw new \RuntimeException('Daily salt unavailable.');

@@ -217,6 +217,7 @@ Then load a tracked page and confirm a `202` from `POST /t/e` and an active visi
 | Every visitor shares one visitor hash | the site is behind a proxy and `TRUSTED_PROXIES` is empty |
 | `health_url` returns the old commit | the health check ran before nginx picked up the new root; it retries `health_tries` times |
 | Reports stay empty | `rollup:run` is not running; check `./console app jobs:status` |
+| `/t/<key>.js` answers a few lines ending in `q:[],track:function(){}` (the no-op stub) although `current/resources/tracker/tracker.js` exists | a release deployed by a console older than this fix compiled its container in `releases/.tmp-<TS>`; deploy a newer package, then `./console self-update`. To repair in place: `rm -rf current/var/cache/container`, then reset OPcache (restart PHP-FPM, or `POST /_ops/opcache-reset`) |
 | Writes fail with a permissions error | `shared/var/**` must be writable by the site user; `./console init` creates them |
 
 ## Related

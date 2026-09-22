@@ -27,11 +27,14 @@ final class DeployFlowTest extends DeployTestCase
         self::assertSame([self::ts(1)], $this->releaseDirs());
 
         $calls = $this->appCalls();
-        self::assertSame(['app:preflight', 'cache:warmup', 'migrations:migrate'], array_column($calls, 'cmd'));
+        self::assertSame(['app:preflight', 'cache:warmup', 'migrations:migrate', 'cache:warmup'], array_column($calls, 'cmd'));
         self::assertSame(['migrations:migrate', '--no-interaction', '--allow-no-migration'], $calls[2]['args']);
-        foreach ($calls as $call) {
-            self::assertSame('.tmp-' . self::ts(1), $call['release'], 'app commands run before the rename');
+        foreach (array_slice($calls, 0, 3) as $call) {
+            self::assertSame('.tmp-' . self::ts(1), $call['release'], 'checks and migrations run before the rename');
         }
+        // A compiled container keeps absolute paths, so the one built in .tmp-<TS> would point at a
+        // directory that no longer exists: the last warmup runs where the release really lives.
+        self::assertSame(self::ts(1), $calls[3]['release'], 'the container is compiled again after the rename');
 
         $h = $this->history();
         self::assertCount(1, $h);
@@ -129,7 +132,26 @@ final class DeployFlowTest extends DeployTestCase
     public function testNoMigrate(): void
     {
         $this->assertDeployOk($this->deploy(PackageBuilder::make(self::ts(1)), ['--no-migrate']));
-        self::assertSame(['app:preflight', 'cache:warmup'], array_column($this->appCalls(), 'cmd'));
+        self::assertSame(['app:preflight', 'cache:warmup', 'cache:warmup'], array_column($this->appCalls(), 'cmd'));
+    }
+
+    public function testTheReleaseCacheIsEmptiedBeforeTheFinalWarmup(): void
+    {
+        $pkg = PackageBuilder::make(self::ts(1))->dir('var/cache/container/stale')->file('var/cache/container/stale/CompiledContainer.php', '<?php // compiled for .tmp-');
+        $this->assertDeployOk($this->deploy($pkg));
+        self::assertDirectoryExists($this->root . '/releases/' . self::ts(1) . '/var/cache');
+        self::assertFileDoesNotExist($this->root . '/releases/' . self::ts(1) . '/var/cache/container/stale/CompiledContainer.php');
+    }
+
+    public function testAFailingFinalWarmupLeavesCurrentAlone(): void
+    {
+        $this->assertDeployOk($this->deploy(PackageBuilder::make(self::ts(1))));
+        $r = $this->deploy(PackageBuilder::make(self::ts(2)), [], ['FAKE_APP_FAIL_FINAL' => 'cache:warmup']);
+        self::assertSame(1, $r->exit);
+        self::assertStringContainsString('cache:warmup failed', $r->stderr);
+        self::assertSame('releases/' . self::ts(1), $this->currentTarget(), 'current still points at the previous release');
+        self::assertSame([self::ts(1)], $this->releaseDirs(), 'the half-built release is removed, not left under its final name');
+        self::assertSame('failed', $this->history()[1]['result']);
     }
 
     public function testNewestPackageIsDeployedByDefault(): void
@@ -148,7 +170,7 @@ final class DeployFlowTest extends DeployTestCase
         $r = $this->console(['deploy', $pkg->name()]);
         self::assertSame(0, $r->exit);
         self::assertStringContainsString('already current', $r->stdout);
-        self::assertCount(3, $this->appCalls());
+        self::assertCount(4, $this->appCalls(), 'the first deploy only: preflight, warmup, migrate, final warmup');
     }
 
     public function testDryRunChangesNothing(): void
@@ -201,7 +223,7 @@ final class DeployFlowTest extends DeployTestCase
         self::assertFileExists($backup);
         self::assertSame("-- fake dump\n", gzdecode((string) file_get_contents($backup)));
         $cmds = array_column($this->appCalls(), 'cmd');
-        self::assertSame('migrations:migrate', end($cmds));
+        self::assertSame(['migrations:migrate', 'cache:warmup'], array_slice($cmds, -2), 'migrations run after the backup, then the final warmup');
     }
 
     public function testFailedBackupAbortsDeploy(): void
@@ -273,7 +295,7 @@ final class DeployFlowTest extends DeployTestCase
         $r = $this->console(['app', 'user:list', '--format=json']);
         self::assertSame(0, $r->exit, $r->output());
         self::assertStringContainsString('fake user:list ok', $r->stdout);
-        $last = $this->appCalls()[3];
+        $last = $this->appCalls()[4];
         self::assertSame(['user:list', '--format=json'], $last['args']);
         self::assertSame(self::ts(1), $last['release']);
 
