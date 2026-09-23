@@ -21,7 +21,7 @@ make ci             # exactly what .github/workflows/ci.yml runs, in the same or
 | `mutation` | Infection, MSI ≥ 80 (nightly) | php container |
 | `stan` `deptrac` `cs` `cs-fix` `rector` | PHPStan (src + tests), Deptrac, PHP-CS-Fixer, Rector | php container |
 | `test-tracker` | Vitest + happy-dom | node container |
-| `size` | size-limit, ≤ 5.0 KB gzip | node container |
+| `size` | size-limit, gzip: core ≤ 5.0 KB, banner ≤ 4.0 KB, both ≤ 9.0 KB | node container |
 | `test-dashboard` | Vitest + @nuxt/test-utils | node container |
 | `typecheck` `openapi-types` | `tsc`/`vue-tsc`, openapi-typescript | node container |
 | `test-e2e` | Playwright, three engines | playwright container |

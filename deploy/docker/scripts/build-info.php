@@ -51,9 +51,11 @@ foreach (glob($releaseDir . '/migrations/Version*.php') ?: [] as $file) {
 sort($migrations);
 
 $trackerFile = $releaseDir . '/resources/tracker/tracker.js';
-if (!is_file($trackerFile)) {
-    fwrite(STDERR, "build-info: resources/tracker/tracker.js is missing from the release tree\n");
-    exit(1);
+foreach (['tracker.js', 'banner.js'] as $file) {
+    if (!is_file($releaseDir . '/resources/tracker/' . $file)) {
+        fwrite(STDERR, "build-info: resources/tracker/{$file} is missing from the release tree\n");
+        exit(1);
+    }
 }
 
 $manifest = [

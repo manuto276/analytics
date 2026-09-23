@@ -1,5 +1,4 @@
-import { close, fab, show } from './banner/banner';
-import { cfg, d, DAY, n, today } from './config';
+import { cfg, d, DAY, n, today, w, type BannerFactory, type BannerUi } from './config';
 import { href, off, push, type Level } from './collector';
 import { getC, setC, wipe } from './cookies';
 import { fill } from './dom';
@@ -20,6 +19,8 @@ let at: number | null = null;
 let forced = false;
 let landing: [string, string];
 const ls: ((s: ConsentState) => void)[] = [];
+/** The banner module, when the server bundled it (sites with the cookie level on). */
+let ui: BannerUi | undefined;
 
 /** Cookie level configured for this site. */
 const enabled = (): boolean => !!(cfg.c && cfg.consent) && !forced;
@@ -76,7 +77,7 @@ export const decide = (s: Status, kind: string): void => {
     if (was != s) push('cu', { lu: landing[0], lr: landing[1] || undefined }, 'c');
   } else wipe();
   fill();
-  close();
+  if (ui) ui.close();
   for (const f of ls) f(get());
 };
 
@@ -85,7 +86,7 @@ export const set = (s: Status): void => decide(s, s.slice(0, 6));
 export const open = (): void => {
   if (!enabled()) return;
   push('cs', { cs: 'reopen' }, 'b');
-  show(true);
+  if (ui) ui.show(true);
 };
 
 export const onChange = (f: (s: ConsentState) => void): (() => void) => {
@@ -108,13 +109,17 @@ export const initConsent = (): void => {
     off || (!!cfg.gpc && n.globalPrivacyControl === true) || (cfg.dnt == 'no_cookie' && n.doNotTrack == '1');
   read();
   if (forced || st == 'rejected') wipe();
+  const mk = w.__an_b as BannerFactory | undefined;
   if (enabled()) {
+    ui = mk && mk(cfg.consent as NonNullable<typeof cfg.consent>, decide, open);
     if (st == 'unknown') {
-      show(false);
-      push('cs', { cs: 'shown' }, 'b');
+      if (ui) {
+        ui.show(false);
+        push('cs', { cs: 'shown' }, 'b');
+      }
     } else {
       ids();
-      fab();
+      if (ui) ui.fab();
     }
   }
   fill();

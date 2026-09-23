@@ -47,6 +47,44 @@ final class SpaFallbackTest extends HttpTestCase
         $this->assertStatus(304, $this->get('/login', ['If-None-Match' => $etag]));
     }
 
+    public function testTheDashboardMayFrameOnlyItsOwnPages(): void
+    {
+        $csp = $this->get('/settings/consent')->getHeaderLine('Content-Security-Policy');
+        self::assertStringContainsString("frame-src 'self';", $csp);
+        self::assertStringContainsString("default-src 'self';", $csp);
+    }
+
+    public function testTheBannerPreviewPageHasItsOwnStrictPolicy(): void
+    {
+        $file = $this->service(Settings::class)->projectDir . '/public/_preview/banner.html';
+        $created = false;
+        if (!is_file($file)) {
+            @mkdir(\dirname($file), 0o777, true);
+            file_put_contents($file, '<!doctype html><html><head><script src="banner.js"></script><script src="preview.js"></script></head><body></body></html>');
+            $created = true;
+        }
+        try {
+            $response = $this->get('/_preview/banner.html');
+            $this->assertStatus(200, $response);
+            self::assertSame((string) file_get_contents($file), (string) $response->getBody(), 'the preview page itself, not the SPA shell');
+            $csp = $response->getHeaderLine('Content-Security-Policy');
+            self::assertStringContainsString("default-src 'none'", $csp);
+            self::assertStringContainsString("script-src 'self';", $csp, 'no inline scripts, no hashes');
+            self::assertStringContainsString("frame-ancestors 'self'", $csp);
+            self::assertStringNotContainsString('connect-src', $csp, 'no network requests (default-src none)');
+            self::assertSame('SAMEORIGIN', $response->getHeaderLine('X-Frame-Options'));
+            self::assertSame('no-referrer', $response->getHeaderLine('Referrer-Policy'));
+
+            // Nothing else under /_preview/ is special: other documents are the SPA with frame-ancestors 'none'.
+            self::assertSame('DENY', $this->get('/_preview/other.html')->getHeaderLine('X-Frame-Options'));
+        } finally {
+            if ($created) {
+                @unlink($file);
+                @rmdir(\dirname($file));
+            }
+        }
+    }
+
     public function testApiAndTrackerPathsAreNotSwallowed(): void
     {
         $this->assertProblem($this->get('/api/v1/unknown'), 404, 'not_found');

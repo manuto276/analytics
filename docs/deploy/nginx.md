@@ -95,7 +95,12 @@ address.
 location / { try_files $uri /index.html; }
 location = /index.html { add_header Cache-Control "no-cache" always; }
 location = /200.html   { add_header Cache-Control "no-cache" always; }
+location = /_preview/banner.html { include fastcgi_params; fastcgi_param SCRIPT_FILENAME $realpath_root/index.php; fastcgi_pass …; }
 ```
+
+The one document that must go through PHP even in this setup is `/_preview/banner.html`, the
+consent-banner preview the dashboard frames: PHP serves it with its own Content-Security-Policy and
+`frame-ancestors 'self'`, which a static file would not carry.
 
 Fastest, one fewer PHP process per document. The document is served by nginx, so it does **not**
 carry the application's Content-Security-Policy — the API responses still do, and the SPA's own

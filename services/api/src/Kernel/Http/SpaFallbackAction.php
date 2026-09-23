@@ -21,9 +21,25 @@ final readonly class SpaFallbackAction
 
     public function __invoke(ServerRequestInterface $request): ResponseInterface
     {
-        $file = $this->settings->projectDir . '/public/index.html';
+        return $this->document($request, '/public/index.html', 'The dashboard has not been built. Run `pnpm generate:api` in services/dashboard.');
+    }
+
+    /**
+     * The consent banner preview page the dashboard frames (services/dashboard/public/_preview/).
+     * It is a static document, but served here so it carries its own strict CSP (see
+     * {@see \Analytics\Shared\Http\Middleware\SecurityHeadersMiddleware}) instead of falling back to
+     * the SPA shell.
+     */
+    public function bannerPreview(ServerRequestInterface $request): ResponseInterface
+    {
+        return $this->document($request, '/public/_preview/banner.html', 'The banner preview has not been built. Run `pnpm generate:api` in services/dashboard.');
+    }
+
+    private function document(ServerRequestInterface $request, string $path, string $missing): ResponseInterface
+    {
+        $file = $this->settings->projectDir . $path;
         if (!is_file($file)) {
-            throw ApiProblem::notFound('The dashboard has not been built. Run `pnpm generate:api` in services/dashboard.');
+            throw ApiProblem::notFound($missing);
         }
         $html = (string) file_get_contents($file);
         $etag = '"' . substr(hash('xxh128', $html), 0, 24) . '"';

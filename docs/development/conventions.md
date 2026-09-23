@@ -116,8 +116,9 @@ not, and `RbacMatrixTest` fails the build.
 
 ## TypeScript
 
-**Tracker** (`services/tracker`): no runtime dependencies, ES2019 output, and a hard size budget of
-5.0 KB gzipped for core plus banner (`size-limit`, `make size`). That budget shapes the style —
+**Tracker** (`services/tracker`): no runtime dependencies, ES2019 output, and hard size budgets
+(`size-limit`, `make size`, gzip): core ≤ 5.0 KB, banner module ≤ 4.0 KB, both together ≤ 9.0 KB.
+Styling is not the tracker's job: the server compiles the banner stylesheet. That budget shapes the style —
 short identifiers, no classes, no polyfills, `==` where the coercion is intended. Do not import a
 library into it. ESLint + `tsc --noEmit` (`make lint`, `make typecheck`).
 

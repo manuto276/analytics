@@ -73,8 +73,8 @@ matters here.
   benefit.
 - **Client-specific code.** The product is generic. Examples use `example.com` / `example.net`; test
   hosts are `analytics.test` and `*.site.test`.
-- **A runtime dependency in the tracker**, or a change that pushes it over the 5.0 KB gzip budget
-  (`make size`).
+- **A runtime dependency in the tracker**, or a change that pushes it over its gzip budgets
+  (core 5.0 KB, banner 4.0 KB, together 9.0 KB; `make size`).
 - **A PHPStan baseline.** Level max, no baseline. Fix the finding or explain it in the code.
 - **A destructive migration in a single release.** Expand/contract only; the lint in
   `MigrationsTest::testMigrationsAreForwardOnlyAndExpandOnly` enforces it. See

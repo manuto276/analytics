@@ -91,6 +91,7 @@ COPY deploy/docker/scripts/spa-csp.mjs /scripts/spa-csp.mjs
 WORKDIR /src
 RUN mkdir -p /out \
  && cp services/tracker/dist/tracker.js /out/tracker.js \
+ && cp services/tracker/dist/banner.js /out/banner.js \
  && cp -R services/dashboard/.output/public /out/spa \
  && node /scripts/spa-csp.mjs /out/spa /out/csp.php
 
@@ -124,6 +125,7 @@ COPY --from=vendor /app/vendor/ /release/vendor/
 # Frontend artefacts
 COPY --from=node-build /out/spa/ /release/public/
 COPY --from=node-build /out/tracker.js /release/resources/tracker/tracker.js
+COPY --from=node-build /out/banner.js /release/resources/tracker/banner.js
 COPY --from=node-build /out/csp.php /release/config/csp.php
 
 # Repository files that ship with a release

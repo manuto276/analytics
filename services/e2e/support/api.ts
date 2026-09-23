@@ -87,14 +87,18 @@ export class Api {
   }
 
   /** Enables the cookie level with a first-party cookie domain and publishes a banner. */
-  async enableCookieLevel(siteId: number, cookieDomain = 'site.test'): Promise<void> {
+  async enableCookieLevel(siteId: number, cookieDomain = 'site.test', theme?: Record<string, unknown>): Promise<void> {
     await this.updateSite(siteId, { cookie_level_enabled: true, cookie_domain: cookieDomain })
-    await this.publishConsent(siteId, { material: false })
+    await this.publishConsent(siteId, { material: false, theme })
   }
 
+  /**
+   * Saves and publishes a banner. `theme` defaults to a v1 theme (the shape stored by
+   * installations that predate theme v2); pass a v2 object to exercise the new layout options.
+   */
   async publishConsent(
     siteId: number,
-    { material = false, title = 'We use cookies' }: { material?: boolean, title?: string } = {},
+    { material = false, title = 'We use cookies', theme }: { material?: boolean, title?: string, theme?: Record<string, unknown> } = {},
   ): Promise<any> {
     await this.put(`/sites/${siteId}/consent/draft`, {
       default_locale: 'en',
@@ -119,7 +123,7 @@ export class Api {
         },
       },
       policy_urls: { en: 'https://www.site.test/privacy', it: 'https://www.site.test/privacy' },
-      theme: { bg: '#ffffff', fg: '#111827', ac: '#1d4ed8', acf: '#ffffff', rad: 8, pos: 'bottom' },
+      theme: theme ?? { bg: '#ffffff', fg: '#111827', ac: '#1d4ed8', acf: '#ffffff', rad: 8, pos: 'bottom' },
       accepted_ttl_days: 180,
       rejected_ttl_days: 180,
       show_floating_reopen: true,

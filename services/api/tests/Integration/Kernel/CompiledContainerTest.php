@@ -36,13 +36,15 @@ final class CompiledContainerTest extends TestCase
         $temporary = $this->release('.tmp-20260919T102728Z', withTracker: false);
         $before = ContainerFactory::create($this->settings($temporary))->get(ScriptBundleBuilder::class);
         \assert($before instanceof ScriptBundleBuilder);
-        self::assertStringContainsString('track:function(){}', $before->tracker()['code'], 'no tracker there: the stub');
+        // No tracker there (reading it would serve the stub and log an error: this is production).
+        self::assertSame([$temporary . '/resources/tracker/tracker.js' => false, $temporary . '/resources/tracker/banner.js' => false], $before->files());
 
         // The same shared cache, the directory the release really lives in.
         $final = $this->release('20260919T102728Z', withTracker: true);
         $after = ContainerFactory::create($this->settings($final))->get(ScriptBundleBuilder::class);
         \assert($after instanceof ScriptBundleBuilder);
         self::assertSame('/* the real tracker */', trim($after->tracker()['code']), 'the release\'s own tracker, not the stub compiled for the other path');
+        self::assertSame([$final . '/resources/tracker/tracker.js' => true, $final . '/resources/tracker/banner.js' => false], $after->files(), 'the banner module is looked up in the same release');
 
         self::assertNotSame(
             ContainerFactory::compilationDir($this->settings($temporary)),

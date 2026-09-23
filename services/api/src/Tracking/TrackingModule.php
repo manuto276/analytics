@@ -19,10 +19,12 @@ use Analytics\Tracking\Infrastructure\RedisDailySaltProvider;
 use Analytics\Tracking\Infrastructure\RedisQueueEventSink;
 use Analytics\Tracking\Infrastructure\SyncEventSink;
 use Psr\Container\ContainerInterface;
+use Psr\Log\LoggerInterface;
 use Slim\Interfaces\RouteCollectorProxyInterface;
 
 use function DI\autowire;
 use function DI\factory;
+use function DI\get;
 
 final class TrackingModule extends Module
 {
@@ -65,7 +67,10 @@ final class TrackingModule extends Module
             }),
             ScriptBundleBuilder::class => autowire()
                 ->constructorParameter('trackerPath', $settings->projectDir . '/resources/tracker/tracker.js')
-                ->constructorParameter('sourceUrl', $settings->sourceUrl),
+                ->constructorParameter('bannerPath', $settings->projectDir . '/resources/tracker/banner.js')
+                ->constructorParameter('sourceUrl', $settings->sourceUrl)
+                ->constructorParameter('logger', get(LoggerInterface::class))
+                ->constructorParameter('strict', $settings->isProd()),
         ];
     }
 

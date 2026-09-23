@@ -12,6 +12,7 @@ use Analytics\Shared\Mail\RecordingMailer;
 use Analytics\Shared\Mail\SymfonyMailer;
 use Analytics\Tests\Support\ConsoleTestCase;
 use Analytics\Tests\Support\TestDatabase;
+use Analytics\Tracking\Application\ScriptBundleBuilder;
 use Doctrine\DBAL\Connection;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -72,7 +73,7 @@ final class MailCommandsTest extends ConsoleTestCase
             'configured: smtp://smtp.example.com:587 as Stats <stats@example.net>' => [['MAILER_DSN' => 'smtp://u:p@smtp.example.com:587', 'MAIL_FROM' => 'stats@example.net', 'MAIL_FROM_NAME' => 'Stats'], true],
         ];
         foreach ($cases as $expected => [$env, $ok]) {
-            $tester = new CommandTester(new PreflightCommand(self::settings($env), $connection));
+            $tester = new CommandTester(new PreflightCommand(self::settings($env), $connection, $this->service(ScriptBundleBuilder::class)));
             self::assertSame(Command::SUCCESS, $tester->execute(['--skip-db' => true, '--json' => true]), 'the mailer never fails preflight');
             $json = json_decode($tester->getDisplay(), true);
             self::assertIsArray($json);

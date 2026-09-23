@@ -7,6 +7,7 @@ namespace Analytics\Kernel\Console;
 use Analytics\Kernel\Settings;
 use Analytics\Shared\Mail\SymfonyMailer;
 use Analytics\Shared\Types;
+use Analytics\Tracking\Application\ScriptBundleBuilder;
 use Doctrine\DBAL\Connection;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -20,8 +21,11 @@ final class PreflightCommand extends Command
     public const array REQUIRED_EXTENSIONS = ['pdo_mysql', 'sodium', 'intl', 'mbstring', 'json'];
     public const array RECOMMENDED_EXTENSIONS = ['opcache'];
 
-    public function __construct(private readonly Settings $settings, private readonly Connection $connection)
-    {
+    public function __construct(
+        private readonly Settings $settings,
+        private readonly Connection $connection,
+        private readonly ScriptBundleBuilder $scripts,
+    ) {
         parent::__construct();
     }
 
@@ -60,6 +64,12 @@ final class PreflightCommand extends Command
                 @mkdir($dir, 0750, true);
             }
             $add('writable:' . basename($dir), is_dir($dir) && is_writable($dir), $dir);
+        }
+
+        // The tracker and the banner module are build artefacts (pnpm build:api, or the package).
+        // Without them /t/{key}.js serves a no-op stub: fatal in production, a warning elsewhere.
+        foreach ($this->scripts->files() as $path => $present) {
+            $add('tracker:' . basename($path), $present, $present ? $path : $path . ' is missing (run `pnpm build:api` in services/tracker, or redeploy the package)', $this->settings->isProd());
         }
 
         if ($input->getOption('skip-db') !== true) {

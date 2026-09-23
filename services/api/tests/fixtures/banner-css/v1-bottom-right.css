@@ -1,0 +1,26 @@
+.b,.f{position:fixed;z-index:2147483647;box-sizing:border-box;margin:0;font-family:inherit;font-size:inherit;line-height:1.5;animation:i .2s}
+.b{color:#111827;background:#ffffff;border:0px solid #e5e7eb;border-radius:8px;box-shadow:0 4px 24px rgba(0,0,0,.25);padding:16px;overflow:auto;overscroll-behavior:contain}
+h2{margin:0 32px 8px 0;font-size:1.15em;line-height:1.3}
+p{margin:0 0 12px}
+a{color:#111827;text-decoration:underline}
+.a{display:flex;flex-wrap:wrap;gap:8px}
+.k{flex:1;margin:0;font:inherit;padding:8px 16px;cursor:pointer;border:2px solid #1d4ed8;border-radius:8px;background:#1d4ed8;color:#ffffff}
+.x{position:absolute;top:8px;right:8px;margin:0;font:inherit;font-size:1.4em;line-height:1;padding:4px 8px;border:0;background:none;color:inherit;cursor:pointer}
+.f{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border:2px solid #1d4ed8;border-radius:8px;background:#1d4ed8;color:#ffffff;cursor:pointer;box-shadow:0 4px 24px rgba(0,0,0,.25)}
+.i{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+:focus-visible{outline:2px solid #1d4ed8;outline-offset:2px}
+.b{top:auto;bottom:16px;left:auto;right:16px;width:min(576px,calc(100% - 32px));max-width:none;margin:0;max-height:calc(100% - 32px)}
+.a{flex-direction:row}
+.k{flex:1}
+.f{top:auto;bottom:calc(16px + env(safe-area-inset-bottom,0px));left:auto;right:16px;display:inline-flex;padding:8px 14px}
+.i{display:none}
+.t{display:inline}
+@media (max-width:640px){.b{top:auto;bottom:calc(16px + env(safe-area-inset-bottom,0px));translate:none;left:16px;right:16px;width:auto;max-width:none;margin:0;max-height:calc(100% - 32px);box-shadow:0 4px 24px rgba(0,0,0,.25)}
+.a{flex-direction:row}
+.k{flex:1}
+.f{top:auto;bottom:calc(16px + env(safe-area-inset-bottom,0px));left:auto;right:16px;display:inline-flex;padding:8px 14px}
+.i{display:none}
+.t{display:inline}}
+@keyframes i{from{opacity:0;transform:translateY(8px)}}
+@media (prefers-reduced-motion:reduce){.b,.f{animation:none}}
+@media (forced-colors:active){.b,.f,.k{border:1px solid CanvasText}}

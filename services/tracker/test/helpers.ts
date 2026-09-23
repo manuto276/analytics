@@ -20,7 +20,8 @@ export const makeConsent = (o: Partial<ConsentCfg> = {}): ConsentCfg => ({
   at: 180,
   rt: 180,
   fl: false,
-  theme: { bg: '#ffffff', fg: '#111827', ac: '#1d4ed8', acf: '#ffffff', rad: 8, pos: 'bottom' },
+  css: '.b{position:fixed}.k{color:#fff}',
+  ri: 'M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6zM9 12l2 2 4-4',
   texts: {
     en: {
       title: 'Cookies',
@@ -259,6 +260,7 @@ export const cleanupDom = (): void => {
   delete wr.__an_cfg;
   delete wr.analytics;
   delete wr.__analytics;
+  delete wr.__an_b;
   document.body.innerHTML = '';
   vi.clearAllTimers();
   vi.useRealTimers();
@@ -269,9 +271,14 @@ export const advanceTime = (ms: number): void => {
   vi.advanceTimersByTime(ms);
 };
 
-/** Import a fresh tracker instance (runs src/index.ts). */
-export const load = async (): Promise<void> => {
+/**
+ * Import a fresh tracker instance the way the server serves it: the banner module first
+ * (src/banner/index.ts, registers window.__an_b), then the core (src/index.ts).
+ * `{ banner: false }` loads the core alone, as served to sites without the cookie level.
+ */
+export const load = async ({ banner = true }: { banner?: boolean } = {}): Promise<void> => {
   vi.resetModules();
+  if (banner) await import('../src/banner/index');
   await import('../src/index');
 };
 

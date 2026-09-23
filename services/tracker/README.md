@@ -1,6 +1,8 @@
 # @analytics/tracker
 
-Dependency-free browser tracker and consent banner (TypeScript, bundled by esbuild as a minified ES2019 IIFE).
+Dependency-free browser tracker and consent banner (TypeScript, bundled by esbuild as two minified ES2019
+IIFEs: `dist/tracker.js`, the core, and `dist/banner.js`, the banner UI that the server adds to
+`/t/{key}.js` only for sites with the cookie level on).
 The contract (config `window.__an_cfg`, transport, cookies, JS API) is documented in
 [`docs/architecture/tracker.md`](../../docs/architecture/tracker.md); the payload schema is
 [`docs/api/tracking-payload.v1.schema.json`](../../docs/api/tracking-payload.v1.schema.json).
@@ -18,7 +20,9 @@ src/transport.ts    sendBeacon (text/plain) with fetch keepalive fallback + one 
 src/spa.ts          history patching, popstate, hashchange (hash routing)
 src/dom.ts          declarative attributes (data-analytics-*) and optional automatic events
 src/api.ts          window[g] API, stub queue replay, global collision handling
-src/banner/         shadow-DOM consent banner (banner, template, styles)
+src/banner/         shadow-DOM consent banner, built as dist/banner.js (index = entry registering
+                    window.__an_b; banner = mount/show/close; template = DOM). No CSS here: the
+                    stylesheet comes compiled from the server in cfg.consent.css
 ```
 
 ## Automatic events (`cfg.auto`)
@@ -51,16 +55,17 @@ Uses pnpm (`corepack pnpm …` works without a global install).
 
 ```sh
 pnpm install --frozen-lockfile
-pnpm build           # dist/tracker.js
-pnpm build:api       # build + copy to ../api/resources/tracker/tracker.js
+pnpm build           # dist/tracker.js (core) and dist/banner.js (banner module)
+pnpm build:api       # build + copy both to ../api/resources/tracker/
 pnpm test            # Vitest + happy-dom
 pnpm test:coverage   # v8 coverage, gates: lines >= 95 %, branches >= 90 %
-pnpm size            # size-limit: dist/tracker.js <= 5.0 KB gzip (run after build)
+pnpm size            # size-limit, gzip: core <= 5.0 KB, banner <= 4.0 KB, both <= 9.0 KB (run after build)
 pnpm lint            # ESLint (typescript-eslint, flat config)
 pnpm typecheck       # tsc --noEmit
 ```
 
-Test helpers live in `test/helpers.ts` (`makeConfig`, `installDom`, `advanceTime`, a fake cookie jar that
+Test helpers live in `test/helpers.ts` (`makeConfig`, `installDom`, `advanceTime`, `load()` — banner module
+then core, as served; `load({ banner: false })` for the core alone —, a fake cookie jar that
 honours `Domain`, `Max-Age` and `Secure`, and payload validation against the JSON schema with Ajv).
 
 Note: the tracker sends nothing when `navigator.webdriver` is true, so browser automation must

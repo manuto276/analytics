@@ -59,6 +59,9 @@ final class ScriptTest extends HttpTestCase
         self::assertSame(1, $config['consent']['v']);
         self::assertSame('Accetta', $config['consent']['texts']['it']['accept']);
         self::assertSame('https://www.example.com/it/privacy', $config['consent']['texts']['it']['policyUrl']);
+        self::assertStringStartsWith('.b,.f{position:fixed', $config['consent']['css'], 'the compiled banner stylesheet');
+        self::assertIsString($config['consent']['ri']);
+        self::assertArrayNotHasKey('theme', $config['consent']);
         self::assertNotSame($first->getHeaderLine('ETag'), $second->getHeaderLine('ETag'));
     }
 

@@ -34,7 +34,7 @@ class ConsentConfig
     /**
      * @param array<string, array<string, string>> $texts      locale => text keys
      * @param array<string, string>                $policyUrls locale => URL
-     * @param array<string, string|int>            $theme
+     * @param array<array-key, mixed>              $theme      v1 or v2 (ConsentThemeV2::fromStored() reads both)
      */
     public function __construct(
         #[ORM\Column(name: 'site_id', type: 'integer', options: ['unsigned' => true])]

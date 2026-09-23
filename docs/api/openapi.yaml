@@ -901,7 +901,13 @@ paths:
                     properties:
                       published: { allOf: [{ $ref: '#/components/schemas/ConsentConfig' }], nullable: true }
                       draft: { allOf: [{ $ref: '#/components/schemas/ConsentConfig' }], nullable: true }
-                      defaults: { $ref: '#/components/schemas/ConsentConfigInput' }
+                      defaults:
+                        allOf:
+                          - $ref: '#/components/schemas/ConsentConfigInput'
+                          - type: object
+                            required: [theme_v2]
+                            properties:
+                              theme_v2: { $ref: '#/components/schemas/ConsentThemeV2' }
         '401': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
   /sites/{siteId}/consent/draft:
@@ -931,6 +937,37 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+  /sites/{siteId}/consent/preview:
+    parameters:
+      - $ref: '#/components/parameters/SiteId'
+    post:
+      tags: [consent]
+      summary: Compile an unsaved configuration into the tracker's consent block (site admin; nothing is stored)
+      description: |
+        Validates the body exactly like `PUT …/consent/draft` (same 422 errors, e.g. custom CSS
+        problems under `theme.css` as "Line L, column C: …") and returns the `consent` block of
+        `window.__an_cfg` the site would receive: compiled stylesheet, reopen icon, texts per locale.
+        The dashboard preview feeds it to the real banner module (`dist/banner.js`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConsentConfigInput' }
+      responses:
+        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/ConsentTrackerConfig' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
   /sites/{siteId}/consent/publish:
     parameters:
       - $ref: '#/components/parameters/SiteId'
@@ -2579,8 +2616,9 @@ components:
         close: { type: string, maxLength: 40 }
         policy: { type: string, maxLength: 60 }
         reopen: { type: string, maxLength: 60 }
-    ConsentTheme:
+    ConsentThemeV1:
       type: object
+      description: 'Theme v1 (deprecated). Still accepted on write and stored as sent; read it upgraded as `theme_v2`. Cannot be mixed with v2 keys.'
       required: [bg, fg, ac, acf, rad, pos]
       properties:
         bg: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
@@ -2589,6 +2627,92 @@ components:
         acf: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
         rad: { type: integer, minimum: 0, maximum: 24 }
         pos: { type: string, enum: [bottom, bottom-left, bottom-right] }
+    ConsentThemeV2:
+      type: object
+      additionalProperties: false
+      description: |
+        Theme v2 (docs/api/consent-theme.v2.schema.json, docs/integration/consent-banner.md). Every field is
+        optional on write (missing fields take the defaults); the stored theme and `theme_v2` are complete.
+        The server compiles it, with the vetted custom CSS, into the banner stylesheet.
+      properties:
+        colors:
+          type: object
+          additionalProperties: false
+          description: One button style for Accept and Reject (no secondary colour, Garante 2021 B2). Contrast ≥ 4.5:1 for text/background, accentText/accent, link/background.
+          properties:
+            background: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
+            text: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
+            accent: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
+            accentText: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
+            border: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
+            link: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
+            backdrop: { type: string, nullable: true, pattern: '^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$', description: 'Page tint around a `center` banner; painted only, never blocks the page' }
+        font:
+          type: object
+          additionalProperties: false
+          properties:
+            family: { type: string, maxLength: 200, description: '`inherit`, `system` or a list of family names (letters, digits, spaces, - and _, optionally quoted); fonts are never downloaded' }
+            size: { type: integer, nullable: true, minimum: 12, maximum: 20, description: 'px; null inherits the page font size' }
+            lineHeight: { type: number, minimum: 1, maximum: 2 }
+        shape:
+          type: object
+          additionalProperties: false
+          properties:
+            radius: { type: integer, minimum: 0, maximum: 32 }
+            buttonRadius: { type: integer, minimum: 0, maximum: 999 }
+        spacing:
+          type: object
+          additionalProperties: false
+          properties:
+            padding: { type: integer, minimum: 8, maximum: 48 }
+            gap: { type: integer, minimum: 0, maximum: 32 }
+        border:
+          type: object
+          additionalProperties: false
+          properties:
+            width: { type: integer, minimum: 0, maximum: 4 }
+        shadow: { type: string, enum: [none, sm, md, lg] }
+        layout:
+          type: object
+          additionalProperties: false
+          properties:
+            breakpoint: { type: integer, minimum: 480, maximum: 1024, description: 'Viewports this wide or narrower use the mobile layout' }
+            desktop:
+              type: object
+              additionalProperties: false
+              properties:
+                position: { type: string, enum: [bottom, bottom-left, bottom-right, top, center] }
+                maxWidth: { type: integer, minimum: 280, maximum: 1200 }
+                offset: { type: integer, minimum: 0, maximum: 64 }
+                buttons: { type: string, enum: [row, stack] }
+            mobile:
+              type: object
+              additionalProperties: false
+              properties:
+                position: { type: string, enum: [bottom, top, center, sheet] }
+                offset: { type: integer, minimum: 0, maximum: 32 }
+                buttons: { type: string, enum: [row, stack] }
+        reopen:
+          type: object
+          additionalProperties: false
+          properties:
+            icon: { type: string, enum: [cookie, shield, fingerprint, settings] }
+            size: { type: string, enum: [sm, md, lg] }
+            background: { type: string, nullable: true, pattern: '^#[0-9a-fA-F]{6}$', description: 'null: colors.accent' }
+            text: { type: string, nullable: true, pattern: '^#[0-9a-fA-F]{6}$', description: 'null: colors.accentText' }
+            desktop: { $ref: '#/components/schemas/ConsentReopenPlacement' }
+            mobile: { $ref: '#/components/schemas/ConsentReopenPlacement' }
+        css:
+          type: string
+          maxLength: 8192
+          description: 'Custom CSS with the public class names (.banner .title .body .link .actions .button .close .reopen .reopen-icon); selector and property allowlists; errors come back as 422 under `theme.css`, "Line L, column C: …"'
+    ConsentReopenPlacement:
+      type: object
+      additionalProperties: false
+      properties:
+        variant: { type: string, enum: [text, icon, icon-text, hidden] }
+        position: { type: string, enum: [bottom-left, bottom-right] }
+        offset: { type: integer, minimum: 0, maximum: 64 }
     ConsentConfigInput:
       type: object
       required: [texts, policy_urls, default_locale, theme, accepted_ttl_days, rejected_ttl_days, show_floating_reopen]
@@ -2600,7 +2724,10 @@ components:
           type: object
           additionalProperties: { type: string }
         default_locale: { type: string }
-        theme: { $ref: '#/components/schemas/ConsentTheme' }
+        theme:
+          oneOf:
+            - $ref: '#/components/schemas/ConsentThemeV2'
+            - $ref: '#/components/schemas/ConsentThemeV1'
         accepted_ttl_days: { type: integer, minimum: 1, maximum: 395 }
         rejected_ttl_days: { type: integer, minimum: 1, maximum: 395 }
         show_floating_reopen: { type: boolean }
@@ -2608,8 +2735,11 @@ components:
       allOf:
         - $ref: '#/components/schemas/ConsentConfigInput'
         - type: object
-          required: [id, revision, consent_version, status, created_at, published_at, published_by]
+          required: [id, revision, consent_version, status, theme_v2, created_at, published_at, published_by]
           properties:
+            theme_v2:
+              allOf: [{ $ref: '#/components/schemas/ConsentThemeV2' }]
+              description: 'The theme as the banner uses it — `theme` upgraded to v2 when it is still v1, complete with defaults.'
             id: { type: integer }
             revision: { type: integer }
             consent_version: { type: integer }
@@ -2620,6 +2750,29 @@ components:
             contrast_warnings:
               type: array
               items: { type: string }
+    ConsentTrackerConfig:
+      type: object
+      additionalProperties: false
+      description: 'The `consent` block of window.__an_cfg (docs/architecture/tracker.md), as served in /t/{publicKey}.js.'
+      required: [v, rev, dl, at, rt, fl, css, ri, texts]
+      properties:
+        v: { type: integer, description: 'consent_version (for a preview: the version after publishing without a material change)' }
+        rev: { type: integer, description: 'revision (for a preview: the revision the draft has or would get)' }
+        dl: { type: string, description: default locale }
+        at: { type: integer, description: accepted_ttl_days }
+        rt: { type: integer, description: rejected_ttl_days }
+        fl: { type: boolean, description: show_floating_reopen }
+        css: { type: string, description: 'The whole banner stylesheet, compiled from the theme and the vetted custom CSS' }
+        ri: { type: string, description: 'SVG path (24×24 viewBox) of the reopen icon' }
+        texts:
+          type: object
+          additionalProperties:
+            allOf:
+              - $ref: '#/components/schemas/ConsentTexts'
+              - type: object
+                required: [policyUrl]
+                properties:
+                  policyUrl: { type: string }
     ApiKey:
       type: object
       required: [id, name, prefix, scopes, created_at, last_used_at, expires_at, revoked_at]

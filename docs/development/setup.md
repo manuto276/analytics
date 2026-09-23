@@ -75,8 +75,11 @@ The dev container defines throw-away values for `APP_SECRET` and
   `services/api/public` and writes the CSP hashes to `services/api/config/csp.php`,
   which is what nginx and the backend serve.
 - **Tracker**: `cd services/tracker && pnpm build:api` writes
-  `services/api/resources/tracker/tracker.js`, the file the `/t/{key}.js`
-  endpoint embeds. Without it the backend serves a harmless no-op stub.
+  `services/api/resources/tracker/tracker.js` (core) and `banner.js` (consent
+  banner module, added to `/t/{key}.js` only for sites with the cookie level on),
+  the files the `/t/{key}.js` endpoint embeds. Without them the backend serves a
+  harmless no-op stub (and no banner); `app:preflight` warns about it, and in
+  production reports it as a failure.
 
 ## 3. The test stack
 

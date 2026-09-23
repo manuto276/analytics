@@ -3,7 +3,9 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const target = resolve(root, '../api/resources/tracker/tracker.js');
-mkdirSync(dirname(target), { recursive: true });
-copyFileSync(resolve(root, 'dist/tracker.js'), target);
-console.log(`copied dist/tracker.js -> ${target}`);
+const targetDir = resolve(root, '../api/resources/tracker');
+mkdirSync(targetDir, { recursive: true });
+for (const file of ['tracker.js', 'banner.js']) {
+  copyFileSync(resolve(root, 'dist', file), resolve(targetDir, file));
+  console.log(`copied dist/${file} -> ${resolve(targetDir, file)}`);
+}

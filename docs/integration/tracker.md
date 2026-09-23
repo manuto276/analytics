@@ -1,8 +1,9 @@
 # Tracker integration
 
 The tracker is a single JavaScript file served by the analytics service at
-`GET /t/{publicKey}.js`, with the site's configuration embedded. It has no dependencies, needs no
-build step on your side, and is ≤ 5.0 KB gzipped including the consent banner.
+`GET /t/{publicKey}.js`, with the site's configuration embedded. It has no dependencies and needs no
+build step on your side. It is ≤ 5.0 KB gzipped; sites with the cookie level on also get the consent
+banner module in the same file (≤ 4.0 KB more, ≤ 9.0 KB together) — still one request.
 
 The exact contract (configuration keys, transport, cookie formats) is
 [../architecture/tracker.md](../architecture/tracker.md). This page is how to use it.

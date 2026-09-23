@@ -32,6 +32,12 @@ final class Input
         return \array_key_exists($key, $this->data);
     }
 
+    /** Prefix of the error keys of this input (e.g. "theme." for a nested object). */
+    public function prefix(): string
+    {
+        return $this->prefix;
+    }
+
     /** @return array<array-key, mixed> */
     public function raw(): array
     {

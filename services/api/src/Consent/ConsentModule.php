@@ -17,6 +17,8 @@ final class ConsentModule extends Module
         $routes->get($site, [ConsentController::class, 'show'], Permission::SITE_VIEW);
         $routes->put($site . '/draft', [ConsentController::class, 'saveDraft'], Permission::SITE_MANAGE);
         $routes->delete($site . '/draft', [ConsentController::class, 'discardDraft'], Permission::SITE_MANAGE);
+        // Same permission as saving the draft: the preview validates the same body.
+        $routes->post($site . '/preview', [ConsentController::class, 'preview'], Permission::SITE_MANAGE);
         $routes->post($site . '/publish', [ConsentController::class, 'publish'], Permission::SITE_MANAGE);
         $routes->get($site . '/history', [ConsentController::class, 'history'], Permission::SITE_VIEW);
         $routes->get($site . '/receipts', [ConsentController::class, 'receipts'], Permission::SITE_MANAGE);

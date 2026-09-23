@@ -19,9 +19,24 @@
   },
   "size-limit": [
     {
-      "name": "tracker (core + banner)",
+      "name": "core (dist/tracker.js)",
       "path": "dist/tracker.js",
       "limit": "5.0 KB",
+      "gzip": true
+    },
+    {
+      "name": "banner (dist/banner.js)",
+      "path": "dist/banner.js",
+      "limit": "4.0 KB",
+      "gzip": true
+    },
+    {
+      "name": "core + banner (sites with the cookie level)",
+      "path": [
+        "dist/banner.js",
+        "dist/tracker.js"
+      ],
+      "limit": "9.0 KB",
       "gzip": true
     }
   ],

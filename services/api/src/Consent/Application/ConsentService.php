@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Analytics\Consent\Application;
 
 use Analytics\Consent\Domain\ConsentConfig;
+use Analytics\Consent\Domain\ConsentThemeV2;
 use Analytics\Shared\Http\ApiProblem;
 use Analytics\Shared\Types;
 use Analytics\Shared\Validation\Input;
@@ -19,7 +20,8 @@ use Psr\Clock\ClockInterface;
 final readonly class ConsentService
 {
     public const array TEXT_KEYS = ['title' => 120, 'body' => 1200, 'accept' => 40, 'reject' => 40, 'close' => 40, 'policy' => 60, 'reopen' => 60];
-    public const array POSITIONS = ['bottom', 'bottom-left', 'bottom-right'];
+    /** Cache key of the consent block of window.__an_cfg; publishing deletes it. */
+    public const string TRACKER_CONFIG_CACHE = 'tracker_config_';
 
     public function __construct(
         private EntityManagerInterface $em,
@@ -53,7 +55,9 @@ final readonly class ConsentService
             ],
             'policy_urls' => ['en' => 'https://www.example.com/privacy', 'it' => 'https://www.example.com/it/privacy'],
             'default_locale' => 'en',
-            'theme' => ['bg' => '#ffffff', 'fg' => '#111827', 'ac' => '#1d4ed8', 'acf' => '#ffffff', 'rad' => 8, 'pos' => 'bottom'],
+            // The complete v2 theme (docs/api/consent-theme.v2.schema.json). v1 themes are still
+            // accepted on write for clients that predate v2.
+            'theme' => ConsentThemeV2::defaults()->toArray(),
             'accepted_ttl_days' => 180,
             'rejected_ttl_days' => 180,
             'show_floating_reopen' => true,
@@ -126,13 +130,15 @@ final readonly class ConsentService
         $draft->publishedAt = $this->clock->now();
         $draft->publishedBy = $userId;
         $this->em->flush();
-        $this->cache->deleteItem('tracker_config_' . $siteId);
+        $this->cache->deleteItem(self::TRACKER_CONFIG_CACHE . $siteId);
 
         return $draft;
     }
 
     /**
-     * @return array{texts: array<string, array<string, string>>, policy_urls: array<string, string>, default_locale: string, theme: array{bg: string, fg: string, ac: string, acf: string, rad: int, pos: string}, accepted_ttl_days: int, rejected_ttl_days: int, show_floating_reopen: bool}
+     * The theme may be v1 (stored as sent) or v2 (stored complete); see {@see ThemeValidator}.
+     *
+     * @return array{texts: array<string, array<string, string>>, policy_urls: array<string, string>, default_locale: string, theme: array<string, mixed>, accepted_ttl_days: int, rejected_ttl_days: int, show_floating_reopen: bool}
      */
     public static function validate(Input $input): array
     {
@@ -165,24 +171,9 @@ final readonly class ConsentService
         if ($texts !== [] && !isset($texts[$defaultLocale])) {
             $input->error('default_locale', 'Must be one of the locales with texts.');
         }
-        $themeInput = $input->nested('theme', true) ?? new Input([], 'theme.');
-        $theme = [
-            'bg' => $themeInput->string('bg', 7, 7, '/^#[0-9a-fA-F]{6}$/'),
-            'fg' => $themeInput->string('fg', 7, 7, '/^#[0-9a-fA-F]{6}$/'),
-            'ac' => $themeInput->string('ac', 7, 7, '/^#[0-9a-fA-F]{6}$/'),
-            'acf' => $themeInput->string('acf', 7, 7, '/^#[0-9a-fA-F]{6}$/'),
-            'rad' => $themeInput->int('rad', 8, 0, 24),
-            'pos' => $themeInput->choice('pos', self::POSITIONS, 'bottom'),
-        ];
+        $themeInput = $input->nested('theme') ?? new Input([], 'theme.');
+        $theme = ThemeValidator::validate($themeInput);
         $input->merge($themeInput);
-        if ($themeInput->errors() === []) {
-            if (ContrastChecker::ratio($theme['fg'], $theme['bg']) < ContrastChecker::MINIMUM) {
-                $input->error('theme.fg', \sprintf('Text/background contrast must be at least %.1f:1.', ContrastChecker::MINIMUM));
-            }
-            if (ContrastChecker::ratio($theme['acf'], $theme['ac']) < ContrastChecker::MINIMUM) {
-                $input->error('theme.acf', \sprintf('Button text/button contrast must be at least %.1f:1.', ContrastChecker::MINIMUM));
-            }
-        }
         $values = [
             'texts' => $texts,
             'policy_urls' => $policyUrls,
@@ -208,7 +199,8 @@ final readonly class ConsentService
             'texts' => (object) $config->texts,
             'policy_urls' => (object) $config->policyUrls,
             'default_locale' => $config->defaultLocale,
-            'theme' => $config->theme,
+            'theme' => (object) $config->theme,
+            'theme_v2' => ConsentThemeV2::fromStored($config->theme)->toArray(),
             'accepted_ttl_days' => $config->acceptedTtlDays,
             'rejected_ttl_days' => $config->rejectedTtlDays,
             'show_floating_reopen' => $config->showFloatingReopen,
@@ -225,11 +217,11 @@ final readonly class ConsentService
      */
     public function trackerConfig(int $siteId): ?array
     {
-        $item = $this->cache->getItem('tracker_config_' . $siteId);
-        if ($item->isHit()) {
-            $cached = $item->get();
-
-            if (!\is_array($cached) || $cached === []) {
+        $item = $this->cache->getItem(self::TRACKER_CONFIG_CACHE . $siteId);
+        $cached = $item->isHit() ? $item->get() : null;
+        // A block cached before the stylesheet existed (the deploy that introduced it) is rebuilt.
+        if (\is_array($cached) && ($cached === [] || isset($cached['css']))) {
+            if ($cached === []) {
                 return null;
             }
             $out = [];
@@ -247,23 +239,56 @@ final readonly class ConsentService
         return $value;
     }
 
+    /**
+     * The consent block an unsaved configuration would produce — what the dashboard preview renders
+     * with the real banner module. Validated exactly like {@see self::saveDraft()} (same 422s);
+     * nothing is stored. `v` and `rev` are those the configuration would get if it were saved as
+     * the draft and published without a material change.
+     *
+     * @return array<string, mixed>
+     */
+    public function preview(int $siteId, Input $input): array
+    {
+        $values = self::validate($input);
+        $draft = $this->draft($siteId);
+        $published = $this->published($siteId);
+        $revision = $draft->revision ?? (($published->revision ?? 0) + 1);
+
+        return self::trackerBlock($values['texts'], $values['policy_urls'], $values['default_locale'], $values['theme'], $values['accepted_ttl_days'], $values['rejected_ttl_days'], $values['show_floating_reopen'], $published->consentVersion ?? 1, $revision);
+    }
+
     /** @return array<string, mixed> */
     private function buildTrackerConfig(ConsentConfig $config): array
     {
-        $texts = [];
-        foreach ($config->texts as $locale => $values) {
-            $texts[$locale] = $values + ['policyUrl' => $config->policyUrls[$locale] ?? ($config->policyUrls[$config->defaultLocale] ?? '')];
+        return self::trackerBlock($config->texts, $config->policyUrls, $config->defaultLocale, $config->theme, $config->acceptedTtlDays, $config->rejectedTtlDays, $config->showFloatingReopen, $config->consentVersion, $config->revision);
+    }
+
+    /**
+     * @param array<string, array<string, string>> $texts
+     * @param array<string, string> $policyUrls
+     * @param array<array-key, mixed> $theme stored theme (v1 or v2)
+     *
+     * @return array<string, mixed>
+     */
+    private static function trackerBlock(array $texts, array $policyUrls, string $defaultLocale, array $theme, int $acceptedTtlDays, int $rejectedTtlDays, bool $floatingReopen, int $consentVersion, int $revision): array
+    {
+        $localised = [];
+        foreach ($texts as $locale => $values) {
+            $localised[$locale] = $values + ['policyUrl' => $policyUrls[$locale] ?? ($policyUrls[$defaultLocale] ?? '')];
         }
 
+        $v2 = ConsentThemeV2::fromStored($theme);
+
         return [
-            'v' => $config->consentVersion,
-            'rev' => $config->revision,
-            'dl' => $config->defaultLocale,
-            'at' => $config->acceptedTtlDays,
-            'rt' => $config->rejectedTtlDays,
-            'fl' => $config->showFloatingReopen,
-            'theme' => $config->theme,
-            'texts' => $texts,
+            'v' => $consentVersion,
+            'rev' => $revision,
+            'dl' => $defaultLocale,
+            'at' => $acceptedTtlDays,
+            'rt' => $rejectedTtlDays,
+            'fl' => $floatingReopen,
+            'css' => BannerStylesheet::compile($v2),
+            'ri' => BannerStylesheet::iconPath($v2),
+            'texts' => $localised,
         ];
     }
 }

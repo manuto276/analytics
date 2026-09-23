@@ -1,4 +1,6 @@
-import { d, type Texts } from '../config';
+import type { Texts } from '../config';
+
+const d = document;
 
 export const h = (tag: string, at: Record<string, string>, ...kids: (Node | string)[]): HTMLElement => {
   const e = d.createElement(tag);
@@ -7,15 +9,16 @@ export const h = (tag: string, at: Record<string, string>, ...kids: (Node | stri
   return e;
 };
 
+/** Accept and Reject are built by this one function: same tag, class and attributes (Garante B2). */
 const btn = (cls: string, text: string, extra: Record<string, string> = {}): HTMLElement =>
   h('button', { type: 'button', class: cls, ...extra }, text);
 
-export const dialog = (tx: Texts, lang: string, pos?: string): HTMLElement => {
+export const dialog = (tx: Texts, lang: string): HTMLElement => {
   const u = tx.policyUrl;
   return h(
     'div',
     {
-      class: 'b' + (pos == 'bottom-left' ? ' l' : pos == 'bottom-right' ? ' r' : ''),
+      class: 'b',
       role: 'dialog',
       'aria-modal': 'false',
       'aria-labelledby': 't',
@@ -35,5 +38,25 @@ export const dialog = (tx: Texts, lang: string, pos?: string): HTMLElement => {
   );
 };
 
-export const reopen = (tx: Texts, lang: string, pos?: string): HTMLElement =>
-  btn('k f' + (pos == 'bottom-right' ? ' r' : ''), tx.reopen || tx.title, { lang, 'data-o': '' });
+const NS = 'http://www.w3.org/2000/svg';
+
+/**
+ * Floating reopen button: icon (`.i`) and label (`.t`); the stylesheet shows either or both per
+ * device. The aria-label keeps an icon-only button named.
+ */
+export const reopen = (tx: Texts, lang: string, path?: string): HTMLElement => {
+  const t = tx.reopen || tx.title;
+  const kids: Node[] = [];
+  if (path) {
+    const s = d.createElementNS(NS, 'svg');
+    const p = d.createElementNS(NS, 'path');
+    s.setAttribute('viewBox', '0 0 24 24');
+    s.setAttribute('aria-hidden', 'true');
+    s.setAttribute('class', 'i');
+    p.setAttribute('d', path);
+    s.append(p);
+    kids.push(s);
+  }
+  kids.push(h('span', { class: 't' }, t));
+  return h('button', { type: 'button', class: 'f', 'aria-label': t, lang, 'data-o': '' }, ...kids);
+};

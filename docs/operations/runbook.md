@@ -194,7 +194,14 @@ the correct text with `material_change: false` and let the re-asking pass. The c
 the size of the effect.
 
 **If the theme fails the contrast check**, the API refuses to save it (`422 validation_failed` naming
-`theme.fg` or `theme.acf`) — that is by design; pick compliant colours.
+the field: `theme.colors.text`, `theme.colors.accentText`, `theme.colors.link`, `theme.reopen.text`;
+`theme.fg`/`theme.acf` for a v1 theme) — that is by design; pick compliant colours. Custom CSS errors
+come back under `theme.css` as `Line L, column C: …`
+([../integration/consent-banner.md](../integration/consent-banner.md#custom-css)).
+
+**If the banner shows up unstyled, or not at all, on a site with the cookie level on**, check that the
+release has `resources/tracker/banner.js` (`bin/analytics app:preflight` reports `tracker:banner.js`;
+in production a missing file is a failure and is logged as an error on every script build).
 
 **Verify.**
 
@@ -202,7 +209,8 @@ the size of the effect.
 curl -s https://stats.example.net/t/pk_XXXXXXXXXXXXXXXXXXXXX.js | head -c 400
 ```
 
-The `window.__an_cfg` block shows the published `consent.v`, texts and theme.
+The `window.__an_cfg` block shows the published `consent.v`, the texts and the compiled stylesheet
+(`consent.css`); the banner module follows it, then the core.
 
 ---
 

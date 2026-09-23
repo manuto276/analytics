@@ -1,15 +1,53 @@
 # Tracker contract
 
-The tracker (`services/tracker`) is a dependency-free TypeScript bundle built by esbuild as an ES2019 IIFE.
-The API (`GET /t/{publicKey}.js`) serves it as:
+The tracker (`services/tracker`) is a dependency-free TypeScript code base built by esbuild into two
+ES2019 IIFEs:
+
+| File | Contents | Budget (gzip, `pnpm size`) |
+|---|---|---|
+| `dist/tracker.js` | the core: config, ids, cookies, consent state machine, collector, transport, SPA, DOM hooks, JS API | ≤ 5.0 KB |
+| `dist/banner.js` | the consent banner UI (`src/banner/*`): shadow root, dialog, floating reopen button | ≤ 4.0 KB |
+| both | what a site with the cookie level on downloads | ≤ 9.0 KB |
+
+The API (`GET /t/{publicKey}.js`) serves one file:
 
 ```
 /*! analytics | AGPL-3.0-or-later | source: https://github.com/manuto276/analytics */
 window.__an_cfg=<JSON config>;
-<contents of services/tracker/dist/tracker.js>
+<contents of dist/banner.js>      ← only when the site has the cookie level on (cfg.c)
+<contents of dist/tracker.js>
 ```
 
-The bundle file is copied into `services/api/resources/tracker/tracker.js` at build/package time.
+Both files are copied into `services/api/resources/tracker/` at build/package time (`pnpm build:api`,
+the Docker `node-build` stage). `ScriptBundleBuilder` strips their build headers, and its ETag covers
+the config and both files. Sites without the cookie level never download the banner.
+
+**Module boundary.** `banner.js` runs first and only registers a factory on the private global
+`window.__an_b`: `(consentCfg, decide, open) => {show, fab, close}`. The core's `initConsent()` calls
+it when the cookie level is enabled and keeps the returned object; every banner call is guarded, so
+the core works without the module (consent API, cookies and counters behave the same; nothing is
+drawn and no `cs: shown` is counted). The banner module holds no consent state: choices go back
+through the core's `decide()`.
+
+**Styling is compiled by the server.** The tracker contains no CSS builder. The API compiles the
+site's theme (v2, or v1 upgraded on read) and the vetted custom CSS into one stylesheet
+(`Consent\Application\BannerStylesheet`) and ships it as `consent.css`; the banner applies it with
+`adoptedStyleSheets` (a `<style>` fallback) inside its shadow root. The DOM uses fixed short class
+names and no inline styles:
+
+| Class / element | Part |
+|---|---|
+| `.b` | the dialog (`role="dialog"`) |
+| `h2`, `p`, `a` | title, body, policy link |
+| `.a` | actions row |
+| `.k` | Accept **and** Reject — same class, same attributes (`data-a`/`data-r` are click hooks the stylesheet never uses) |
+| `.x` | close `×` |
+| `.f`, `.i`, `.t` | floating reopen button, its icon (`<svg>`), its label |
+
+**Missing files are loud.** Without `tracker.js` the endpoint serves a no-op stub that keeps the
+queue, and without `banner.js` no banner; in production each build of a bundle then logs an error
+and `app:preflight` fails (`tracker:tracker.js`, `tracker:banner.js`), so a broken release cannot go
+live silently. In development they are warnings.
 
 ## `window.__an_cfg`
 
@@ -35,7 +73,8 @@ The bundle file is copied into `services/api/resources/tracker/tracker.js` at bu
     "at": 180,                       // accepted TTL days
     "rt": 180,                       // rejected TTL days
     "fl": true,                      // show floating reopen button after a choice
-    "theme": { "bg": "#ffffff", "fg": "#111827", "ac": "#1d4ed8", "acf": "#ffffff", "rad": 8, "pos": "bottom" },  // pos: bottom|bottom-left|bottom-right
+    "css": ".b,.f{position:fixed;…}", // the whole banner stylesheet, compiled by the server from the theme (+ custom CSS)
+    "ri": "M12 3l7 3v5c0 4.5…",      // reopen icon: SVG path data (24×24, stroked) from the server's fixed allowlist
     "texts": {
       "en": { "title": "…", "body": "…", "accept": "Accept", "reject": "Reject", "close": "Close", "policy": "Privacy policy", "policyUrl": "https://www.example.com/privacy", "reopen": "Cookie settings" },
       "it": { "…": "…" }

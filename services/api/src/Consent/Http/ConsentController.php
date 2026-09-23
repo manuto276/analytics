@@ -6,6 +6,7 @@ namespace Analytics\Consent\Http;
 
 use Analytics\Audit\Application\AuditLogger;
 use Analytics\Consent\Application\ConsentService;
+use Analytics\Consent\Domain\ConsentThemeV2;
 use Analytics\Kernel\Http\RequestContext;
 use Analytics\Shared\Crypto\Base64Url;
 use Analytics\Shared\Http\ApiProblem;
@@ -36,8 +37,20 @@ final readonly class ConsentController
         return $this->responder->data([
             'published' => $published === null ? null : ConsentService::toArray($published),
             'draft' => $draft === null ? null : ConsentService::toArray($draft),
-            'defaults' => ConsentService::defaults(),
+            'defaults' => ConsentService::defaults() + ['theme_v2' => ConsentThemeV2::defaults()->toArray()],
         ]);
+    }
+
+    /**
+     * The consent block of window.__an_cfg that an unsaved configuration would produce (compiled
+     * stylesheet, reopen icon, texts…), for the dashboard preview. Same validation as saving the
+     * draft; nothing is stored, so nothing is audited.
+     */
+    public function preview(ServerRequestInterface $request): ResponseInterface
+    {
+        $site = RequestContext::site($request);
+
+        return $this->responder->data($this->consent->preview($site->id(), RequestContext::body($request)));
     }
 
     public function saveDraft(ServerRequestInterface $request): ResponseInterface

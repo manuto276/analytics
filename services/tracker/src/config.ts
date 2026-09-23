@@ -9,15 +9,6 @@ export interface Texts {
   reopen?: string;
 }
 
-export interface Theme {
-  bg?: string;
-  fg?: string;
-  ac?: string;
-  acf?: string;
-  rad?: number;
-  pos?: 'bottom' | 'bottom-left' | 'bottom-right';
-}
-
 export interface ConsentCfg {
   v: number;
   rev?: number;
@@ -25,9 +16,22 @@ export interface ConsentCfg {
   at: number;
   rt: number;
   fl?: boolean;
-  theme?: Theme;
+  /** The whole banner stylesheet, compiled by the server from the theme (and vetted custom CSS). */
+  css?: string;
+  /** SVG path (24×24 viewBox, stroked) of the reopen button icon, from the server's allowlist. */
+  ri?: string;
   texts: Record<string, Texts>;
 }
+
+export type Decision = 'accepted' | 'rejected';
+
+/** The banner module (dist/banner.js), registered as `window.__an_b` before the core runs. */
+export interface BannerUi {
+  show(focus: boolean): void;
+  fab(): void;
+  close(): void;
+}
+export type BannerFactory = (c: ConsentCfg, decide: (s: Decision, kind: string) => void, open: () => void) => BannerUi;
 
 export interface Cfg {
   k: string;

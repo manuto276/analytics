@@ -55,17 +55,22 @@ final class ConsentApiTest extends HttpTestCase
         $site = $this->factory->site();
         $this->loginAs($this->factory->admin());
         $bad = ConsentService::defaults();
-        $bad['theme']['fg'] = '#eeeeee';
-        $bad['theme']['acf'] = '#1d4ed9';
+        $bad['theme'] = ['colors' => ['text' => '#eeeeee', 'accentText' => '#1d4ed9']];
         $bad['texts']['en']['accept'] = '';
         $bad['policy_urls']['en'] = 'javascript:alert(1)';
         $bad['default_locale'] = 'fr';
         $response = $this->put('/api/v1/sites/' . $site->id() . '/consent/draft', $bad);
         $this->assertProblem($response, 422, 'validation_failed');
         $errors = $this->json($response)['errors'];
-        foreach (['theme.fg', 'theme.acf', 'texts.en.accept', 'policy_urls.en', 'default_locale'] as $field) {
+        foreach (['theme.colors.text', 'theme.colors.accentText', 'texts.en.accept', 'policy_urls.en', 'default_locale'] as $field) {
             self::assertArrayHasKey($field, $errors);
         }
+
+        // A v1 theme keeps the v1 contrast rules.
+        $v1 = ['theme' => ['bg' => '#ffffff', 'fg' => '#eeeeee', 'ac' => '#1d4ed8', 'acf' => '#1d4ed9', 'rad' => 8, 'pos' => 'bottom']] + ConsentService::defaults();
+        $response = $this->put('/api/v1/sites/' . $site->id() . '/consent/draft', $v1);
+        $this->assertProblem($response, 422, 'validation_failed');
+        self::assertSame(['theme.fg', 'theme.acf'], array_keys($this->json($response)['errors']));
 
         self::assertSame(21.0, ContrastChecker::ratio('#000000', '#ffffff'));
         self::assertGreaterThan(4.5, ContrastChecker::ratio('#ffffff', '#1d4ed8'));

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { css } from '../src/banner/styles';
 import {
   advanceTime,
   api,
@@ -39,7 +38,7 @@ describe('banner', () => {
     Object.defineProperty(proto, 'adoptedStyleSheets', { configurable: true, get: () => undefined, set: () => undefined });
     try {
       await load();
-      expect(shadow().querySelector('style')!.textContent).toContain('.b,.f{position:fixed');
+      expect(shadow().querySelector('style')!.textContent).toBe('.b{position:fixed}.k{color:#fff}');
     } finally {
       Object.defineProperty(proto, 'adoptedStyleSheets', desc);
     }
@@ -76,6 +75,25 @@ describe('banner', () => {
     expect(a.getAttribute('style')).toBe(r.getAttribute('style'));
     expect(a.parentElement).toBe(r.parentElement);
     expect([a.textContent, r.textContent]).toEqual(['Accept', 'Reject']);
+    // Stronger than "same class": apart from the hook that tells them apart for the click handler
+    // (data-a / data-r, which the compiled stylesheet never references), the two buttons carry
+    // exactly the same attributes, no inline style and no children other than their label, and
+    // they are the only two children of the actions row. Nothing a stylesheet can select
+    // (class, type, attribute, :first-child aside) distinguishes one from the other.
+    const attrs = (el: Element): string[][] =>
+      Array.from(el.attributes)
+        .filter((x) => x.name != 'data-a' && x.name != 'data-r')
+        .map((x) => [x.name, x.value]);
+    expect(attrs(a)).toEqual(attrs(r));
+    expect(attrs(a)).toEqual([
+      ['type', 'button'],
+      ['class', 'k'],
+    ]);
+    expect(a.hasAttribute('style') || r.hasAttribute('style')).toBe(false);
+    expect([a.childNodes.length, r.childNodes.length]).toEqual([1, 1]);
+    expect(Array.from(a.parentElement!.children)).toEqual([r, a]);
+    expect(a.parentElement!.className).toBe('a');
+    expect(shadow().querySelectorAll('.k')).toHaveLength(2);
   });
 
   it.each([
@@ -140,13 +158,17 @@ describe('banner', () => {
   });
 
   it('shows a floating reopen button after a choice when configured', async () => {
-    const env = installDom({ cfg: makeConfig({ consent: makeConsent({ fl: true, theme: { pos: 'bottom-right' } }) }) });
+    const env = installDom({ cfg: makeConfig({ consent: makeConsent({ fl: true }) }) });
     await load();
     expect(shadow().querySelector('[data-o]')).toBeNull();
     click(dialogEl()!.querySelector('[data-r]'));
     const fab = shadow().querySelector('[data-o]')!;
     expect(fab.textContent).toBe('Cookie settings');
-    expect(fab.className).toBe('k f r');
+    expect(fab.tagName).toBe('BUTTON');
+    expect(fab.className).toBe('f');
+    expect(fab.getAttribute('type')).toBe('button');
+    expect(fab.getAttribute('aria-label')).toBe('Cookie settings');
+    expect(fab.getAttribute('lang')).toBe('en');
     expect(dialogEl()).toBeNull();
     click(fab);
     expect(dialogEl()).not.toBeNull();
@@ -158,25 +180,60 @@ describe('banner', () => {
   });
 
   it('shows the floating button on later page loads and falls back to the title', async () => {
-    const c = makeConsent({ fl: true, theme: undefined });
+    const c = makeConsent({ fl: true });
     c.texts.en.reopen = undefined;
     const env = installDom({ cfg: makeConfig({ consent: c }) });
     setCookie(env, consentCookie(3, 'a', today()));
     await load();
     const fab = shadow().querySelector('[data-o]')!;
     expect(fab.textContent).toBe('Cookies');
-    expect(fab.className).toBe('k f');
+    expect(fab.getAttribute('aria-label')).toBe('Cookies');
+    expect(fab.className).toBe('f');
     expect(dialogEl()).toBeNull();
   });
 
-  it('applies the position class', async () => {
-    installDom({ cfg: makeConfig({ consent: makeConsent({ theme: { pos: 'bottom-left' } }) }) });
+  it('renders the reopen icon from the configured path, hidden from assistive technology', async () => {
+    const c = makeConsent({ fl: true });
+    const env = installDom({ cfg: makeConfig({ consent: c }) });
+    setCookie(env, consentCookie(3, 'r', today()));
     await load();
-    expect(dialogEl()!.className).toBe('b l');
-    cleanupDom();
-    installDom({ cfg: makeConfig({ consent: makeConsent({ theme: { pos: 'bottom-right' } }) }) });
+    const fab = shadow().querySelector('[data-o]')!;
+    const svg = fab.querySelector('svg')!;
+    expect(svg.namespaceURI).toBe('http://www.w3.org/2000/svg');
+    expect(svg.getAttribute('class')).toBe('i');
+    expect(svg.getAttribute('viewBox')).toBe('0 0 24 24');
+    expect(svg.getAttribute('aria-hidden')).toBe('true');
+    expect(svg.querySelector('path')!.getAttribute('d')).toBe(c.ri);
+    expect(fab.querySelector('span.t')!.textContent).toBe('Cookie settings');
+    // icon first, then the label: the stylesheet decides which one is visible per device
+    expect(Array.from(fab.children).map((e) => e.tagName.toLowerCase())).toEqual(['svg', 'span']);
+    expect(fab.hasAttribute('style')).toBe(false);
+  });
+
+  it('renders a text-only reopen button when no icon path is configured', async () => {
+    const env = installDom({ cfg: makeConfig({ consent: makeConsent({ fl: true, ri: undefined }) }) });
+    setCookie(env, consentCookie(3, 'a', today()));
     await load();
-    expect(dialogEl()!.className).toBe('b r');
+    const fab = shadow().querySelector('[data-o]')!;
+    expect(fab.querySelector('svg')).toBeNull();
+    expect(fab.textContent).toBe('Cookie settings');
+  });
+
+  it('uses fixed class names and no inline styles: layout comes from the stylesheet', async () => {
+    installDom();
+    await load();
+    const d = dialogEl()!;
+    expect(d.className).toBe('b');
+    expect(d.querySelector('.a')).not.toBeNull();
+    expect(d.querySelector('.x')).not.toBeNull();
+    expect(shadow().querySelectorAll('[style]')).toHaveLength(0);
+  });
+
+  it('applies an empty stylesheet when the config carries none', async () => {
+    installDom({ cfg: makeConfig({ consent: makeConsent({ css: undefined }) }) });
+    await load();
+    expect(shadow().adoptedStyleSheets).toHaveLength(1);
+    expect(dialogEl()).not.toBeNull();
   });
 
   it('waits for the body when loaded from <head>', async () => {
@@ -191,26 +248,35 @@ describe('banner', () => {
   });
 });
 
-describe('banner styles', () => {
-  it('uses theme colors and radius, with motion and forced-colors support', () => {
-    const s = css({ bg: '#000000', fg: '#fafafa', ac: '#ff0000', acf: '#00ff00', rad: 12 });
-    expect(s).toContain('background:#000000');
-    expect(s).toContain('color:#fafafa');
-    expect(s).toContain('border:2px solid #ff0000');
-    expect(s).toContain('color:#00ff00');
-    expect(s).toContain('border-radius:12px');
-    expect(s).toContain('@media (prefers-reduced-motion:reduce)');
-    expect(s).toContain('@media (forced-colors:active)');
-    expect(s).toContain(':focus-visible');
+describe('core without the banner module', () => {
+  it('keeps consent working when the banner module is absent', async () => {
+    const env = installDom();
+    await load({ banner: false });
+    expect(bannerHost()).toBeNull();
+    expect(api().consent.get().status).toBe('unknown');
+    api().consent.open();
+    expect(bannerHost()).toBeNull();
+    api().consent.set('accepted');
+    expect(api().consent.get().status).toBe('accepted');
+    expect(api().getVisitorId()).toMatch(/^[\w-]{22}$/);
+    advanceTime(1000);
+    // no banner was displayed, so no `shown` counter
+    expect(env.events().filter((e) => e.t == 'cs').map((e) => e.cs)).toEqual(['reopen', 'accept']);
   });
 
-  it('rejects unsafe theme values', () => {
-    const s = css({ bg: 'red;}*{display:none', fg: '#12', rad: 500 });
-    expect(s).not.toContain('display:none');
-    expect(s).toContain('background:#fff');
-    expect(s).toContain('color:#111');
-    expect(s).toContain('border-radius:32px');
-    expect(css({ rad: -3 })).toContain('border-radius:0px');
-    expect(css()).toContain('border-radius:8px');
+  it('keeps a stored decision without the banner module: ids at the cookie level, no floating button', async () => {
+    const env = installDom({ cfg: makeConfig({ consent: makeConsent({ fl: true }) }) });
+    setCookie(env, consentCookie(3, 'a', today()));
+    await load({ banner: false });
+    expect(bannerHost()).toBeNull();
+    expect(api().consent.get().status).toBe('accepted');
+    expect(api().getVisitorId()).toMatch(/^[\w-]{22}$/);
+  });
+
+  it('shows the banner only for the configuration the core was given', async () => {
+    installDom({ cfg: makeConfig({ c: false }) });
+    await load();
+    expect(bannerHost()).toBeNull();
+    expect(typeof (window as unknown as Record<string, unknown>).__an_b).toBe('function');
   });
 });

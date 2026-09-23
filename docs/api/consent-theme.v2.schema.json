@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/manuto276/analytics/docs/api/consent-theme.v2.schema.json",
+  "title": "Consent banner theme v2",
+  "description": "The `theme` of a consent configuration (PUT /sites/{siteId}/consent/draft). Every field is optional on write: missing fields take the defaults shown here, and the stored theme is complete. The server compiles it (with the custom CSS) into the banner stylesheet sent as `consent.css` in window.__an_cfg. v1 themes (bg, fg, ac, acf, rad, pos) are still accepted and are upgraded on read; the two shapes cannot be mixed. See docs/integration/consent-banner.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "colors": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "One button style for both Accept and Reject: there is deliberately no secondary button colour (Garante 2021, B2). Contrast of at least 4.5:1 is required for text/background, accentText/accent, link/background.",
+      "properties": {
+        "background": { "$ref": "#/$defs/color", "default": "#ffffff" },
+        "text": { "$ref": "#/$defs/color", "default": "#111827" },
+        "accent": { "$ref": "#/$defs/color", "default": "#1d4ed8", "description": "Background and border of Accept and Reject; focus ring." },
+        "accentText": { "$ref": "#/$defs/color", "default": "#ffffff", "description": "Text on Accept and Reject." },
+        "border": { "$ref": "#/$defs/color", "default": "#e5e7eb", "description": "Banner border (see border.width)." },
+        "link": { "$ref": "#/$defs/color", "default": "#1d4ed8", "description": "Privacy policy link." },
+        "backdrop": {
+          "type": ["string", "null"],
+          "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$",
+          "default": null,
+          "description": "Page tint around a `center` banner (#rrggbb or #rrggbbaa). Painted only: the page stays usable (no blocking overlay)."
+        }
+      }
+    },
+    "font": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "family": {
+          "type": "string",
+          "maxLength": 200,
+          "default": "inherit",
+          "description": "`inherit` (the page's font), `system` (a system-font stack) or a comma-separated list of family names: letters, digits, spaces, - and _, optionally quoted. Fonts are never downloaded.",
+          "pattern": "^(inherit|system|\\s*(\"[A-Za-z0-9 _-]+\"|'[A-Za-z0-9 _-]+'|-?[A-Za-z][A-Za-z0-9 _-]*)\\s*(,\\s*(\"[A-Za-z0-9 _-]+\"|'[A-Za-z0-9 _-]+'|-?[A-Za-z][A-Za-z0-9 _-]*)\\s*)*)$"
+        },
+        "size": { "type": ["integer", "null"], "minimum": 12, "maximum": 20, "default": null, "description": "px; null inherits the page's font size." },
+        "lineHeight": { "type": "number", "minimum": 1, "maximum": 2, "default": 1.5 }
+      }
+    },
+    "shape": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "radius": { "type": "integer", "minimum": 0, "maximum": 32, "default": 8, "description": "Banner corners, px." },
+        "buttonRadius": { "type": "integer", "minimum": 0, "maximum": 999, "default": 8, "description": "Accept, Reject and reopen button corners, px (999 = pill)." }
+      }
+    },
+    "spacing": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "padding": { "type": "integer", "minimum": 8, "maximum": 48, "default": 16, "description": "Banner padding, px." },
+        "gap": { "type": "integer", "minimum": 0, "maximum": 32, "default": 8, "description": "Space between the buttons, px." }
+      }
+    },
+    "border": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "width": { "type": "integer", "minimum": 0, "maximum": 4, "default": 0, "description": "Banner border width, px (colour: colors.border)." }
+      }
+    },
+    "shadow": { "enum": ["none", "sm", "md", "lg"], "default": "md" },
+    "layout": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "breakpoint": { "type": "integer", "minimum": 480, "maximum": 1024, "default": 640, "description": "Viewports this wide or narrower (px) use the mobile layout." },
+        "desktop": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "position": { "enum": ["bottom", "bottom-left", "bottom-right", "top", "center"], "default": "bottom" },
+            "maxWidth": { "type": "integer", "minimum": 280, "maximum": 1200, "default": 576, "description": "px; the banner never exceeds the viewport minus two offsets." },
+            "offset": { "type": "integer", "minimum": 0, "maximum": 64, "default": 16, "description": "Distance from the viewport edges, px." },
+            "buttons": { "$ref": "#/$defs/buttons" }
+          }
+        },
+        "mobile": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Every mobile position spans the viewport with equal side gaps (sheet: none) and respects the safe-area insets.",
+          "properties": {
+            "position": { "enum": ["bottom", "top", "center", "sheet"], "default": "bottom" },
+            "offset": { "type": "integer", "minimum": 0, "maximum": 32, "default": 16 },
+            "buttons": { "$ref": "#/$defs/buttons" }
+          }
+        }
+      }
+    },
+    "reopen": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Floating button that reopens the preferences after a choice (when show_floating_reopen is on). It always has an aria-label with the `reopen` text, so the icon-only variant stays accessible.",
+      "properties": {
+        "icon": { "enum": ["cookie", "shield", "fingerprint", "settings"], "default": "cookie" },
+        "size": { "enum": ["sm", "md", "lg"], "default": "md" },
+        "background": { "type": ["string", "null"], "pattern": "^#[0-9a-fA-F]{6}$", "default": null, "description": "null: colors.accent." },
+        "text": { "type": ["string", "null"], "pattern": "^#[0-9a-fA-F]{6}$", "default": null, "description": "null: colors.accentText. Contrast with the background of at least 4.5:1." },
+        "desktop": { "$ref": "#/$defs/reopenPlacement", "default": { "variant": "text", "position": "bottom-left", "offset": 16 } },
+        "mobile": { "$ref": "#/$defs/reopenPlacement", "default": { "variant": "icon", "position": "bottom-left", "offset": 16 } }
+      }
+    },
+    "css": {
+      "type": "string",
+      "maxLength": 8192,
+      "default": "",
+      "description": "Custom CSS (at most 8192 bytes) written with the public class names .banner .title .body .link .actions .button .close .reopen .reopen-icon, with :hover, :focus-visible, :active and @media blocks. Selectors and properties are checked against allowlists; errors come back as 422 under theme.css with line and column. See docs/integration/consent-banner.md."
+    }
+  },
+  "$defs": {
+    "color": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+    "buttons": { "enum": ["row", "stack"], "default": "row", "description": "Accept and Reject side by side, or one above the other." },
+    "reopenPlacement": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "variant": { "enum": ["text", "icon", "icon-text", "hidden"] },
+        "position": { "enum": ["bottom-left", "bottom-right"] },
+        "offset": { "type": "integer", "minimum": 0, "maximum": 64, "description": "Distance from the viewport corner, px." }
+      }
+    }
+  }
+}
