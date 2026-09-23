@@ -1703,7 +1703,9 @@ export interface paths {
                             data: {
                                 published: components["schemas"]["ConsentConfig"] | null;
                                 draft: components["schemas"]["ConsentConfig"] | null;
-                                defaults: components["schemas"]["ConsentConfigInput"];
+                                defaults: components["schemas"]["ConsentConfigInput"] & {
+                                    theme_v2: components["schemas"]["ConsentThemeV2"];
+                                };
                             };
                         };
                     };
@@ -1781,6 +1783,63 @@ export interface paths {
                 default: components["responses"]["Problem"];
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sites/{siteId}/consent/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                siteId: components["parameters"]["SiteId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Compile an unsaved configuration into the tracker's consent block (site admin; nothing is stored)
+         * @description Validates the body exactly like `PUT …/consent/draft` (same 422 errors, e.g. custom CSS
+         *     problems under `theme.css` as "Line L, column C: …") and returns the `consent` block of
+         *     `window.__an_cfg` the site would receive: compiled stylesheet, reopen icon, texts per locale.
+         *     The dashboard preview feeds it to the real banner module (`dist/banner.js`).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    siteId: components["parameters"]["SiteId"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ConsentConfigInput"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["ConsentTrackerConfig"];
+                        };
+                    };
+                };
+                401: components["responses"]["Problem"];
+                403: components["responses"]["Problem"];
+                404: components["responses"]["Problem"];
+                422: components["responses"]["Problem"];
+                default: components["responses"]["Problem"];
+            };
+        };
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -4949,7 +5008,8 @@ export interface components {
             policy: string;
             reopen: string;
         };
-        ConsentTheme: {
+        /** @description Theme v1 (deprecated). Still accepted on write and stored as sent; read it upgraded as `theme_v2`. Cannot be mixed with v2 keys. */
+        ConsentThemeV1: {
             bg: string;
             fg: string;
             ac: string;
@@ -4957,6 +5017,84 @@ export interface components {
             rad: number;
             /** @enum {string} */
             pos: "bottom" | "bottom-left" | "bottom-right";
+        };
+        /**
+         * @description Theme v2 (docs/api/consent-theme.v2.schema.json, docs/integration/consent-banner.md). Every field is
+         *     optional on write (missing fields take the defaults); the stored theme and `theme_v2` are complete.
+         *     The server compiles it, with the vetted custom CSS, into the banner stylesheet.
+         */
+        ConsentThemeV2: {
+            /** @description One button style for Accept and Reject (no secondary colour, Garante 2021 B2). Contrast ≥ 4.5:1 for text/background, accentText/accent, link/background. */
+            colors?: {
+                background?: string;
+                text?: string;
+                accent?: string;
+                accentText?: string;
+                border?: string;
+                link?: string;
+                /** @description Page tint around a `center` banner; painted only, never blocks the page */
+                backdrop?: string | null;
+            };
+            font?: {
+                /** @description `inherit`, `system` or a list of family names (letters, digits, spaces, - and _, optionally quoted); fonts are never downloaded */
+                family?: string;
+                /** @description px; null inherits the page font size */
+                size?: number | null;
+                lineHeight?: number;
+            };
+            shape?: {
+                radius?: number;
+                buttonRadius?: number;
+            };
+            spacing?: {
+                padding?: number;
+                gap?: number;
+            };
+            border?: {
+                width?: number;
+            };
+            /** @enum {string} */
+            shadow?: "none" | "sm" | "md" | "lg";
+            layout?: {
+                /** @description Viewports this wide or narrower use the mobile layout */
+                breakpoint?: number;
+                desktop?: {
+                    /** @enum {string} */
+                    position?: "bottom" | "bottom-left" | "bottom-right" | "top" | "center";
+                    maxWidth?: number;
+                    offset?: number;
+                    /** @enum {string} */
+                    buttons?: "row" | "stack";
+                };
+                mobile?: {
+                    /** @enum {string} */
+                    position?: "bottom" | "top" | "center" | "sheet";
+                    offset?: number;
+                    /** @enum {string} */
+                    buttons?: "row" | "stack";
+                };
+            };
+            reopen?: {
+                /** @enum {string} */
+                icon?: "cookie" | "shield" | "fingerprint" | "settings";
+                /** @enum {string} */
+                size?: "sm" | "md" | "lg";
+                /** @description null: colors.accent */
+                background?: string | null;
+                /** @description null: colors.accentText */
+                text?: string | null;
+                desktop?: components["schemas"]["ConsentReopenPlacement"];
+                mobile?: components["schemas"]["ConsentReopenPlacement"];
+            };
+            /** @description Custom CSS with the public class names (.banner .title .body .link .actions .button .close .reopen .reopen-icon); selector and property allowlists; errors come back as 422 under `theme.css`, "Line L, column C: …" */
+            css?: string;
+        };
+        ConsentReopenPlacement: {
+            /** @enum {string} */
+            variant?: "text" | "icon" | "icon-text" | "hidden";
+            /** @enum {string} */
+            position?: "bottom-left" | "bottom-right";
+            offset?: number;
         };
         ConsentConfigInput: {
             texts: {
@@ -4966,12 +5104,14 @@ export interface components {
                 [key: string]: string;
             };
             default_locale: string;
-            theme: components["schemas"]["ConsentTheme"];
+            theme: components["schemas"]["ConsentThemeV2"] | components["schemas"]["ConsentThemeV1"];
             accepted_ttl_days: number;
             rejected_ttl_days: number;
             show_floating_reopen: boolean;
         };
         ConsentConfig: components["schemas"]["ConsentConfigInput"] & {
+            /** @description The theme as the banner uses it — `theme` upgraded to v2 when it is still v1, complete with defaults. */
+            theme_v2: components["schemas"]["ConsentThemeV2"];
             id: number;
             revision: number;
             consent_version: number;
@@ -4983,6 +5123,30 @@ export interface components {
             published_at: string | null;
             published_by: number | null;
             contrast_warnings?: string[];
+        };
+        /** @description The `consent` block of window.__an_cfg (docs/architecture/tracker.md), as served in /t/{publicKey}.js. */
+        ConsentTrackerConfig: {
+            /** @description consent_version (for a preview: the version after publishing without a material change) */
+            v: number;
+            /** @description revision (for a preview: the revision the draft has or would get) */
+            rev: number;
+            /** @description default locale */
+            dl: string;
+            /** @description accepted_ttl_days */
+            at: number;
+            /** @description rejected_ttl_days */
+            rt: number;
+            /** @description show_floating_reopen */
+            fl: boolean;
+            /** @description The whole banner stylesheet, compiled from the theme and the vetted custom CSS */
+            css: string;
+            /** @description SVG path (24×24 viewBox) of the reopen icon */
+            ri: string;
+            texts: {
+                [key: string]: components["schemas"]["ConsentTexts"] & {
+                    policyUrl: string;
+                };
+            };
         };
         ApiKey: {
             id: number;

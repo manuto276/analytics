@@ -32,19 +32,44 @@ export function meetsContrast(a: string, b: string, minimum = WCAG_AA_NORMAL): b
   return !Number.isNaN(ratio) && ratio >= minimum
 }
 
-export interface ThemeContrast {
-  text: number
-  action: number
-  textOk: boolean
-  actionOk: boolean
+export type ContrastPairKey = 'text' | 'accentText' | 'link' | 'reopen'
+
+export interface ContrastPair {
+  key: ContrastPairKey
+  /** Field the server reports the failure under (theme.colors.text…). */
+  field: string
+  foreground: string
+  background: string
+  ratio: number
   ok: boolean
 }
 
-/** Banner text on background (fg/bg) and button text on accent (acf/ac) must both reach 4.5:1. */
-export function themeContrast(theme: { bg: string, fg: string, ac: string, acf: string }): ThemeContrast {
-  const text = contrastRatio(theme.fg, theme.bg)
-  const action = contrastRatio(theme.acf, theme.ac)
-  const textOk = !Number.isNaN(text) && text >= WCAG_AA_NORMAL
-  const actionOk = !Number.isNaN(action) && action >= WCAG_AA_NORMAL
-  return { text, action, textOk, actionOk, ok: textOk && actionOk }
+export interface ThemeContrast {
+  pairs: ContrastPair[]
+  ok: boolean
+}
+
+interface ContrastTheme {
+  colors: { background: string, text: string, accent: string, accentText: string, link: string }
+  reopen: { background: string | null, text: string | null }
+}
+
+/**
+ * The four pairs the server enforces at 4.5:1 (ThemeValidator): text/background, button
+ * text/button, link/background, and the reopen button's text/background (which default to the
+ * button colours).
+ */
+export function themeContrast(theme: ContrastTheme): ThemeContrast {
+  const c = theme.colors
+  const pair = (key: ContrastPairKey, field: string, foreground: string, background: string): ContrastPair => {
+    const ratio = contrastRatio(foreground, background)
+    return { key, field, foreground, background, ratio, ok: !Number.isNaN(ratio) && ratio >= WCAG_AA_NORMAL }
+  }
+  const pairs = [
+    pair('text', 'theme.colors.text', c.text, c.background),
+    pair('accentText', 'theme.colors.accentText', c.accentText, c.accent),
+    pair('link', 'theme.colors.link', c.link, c.background),
+    pair('reopen', 'theme.reopen.text', theme.reopen.text ?? c.accentText, theme.reopen.background ?? c.accent)
+  ]
+  return { pairs, ok: pairs.every(p => p.ok) }
 }

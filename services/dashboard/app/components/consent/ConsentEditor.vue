@@ -1,13 +1,25 @@
 <script setup lang="ts">
-import type { ConsentConfigInput, ConsentTexts } from '~/types'
+import type { ConsentTexts } from '~/types'
+import type { ConsentDraft } from '~/utils/consentTheme'
+import ThemeAdvanced from './theme/Advanced.vue'
+import ThemeColors from './theme/Colors.vue'
+import ThemeLayout from './theme/Layout.vue'
+import ThemeReopen from './theme/Reopen.vue'
+import ThemeShape from './theme/Shape.vue'
+import ThemeTypography from './theme/Typography.vue'
 
 const props = withDefaults(defineProps<{
   readonly?: boolean
+  /** Validation errors from the server (save or preview), by field path (theme.css, theme.colors.text…). */
+  errors?: Record<string, string[]>
 }>(), {
-  readonly: false
+  readonly: false,
+  errors: () => ({})
 })
 
-const model = defineModel<ConsentConfigInput>({ required: true })
+const model = defineModel<ConsentDraft>({ required: true })
+/** Desktop / Mobile tab of the layout and reopen sections (the page links it to the preview). */
+const device = defineModel<'desktop' | 'mobile'>('device', { default: 'desktop' })
 const activeLocale = defineModel<string>('locale', { default: 'en' })
 
 const { t } = useI18n()
@@ -25,7 +37,7 @@ const TEXT_FIELDS: { key: keyof ConsentTexts, max: number, multiline?: boolean }
 const locales = computed(() => Object.keys(model.value.texts))
 const localeTabs = computed(() => locales.value.map(code => ({ label: code.toUpperCase(), value: code })))
 const contrast = computed(() => themeContrast(model.value.theme))
-const positionItems = computed(() => (['bottom', 'bottom-left', 'bottom-right'] as const).map(value => ({ label: t(`consent.positions.${value}`), value })))
+const err = (path: string) => props.errors[path]?.[0]
 
 watch(locales, (list) => {
   if (!list.includes(activeLocale.value) && list[0]) activeLocale.value = list[0]
@@ -95,6 +107,7 @@ defineExpose({ contrast })
           :key="field.key"
           :label="t(`consent.fields.${field.key}`)"
           :name="`texts.${activeLocale}.${field.key}`"
+          :error="err(`texts.${activeLocale}.${field.key}`)"
         >
           <UTextarea
             v-if="field.multiline"
@@ -113,7 +126,7 @@ defineExpose({ contrast })
             class="w-full"
           />
         </UFormField>
-        <UFormField :label="t('consent.policyUrl')" :name="`policy_urls.${activeLocale}`">
+        <UFormField :label="t('consent.policyUrl')" :name="`policy_urls.${activeLocale}`" :error="err(`policy_urls.${activeLocale}`)">
           <UInput
             v-model="policyUrl"
             type="url"
@@ -143,67 +156,45 @@ defineExpose({ contrast })
       </template>
     </UPageCard>
 
-    <UPageCard variant="subtle" :title="t('consent.theme')">
-      <div class="grid grid-cols-2 gap-4">
-        <UFormField
-          v-for="key in (['bg', 'fg', 'ac', 'acf'] as const)"
-          :key="key"
-          :label="t(`consent.colors.${key}`)"
-          :name="`theme.${key}`"
-        >
-          <div class="flex items-center gap-2">
-            <input
-              v-model="model.theme[key]"
-              type="color"
-              class="h-8 w-10 rounded border border-default bg-transparent"
-              :disabled="props.readonly"
-              :aria-label="t(`consent.colors.${key}`)"
-            >
-            <UInput
-              v-model="model.theme[key]"
-              :disabled="props.readonly"
-              class="w-28 font-mono"
-              :data-testid="`color-${key}`"
-            />
-          </div>
-        </UFormField>
-      </div>
+    <UPageCard variant="subtle" :title="t('consent.sections.colors')">
+      <ThemeColors
+        v-model:theme="model.theme"
+        :contrast="contrast"
+        :errors="props.errors"
+        :readonly="props.readonly"
+      />
+    </UPageCard>
 
-      <div class="space-y-2" data-testid="contrast-check">
-        <UAlert
-          :color="contrast.textOk ? 'success' : 'error'"
-          variant="subtle"
-          :icon="contrast.textOk ? 'i-tabler-check' : 'i-tabler-alert-triangle'"
-          :title="t('consent.contrastText', { ratio: Number.isNaN(contrast.text) ? '—' : contrast.text.toFixed(2) })"
-          :description="contrast.textOk ? undefined : t('consent.contrastFail')"
-        />
-        <UAlert
-          :color="contrast.actionOk ? 'success' : 'error'"
-          variant="subtle"
-          :icon="contrast.actionOk ? 'i-tabler-check' : 'i-tabler-alert-triangle'"
-          :title="t('consent.contrastAction', { ratio: Number.isNaN(contrast.action) ? '—' : contrast.action.toFixed(2) })"
-          :description="contrast.actionOk ? undefined : t('consent.contrastFail')"
-        />
-      </div>
+    <UPageCard variant="subtle" :title="t('consent.sections.typography')">
+      <ThemeTypography v-model:theme="model.theme" :errors="props.errors" :readonly="props.readonly" />
+    </UPageCard>
 
-      <div class="grid grid-cols-2 gap-4">
-        <UFormField :label="t('consent.radius')" name="theme.rad">
-          <UInputNumber
-            v-model="model.theme.rad"
-            :min="0"
-            :max="24"
-            :disabled="props.readonly"
-          />
-        </UFormField>
-        <UFormField :label="t('consent.position')" name="theme.pos">
-          <USelect
-            v-model="model.theme.pos"
-            :items="positionItems"
-            :disabled="props.readonly"
-            class="w-full"
-          />
-        </UFormField>
-      </div>
+    <UPageCard variant="subtle" :title="t('consent.sections.shape')">
+      <ThemeShape v-model:theme="model.theme" :errors="props.errors" :readonly="props.readonly" />
+    </UPageCard>
+
+    <UPageCard variant="subtle" :title="t('consent.sections.layout')">
+      <ThemeLayout
+        v-model:theme="model.theme"
+        v-model:device="device"
+        :errors="props.errors"
+        :readonly="props.readonly"
+      />
+    </UPageCard>
+
+    <UPageCard variant="subtle" :title="t('consent.sections.reopen')">
+      <ThemeReopen
+        v-model:theme="model.theme"
+        v-model:device="device"
+        :contrast="contrast"
+        :enabled="model.show_floating_reopen"
+        :errors="props.errors"
+        :readonly="props.readonly"
+      />
+    </UPageCard>
+
+    <UPageCard variant="subtle" :title="t('consent.sections.advanced')" :description="t('consent.sections.advancedHint')">
+      <ThemeAdvanced v-model:theme="model.theme" :errors="props.errors" :readonly="props.readonly" />
     </UPageCard>
 
     <UPageCard variant="subtle" :title="t('consent.behaviour')">

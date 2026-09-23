@@ -26,3 +26,6 @@ logs
 # VSC
 .history
 coverage
+
+# Copied from services/tracker/dist at build time (nuxt.config.ts), never checked in
+public/_preview/banner.js

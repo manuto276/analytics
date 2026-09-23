@@ -21,11 +21,21 @@ describe('contrast', () => {
     expect(meetsContrast('bad', '#ffffff')).toBe(false)
   })
 
-  it('checks banner text and button pairs', () => {
-    expect(themeContrast({ bg: '#ffffff', fg: '#111111', ac: '#1d4ed8', acf: '#ffffff' })).toMatchObject({ textOk: true, actionOk: true, ok: true })
-    const bad = themeContrast({ bg: '#ffffff', fg: '#eeeeee', ac: '#ffff00', acf: '#ffffff' })
-    expect(bad.textOk).toBe(false)
-    expect(bad.actionOk).toBe(false)
+  it('checks the four pairs the server enforces', () => {
+    const theme = {
+      colors: { background: '#ffffff', text: '#111111', accent: '#1d4ed8', accentText: '#ffffff', link: '#1d4ed8' },
+      reopen: { background: null, text: null }
+    }
+    const good = themeContrast(theme)
+    expect(good.ok).toBe(true)
+    expect(good.pairs.map(p => p.key)).toEqual(['text', 'accentText', 'link', 'reopen'])
+    expect(good.pairs[3]).toMatchObject({ foreground: '#ffffff', background: '#1d4ed8', field: 'theme.reopen.text' })
+
+    const bad = themeContrast({
+      colors: { background: '#ffffff', text: '#eeeeee', accent: '#ffff00', accentText: '#ffffff', link: '#dddddd' },
+      reopen: { background: '#000000', text: '#111111' }
+    })
     expect(bad.ok).toBe(false)
+    expect(bad.pairs.filter(p => !p.ok).map(p => p.field)).toEqual(['theme.colors.text', 'theme.colors.accentText', 'theme.colors.link', 'theme.reopen.text'])
   })
 })

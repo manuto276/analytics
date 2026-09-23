@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import type { ApiResponse, ConsentConfig, ConsentConfigInput } from '~/types'
+import type { ApiResponse, ConsentConfig, ConsentThemeV2 } from '~/types'
+import type { ConsentDraft } from '~/utils/consentTheme'
+import type { PreviewDevice } from '~/utils/bannerPreview'
 
 const { t } = useI18n()
 const api = useApi()
@@ -22,21 +24,29 @@ const { data: history, refresh: refreshHistory } = useAsyncData<ConsentConfig[]>
   { default: () => [] }
 )
 
-function toInput(config: ConsentConfigInput): ConsentConfigInput {
+/**
+ * The editable copy of a configuration. The editor always writes theme v2: a configuration whose
+ * stored theme is still v1 opens with its upgraded `theme_v2` and is saved as v2.
+ */
+function toInput(config: Omit<ConsentDraft, 'theme'> & { theme_v2: ConsentThemeV2 }): ConsentDraft {
   return {
     texts: JSON.parse(JSON.stringify(config.texts)),
     policy_urls: { ...config.policy_urls },
     default_locale: config.default_locale,
-    theme: { ...config.theme },
+    theme: completeTheme(config.theme_v2),
     accepted_ttl_days: config.accepted_ttl_days,
     rejected_ttl_days: config.rejected_ttl_days,
     show_floating_reopen: config.show_floating_reopen
   }
 }
 
-const editing = ref<ConsentConfigInput | null>(null)
+const editing = ref<ConsentDraft | null>(null)
 const locale = ref('en')
+const device = ref<PreviewDevice>('desktop')
+/** Server validation errors of the current configuration, from the preview or from saving. */
+const errors = ref<Record<string, string[]>>({})
 watch(consent, (value) => {
+  errors.value = {}
   if (!value) {
     editing.value = null
     return
@@ -62,6 +72,11 @@ async function saveDraft(): Promise<boolean> {
     await refresh()
     return true
   } catch (error) {
+    if (isApiError(error) && error.isValidation) {
+      errors.value = error.errors
+      toast.add({ title: t('consent.saveInvalid'), color: 'error' })
+      return false
+    }
     toast.add({ title: t('errors.generic'), description: (error as Error).message, color: 'error' })
     return false
   } finally {
@@ -152,13 +167,27 @@ async function publish(materialChange: boolean) {
     />
 
     <div class="grid lg:grid-cols-2 gap-6 items-start">
-      <ConsentEditor v-model="editing" v-model:locale="locale" :readonly="!canManage" />
+      <ConsentEditor
+        v-model="editing"
+        v-model:locale="locale"
+        v-model:device="device"
+        :errors="errors"
+        :readonly="!canManage"
+      />
       <div class="space-y-6 lg:sticky lg:top-4">
         <div>
           <p class="text-sm font-medium text-highlighted mb-2">
             {{ t('consent.preview') }}
           </p>
-          <ConsentBannerPreview :config="editing" :locale="locale" />
+          <ConsentBannerPreview
+            v-if="currentSiteId"
+            v-model:device="device"
+            :config="editing"
+            :locale="locale"
+            :site-id="currentSiteId"
+            :enabled="canManage"
+            @errors="errors = $event"
+          />
         </div>
 
         <ConsentReceipts v-if="canManage && currentSite?.consent_receipts_enabled && currentSiteId" :site-id="currentSiteId" />

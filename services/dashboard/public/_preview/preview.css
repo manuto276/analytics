@@ -1,0 +1,14 @@
+/* A neutral stand-in page behind the banner preview (see banner.html). */
+html { color-scheme: light; }
+body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: #f8fafc; }
+.page { padding: 24px; max-width: 960px; margin: 0 auto; }
+.nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 40px; }
+.logo { width: 96px; height: 20px; border-radius: 4px; background: #cbd5e1; }
+.links { display: flex; gap: 16px; }
+.links i { width: 48px; height: 10px; border-radius: 4px; background: #e2e8f0; }
+.hero { margin-bottom: 32px; }
+.hero b { display: block; height: 28px; width: 70%; margin-bottom: 12px; border-radius: 6px; background: #cbd5e1; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 32px; }
+.cards div { height: 120px; border-radius: 8px; background: #e2e8f0; }
+p { height: 10px; margin: 0 0 12px; border-radius: 4px; background: #e2e8f0; }
+.short { width: 45%; }

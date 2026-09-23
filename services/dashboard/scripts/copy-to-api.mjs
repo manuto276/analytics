@@ -13,6 +13,13 @@ if (!existsSync(source)) {
   process.exit(1)
 }
 
+// The consent preview runs the tracker's real banner module (copied by nuxt.config.ts); a SPA
+// without it would ship a preview that cannot render.
+if (!existsSync(join(source, '_preview/banner.js'))) {
+  console.error('Missing .output/public/_preview/banner.js; run "pnpm build" in services/tracker, then "pnpm generate" again.')
+  process.exit(1)
+}
+
 // Remove the previous build first, so hashed assets and routes that no longer
 // exist do not pile up next to the front controller.
 for (const entry of readdirSync(target)) {

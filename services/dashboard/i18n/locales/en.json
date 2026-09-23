@@ -518,23 +518,7 @@
       "policy": "Policy link",
       "reopen": "Reopen button"
     },
-    "theme": "Theme",
-    "colors": {
-      "bg": "Background",
-      "fg": "Text",
-      "ac": "Buttons",
-      "acf": "Button text"
-    },
-    "contrastText": "Text contrast {ratio}:1",
-    "contrastAction": "Button contrast {ratio}:1",
     "contrastFail": "Contrast must be at least 4.5:1 (WCAG AA).",
-    "radius": "Corner radius",
-    "position": "Position",
-    "positions": {
-      "bottom": "Bottom bar",
-      "bottom-left": "Bottom left",
-      "bottom-right": "Bottom right"
-    },
     "behaviour": "Behaviour",
     "acceptedTtl": "Remember acceptance (days)",
     "rejectedTtl": "Remember rejection (days)",
@@ -574,6 +558,151 @@
       "draft": "Draft",
       "published": "Published",
       "archived": "Archived"
+    },
+    "saveInvalid": "Fix the highlighted fields before saving.",
+    "sections": {
+      "colors": "Colours",
+      "typography": "Typography",
+      "shape": "Shape and spacing",
+      "layout": "Layout",
+      "reopen": "Reopen button",
+      "advanced": "Advanced",
+      "advancedHint": "Custom CSS and the theme as JSON, to reuse it on other sites."
+    },
+    "devices": {
+      "desktop": "Desktop",
+      "mobile": "Mobile"
+    },
+    "colors": {
+      "background": "Background",
+      "text": "Text",
+      "accent": "Buttons",
+      "accentText": "Button text",
+      "border": "Border",
+      "link": "Link",
+      "oneButtonStyle": "Accept and Reject always share one style, so neither stands out (Garante 2021).",
+      "backdrop": "Page tint behind a centred banner",
+      "backdropHint": "Painted only: the page stays usable. #rrggbb or #rrggbbaa."
+    },
+    "contrast": {
+      "text": "Text on background",
+      "accentText": "Button text on buttons",
+      "link": "Link on background",
+      "reopen": "Reopen button text",
+      "ratio": "{ratio}:1",
+      "sample": "Aa"
+    },
+    "font": {
+      "family": "Font",
+      "familyHint": "Fonts are never downloaded: pick one the site already loads.",
+      "families": {
+        "inherit": "Same as the page",
+        "system": "System font",
+        "custom": "Font names"
+      },
+      "familyCustom": "Font family names",
+      "familyInvalid": "Use font family names separated by commas, e.g. \"Inter\", sans-serif.",
+      "size": "Text size (px)",
+      "inheritSize": "Same as the page",
+      "lineHeight": "Line height"
+    },
+    "shape": {
+      "radius": "Banner corners (px)",
+      "buttonRadius": "Button corners (px)",
+      "buttonRadiusHint": "999 makes pill-shaped buttons.",
+      "padding": "Padding (px)",
+      "gap": "Space between buttons (px)",
+      "borderWidth": "Border width (px)",
+      "shadow": "Shadow",
+      "shadows": {
+        "none": "None",
+        "sm": "Small",
+        "md": "Medium",
+        "lg": "Large"
+      }
+    },
+    "layout": {
+      "breakpoint": "Mobile layout up to (px)",
+      "breakpointHint": "Screens {px}px wide or narrower use the mobile layout.",
+      "position": "Position",
+      "maxWidth": "Maximum width (px)",
+      "offset": "Distance from the edges (px)",
+      "buttons": "Buttons",
+      "buttonLayouts": {
+        "row": "Side by side",
+        "stack": "Stacked"
+      },
+      "mobileHint": "On phones the banner always spans the screen with equal gaps on both sides and stays clear of the safe areas.",
+      "positions": {
+        "bottom": "Bottom",
+        "bottom-left": "Bottom left",
+        "bottom-right": "Bottom right",
+        "top": "Top",
+        "center": "Centre",
+        "sheet": "Bottom sheet"
+      }
+    },
+    "reopen": {
+      "icon": "Icon",
+      "icons": {
+        "cookie": "Cookie",
+        "shield": "Shield",
+        "fingerprint": "Fingerprint",
+        "settings": "Settings"
+      },
+      "size": "Size",
+      "sizes": {
+        "sm": "Small",
+        "md": "Medium",
+        "lg": "Large"
+      },
+      "ownColors": "Own colours",
+      "ownColorsHint": "Off: the same colours as the Accept and Reject buttons.",
+      "background": "Background",
+      "text": "Text",
+      "variant": "Shows",
+      "variants": {
+        "text": "Text",
+        "icon": "Icon",
+        "icon-text": "Icon and text",
+        "hidden": "Hidden"
+      },
+      "position": "Corner",
+      "offset": "Distance from the corner (px)",
+      "hiddenTitle": "The reopen button is hidden on: {devices}",
+      "hiddenWarning": "Visitors there need another way to change their choice, as easy as giving it (Garante 2021): keep a link with the data-analytics-consent attribute, or to #analytics-consent, on every page, e.g. in the footer.",
+      "disabled": "The floating reopen button is off (see Behaviour): visitors reopen the banner through your own link only."
+    },
+    "advanced": {
+      "css": "Custom CSS",
+      "cssHint": "Applied after the theme. Use the public class names:",
+      "cssBytes": "{n} / {max} bytes",
+      "cssErrors": "The server refused this CSS:",
+      "goTo": "Go to line {line}",
+      "json": "Theme JSON",
+      "jsonHint": "Copy or export this theme and import it on another site. Missing fields take the defaults.",
+      "exportFile": "Export file",
+      "importFile": "Import file",
+      "paste": "Theme JSON to import",
+      "pastePlaceholder": "Paste a theme JSON here",
+      "apply": "Import JSON",
+      "jsonInvalid": "This is not valid JSON.",
+      "jsonSchema": "This JSON is not a valid theme:",
+      "imported": "Theme imported"
+    },
+    "previewUi": {
+      "desktop": "Desktop {width}px",
+      "mobile": "Mobile {width}×{height}",
+      "views": {
+        "banner": "Banner",
+        "reopen": "Reopen button"
+      },
+      "frameTitle": "Consent banner preview",
+      "hint": "Rendered by the banner's own code with the stylesheet your visitors will receive.",
+      "invalid": "Fix the highlighted fields: the preview shows the last valid version.",
+      "failed": "The preview could not be loaded.",
+      "unavailable": "The banner module is missing from this installation, so the preview cannot render.",
+      "forbidden": "The preview is available to site administrators."
     }
   },
   "security": {

@@ -518,23 +518,7 @@
       "policy": "Link informativa",
       "reopen": "Pulsante riapri"
     },
-    "theme": "Tema",
-    "colors": {
-      "bg": "Sfondo",
-      "fg": "Testo",
-      "ac": "Pulsanti",
-      "acf": "Testo pulsanti"
-    },
-    "contrastText": "Contrasto del testo {ratio}:1",
-    "contrastAction": "Contrasto dei pulsanti {ratio}:1",
     "contrastFail": "Il contrasto deve essere almeno 4.5:1 (WCAG AA).",
-    "radius": "Raggio degli angoli",
-    "position": "Posizione",
-    "positions": {
-      "bottom": "Barra in basso",
-      "bottom-left": "In basso a sinistra",
-      "bottom-right": "In basso a destra"
-    },
     "behaviour": "Comportamento",
     "acceptedTtl": "Ricorda l'accettazione (giorni)",
     "rejectedTtl": "Ricorda il rifiuto (giorni)",
@@ -574,6 +558,151 @@
       "draft": "Bozza",
       "published": "Pubblicato",
       "archived": "Archiviato"
+    },
+    "saveInvalid": "Correggi i campi evidenziati prima di salvare.",
+    "sections": {
+      "colors": "Colori",
+      "typography": "Tipografia",
+      "shape": "Forma e spaziatura",
+      "layout": "Layout",
+      "reopen": "Pulsante per riaprire",
+      "advanced": "Avanzate",
+      "advancedHint": "CSS personalizzato e il tema in JSON, per riusarlo su altri siti."
+    },
+    "devices": {
+      "desktop": "Desktop",
+      "mobile": "Mobile"
+    },
+    "colors": {
+      "background": "Sfondo",
+      "text": "Testo",
+      "accent": "Pulsanti",
+      "accentText": "Testo dei pulsanti",
+      "border": "Bordo",
+      "link": "Link",
+      "oneButtonStyle": "Accetta e Rifiuta hanno sempre lo stesso stile, così nessuno dei due risalta (Garante 2021).",
+      "backdrop": "Velatura della pagina dietro un banner centrato",
+      "backdropHint": "Solo colore: la pagina resta utilizzabile. #rrggbb o #rrggbbaa."
+    },
+    "contrast": {
+      "text": "Testo sullo sfondo",
+      "accentText": "Testo sui pulsanti",
+      "link": "Link sullo sfondo",
+      "reopen": "Testo del pulsante per riaprire",
+      "ratio": "{ratio}:1",
+      "sample": "Aa"
+    },
+    "font": {
+      "family": "Carattere",
+      "familyHint": "I caratteri non vengono mai scaricati: scegline uno che il sito carica già.",
+      "families": {
+        "inherit": "Come la pagina",
+        "system": "Carattere di sistema",
+        "custom": "Nomi dei caratteri"
+      },
+      "familyCustom": "Nomi delle famiglie di caratteri",
+      "familyInvalid": "Usa nomi di famiglie separati da virgole, ad es. \"Inter\", sans-serif.",
+      "size": "Dimensione del testo (px)",
+      "inheritSize": "Come la pagina",
+      "lineHeight": "Interlinea"
+    },
+    "shape": {
+      "radius": "Angoli del banner (px)",
+      "buttonRadius": "Angoli dei pulsanti (px)",
+      "buttonRadiusHint": "999 rende i pulsanti a pillola.",
+      "padding": "Margine interno (px)",
+      "gap": "Spazio tra i pulsanti (px)",
+      "borderWidth": "Spessore del bordo (px)",
+      "shadow": "Ombra",
+      "shadows": {
+        "none": "Nessuna",
+        "sm": "Piccola",
+        "md": "Media",
+        "lg": "Grande"
+      }
+    },
+    "layout": {
+      "breakpoint": "Layout mobile fino a (px)",
+      "breakpointHint": "Gli schermi larghi {px}px o meno usano il layout mobile.",
+      "position": "Posizione",
+      "maxWidth": "Larghezza massima (px)",
+      "offset": "Distanza dai bordi (px)",
+      "buttons": "Pulsanti",
+      "buttonLayouts": {
+        "row": "Affiancati",
+        "stack": "Uno sopra l'altro"
+      },
+      "mobileHint": "Sui telefoni il banner occupa sempre la larghezza dello schermo con margini uguali sui due lati e rispetta le aree sicure.",
+      "positions": {
+        "bottom": "In basso",
+        "bottom-left": "In basso a sinistra",
+        "bottom-right": "In basso a destra",
+        "top": "In alto",
+        "center": "Al centro",
+        "sheet": "Pannello dal basso"
+      }
+    },
+    "reopen": {
+      "icon": "Icona",
+      "icons": {
+        "cookie": "Biscotto",
+        "shield": "Scudo",
+        "fingerprint": "Impronta",
+        "settings": "Impostazioni"
+      },
+      "size": "Dimensione",
+      "sizes": {
+        "sm": "Piccola",
+        "md": "Media",
+        "lg": "Grande"
+      },
+      "ownColors": "Colori propri",
+      "ownColorsHint": "Disattivato: gli stessi colori dei pulsanti Accetta e Rifiuta.",
+      "background": "Sfondo",
+      "text": "Testo",
+      "variant": "Mostra",
+      "variants": {
+        "text": "Testo",
+        "icon": "Icona",
+        "icon-text": "Icona e testo",
+        "hidden": "Nascosto"
+      },
+      "position": "Angolo",
+      "offset": "Distanza dall'angolo (px)",
+      "hiddenTitle": "Il pulsante per riaprire è nascosto su: {devices}",
+      "hiddenWarning": "Lì i visitatori hanno bisogno di un altro modo per cambiare la scelta, facile quanto darla (Garante 2021): tieni su ogni pagina un link con l'attributo data-analytics-consent, o verso #analytics-consent, ad esempio nel footer.",
+      "disabled": "Il pulsante flottante per riaprire è disattivato (vedi Comportamento): i visitatori riaprono il banner solo dal tuo link."
+    },
+    "advanced": {
+      "css": "CSS personalizzato",
+      "cssHint": "Applicato dopo il tema. Usa i nomi di classe pubblici:",
+      "cssBytes": "{n} / {max} byte",
+      "cssErrors": "Il server ha rifiutato questo CSS:",
+      "goTo": "Vai alla riga {line}",
+      "json": "JSON del tema",
+      "jsonHint": "Copia o esporta questo tema e importalo su un altro sito. I campi mancanti prendono i valori predefiniti.",
+      "exportFile": "Esporta file",
+      "importFile": "Importa file",
+      "paste": "JSON del tema da importare",
+      "pastePlaceholder": "Incolla qui il JSON di un tema",
+      "apply": "Importa JSON",
+      "jsonInvalid": "Questo non è un JSON valido.",
+      "jsonSchema": "Questo JSON non è un tema valido:",
+      "imported": "Tema importato"
+    },
+    "previewUi": {
+      "desktop": "Desktop {width}px",
+      "mobile": "Mobile {width}×{height}",
+      "views": {
+        "banner": "Banner",
+        "reopen": "Pulsante per riaprire"
+      },
+      "frameTitle": "Anteprima del banner dei cookie",
+      "hint": "Disegnata dal codice del banner con il foglio di stile che riceveranno i tuoi visitatori.",
+      "invalid": "Correggi i campi evidenziati: l'anteprima mostra l'ultima versione valida.",
+      "failed": "Impossibile caricare l'anteprima.",
+      "unavailable": "In questa installazione manca il modulo del banner, quindi l'anteprima non può essere mostrata.",
+      "forbidden": "L'anteprima è disponibile per gli amministratori del sito."
     }
   },
   "security": {
