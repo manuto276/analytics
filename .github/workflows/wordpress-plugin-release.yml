@@ -33,7 +33,7 @@ jobs:
           grep -q "^## \[$version\]" CHANGELOG.md || { echo "::error::No $version in CHANGELOG.md"; exit 1; }
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
