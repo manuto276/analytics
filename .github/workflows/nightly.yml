@@ -149,9 +149,21 @@ jobs:
           coverage: none
           tools: composer:v2
 
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Plugin admin app builds, and build/ is its build
+        working-directory: services/wordpress-plugin/analytics-connector
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+          npm run lint:js
+          git diff --exit-code -- build
+
       - name: Plugin PHP syntax
         run: |
-          find services/wordpress-plugin -name '*.php' -print0 | xargs -0 -n1 php -l > /dev/null
+          find services/wordpress-plugin -name '*.php' -not -path '*/node_modules/*' -not -path '*/vendor/*' -print0 | xargs -0 -n1 php -l > /dev/null
           echo "plugin files parse"
 
       - name: Plugin unit tests (Brain Monkey)

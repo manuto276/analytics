@@ -1,0 +1,96 @@
+name: WordPress plugin release
+
+# The plugin is released on its own tags, `wordpress-plugin-vX.Y.Z` (ADR 0009); the service's
+# `v*` tags are release.yml's. The tag must match the plugin's `Version:`.
+
+on:
+  push:
+    tags: ['wordpress-plugin-v*']
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: services/wordpress-plugin/analytics-connector
+
+jobs:
+  release:
+    name: Build, test and publish the zip
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: The tag matches the plugin's version
+        id: version
+        run: |
+          version=$(sed -n 's/^ \* Version: *//p' analytics-connector.php | tr -d '[:space:]')
+          tag="${GITHUB_REF_NAME#wordpress-plugin-v}"
+          [ "$version" = "$tag" ] || { echo "::error::Tag $GITHUB_REF_NAME, but Version: $version"; exit 1; }
+          grep -q "define( 'ANALYTICS_CONNECTOR_VERSION', '$version' )" analytics-connector.php || { echo "::error::ANALYTICS_CONNECTOR_VERSION is not $version"; exit 1; }
+          grep -q "^## \[$version\]" CHANGELOG.md || { echo "::error::No $version in CHANGELOG.md"; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: services/wordpress-plugin/analytics-connector/package-lock.json
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+          tools: composer:v2
+
+      - name: Build the admin app
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+          npm run lint:js
+          git diff --exit-code -- build || { echo "::error::build/ is not the build of src/: run npm run build and commit"; exit 1; }
+
+      - name: Coding standards
+        run: |
+          composer install --no-interaction --no-progress
+          vendor/bin/phpcs
+
+      - name: Unit tests
+        working-directory: services/wordpress-plugin/analytics-connector/tests
+        run: |
+          composer install --no-interaction --no-progress
+          vendor/bin/phpunit
+
+      - name: WordPress smoke
+        working-directory: .
+        env:
+          WP_SMOKE_PORT: '8091'
+        run: ./services/wordpress-plugin/analytics-connector/tests/smoke/smoke.sh
+
+      - name: The zip
+        run: |
+          SKIP_BUILD=1 bin/build-zip.sh
+          unzip -l "dist/analytics-connector-${{ steps.version.outputs.version }}.zip" > dist/contents.txt
+          grep -q 'analytics-connector/build/admin.js' dist/contents.txt
+          grep -q 'analytics-connector/languages/analytics-connector-it_IT.mo' dist/contents.txt
+          ! grep -Eq 'analytics-connector/(src|tests|node_modules|vendor|design)/' dist/contents.txt
+
+      - name: Release notes from the changelog
+        run: |
+          awk -v v="${{ steps.version.outputs.version }}" '
+            $0 ~ "^## \\[" v "\\]" { on = 1; next }
+            on && /^## \[/ { exit }
+            on { print }
+          ' CHANGELOG.md > dist/notes.md
+          test -s dist/notes.md
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "dist/analytics-connector-${{ steps.version.outputs.version }}.zip" \
+            --title "Analytics for WordPress ${{ steps.version.outputs.version }}" \
+            --notes-file dist/notes.md \
+            --latest=false
