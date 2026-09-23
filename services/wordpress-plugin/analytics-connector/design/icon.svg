@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Analytics for WordPress: the service's mark (docs/assets/brand/mark.svg) in white on the family's tile. docs/icon.md -->
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#1e3a8a"/></linearGradient><radialGradient id="light" cx="0.25" cy="0.15" r="0.9"><stop offset="0" stop-color="#fff" stop-opacity="0.22"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>
+  <rect width="512" height="512" rx="112.6" fill="url(#g)"/>
+  <rect width="512" height="512" rx="112.6" fill="url(#light)"/>
+  <g transform="translate(87.04 87.04) scale(0.8687)">
+    <g fill="#fff"><rect x="53.23" y="210.45" width="64" height="90.5" rx="32"/>
+    <rect x="162.49" y="172.99" width="64" height="127.96" rx="32"/>
+    <rect x="271.75" y="120.01" width="64" height="180.94" rx="32"/>
+    <circle cx="303.75" cy="56" r="32"/></g>
+    <g fill="#fff" opacity="0.55"><rect x="53.23" y="332.96" width="282.52" height="32.01" rx="16.01"/></g>
+  </g>
+</svg>

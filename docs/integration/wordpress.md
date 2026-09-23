@@ -1,29 +1,73 @@
 # WordPress integration
 
-`services/wordpress-plugin/analytics-connector` is an optional, generic WordPress plugin (GPL-2.0-or-later, its own `LICENSE`; see [ADR 0008](../architecture/adr/0008-separate-wordpress-plugin.md)).
-A plain `<script>` in the theme also works; the plugin exists so that tracking loads on every public page regardless of theme or page builder and stays versioned with the tracker and the API.
+`services/wordpress-plugin/analytics-connector` is **Analytics for WordPress**: an optional WordPress plugin (GPL-2.0-or-later, with its own `LICENSE`). It lives in this repository ([ADR 0008](../architecture/adr/0008-separate-wordpress-plugin.md), amended by [ADR 0009](../architecture/adr/0009-wordpress-plugin-dashboard.md)) and has its own [README](../../services/wordpress-plugin/analytics-connector/README.md) and releases: tags `wordpress-plugin-vX.Y.Z`, each with the zip WordPress installs.
 
-It stores only its settings (option `analytics_connector_settings`, deleted on uninstall). It never stores analytics data in WordPress.
+A plain `<script>` in the theme also works. The plugin exists for three things:
+- tracking loads on every public page, whatever the theme or page builder;
+- it stays versioned with the tracker and the API;
+- with an API key that has `reports:read`, the site's statistics show in WordPress.
+
+It never stores analytics data in WordPress. It stores:
+- its settings (`analytics_connector_settings`);
+- the API key, encrypted (`analytics_connector_api_key`), unless `wp-config.php` defines it;
+- its version and a cache generation;
+- the `analytics_view` and `analytics_manage` capabilities.
+
+All of these are removed on uninstall. Reports are cached in transients for 60 seconds (10 for realtime).
 
 ## Install and configure
 
-1. Copy `services/wordpress-plugin/analytics-connector` to `wp-content/plugins/` and activate it.
-2. **Settings → Analytics** (requires `manage_options`; saved through the Settings API with its nonce):
+1. Upload `analytics-connector-X.Y.Z.zip` from the [releases](https://github.com/manuto276/analytics/releases?q=wordpress-plugin) (Plugins → Add New → Upload) and activate it.
+2. **Analytics → Settings** (requires `analytics_manage`, given to administrators). It is a React screen saving through `analytics-connector/v1/admin/settings`, behind the REST nonce:
 
 | Setting | Default | Notes |
 |---|---|---|
-| Service URL | – | e.g. `https://stats.example.net`; trailing slash removed |
-| Public key | – | must match `^pk_[A-Za-z0-9]{21}$`, otherwise rejected and the previous key kept |
-| Load mode | direct | `direct` → `{service}/t/{key}.js`; `proxy` → `{home}{proxy path}{key}.js` |
+| Service address | – | e.g. `https://stats.example.net`; trailing slash removed |
+| Public key | – | must match `^pk_[A-Za-z0-9]{21}$`, otherwise refused (400) |
+| How the tracker is loaded | direct | `direct` → `{service}/t/{key}.js`; `proxy` → `{home}{proxy path}{key}.js` |
 | Proxy path | `/stats/` | normalised to `/path/` |
-| Do not track users who can | `edit_posts` | empty = track everyone, including logged-in editors |
-| JavaScript global | `analytics` | must be a JS identifier and match the site's global name in the dashboard |
+| Not counted: logged-in users who can | `edit_posts` | empty = track everyone, including logged-in editors |
+| JavaScript name | `analytics` | must be a JS identifier and match the site's global name in the dashboard |
+| API key | – | `ak_…`, with `reports:read` for the Overview and `conversions:write` for server-side conversions |
 
-3. For server-side conversions add to `wp-config.php`:
+3. The API key can be pasted in the screen, where it is stored with sodium `secretbox`, keyed from `AUTH_KEY` and `SECURE_AUTH_SALT`. Or it can be kept out of the database; the constant wins:
 
 ```php
-define( 'ANALYTICS_CONNECTOR_API_KEY', '…' ); // API key with the conversions:write scope
+define( 'ANALYTICS_CONNECTOR_API_KEY', 'ak_…' );
 ```
+
+The key never reaches the browser. The screens show only its prefix (`ak_1a2b3c4d_…`).
+
+## The dashboard in WordPress
+
+**Analytics → Overview** (`analytics_view`: administrators and editors) and a widget on the WordPress dashboard. The browser calls only WordPress:
+
+```
+browser → GET /wp-json/analytics-connector/v1/admin/reports/{name}?period=…   (REST nonce, analytics_view)
+WordPress → GET {service}/api/v1/server/sites/{publicKey}/reports/{name}      (Authorization: Bearer ak_…, no redirects)
+```
+
+- **Report names:** overview, timeseries, pages, sources, tech, countries, events, goals, conversions, consent, realtime.
+- **Parameters:** `period`, `from`/`to`, `interval`, `compare`, `kind`, `group` and `limit` (at most 100).
+- Both lists are whitelisted before anything reaches the service. The answer is `{ data, meta }`, with `meta` reduced to range, interval, time zone, currency and availability.
+- The service's refusals become sentences:
+
+| The service answers | WordPress answers | Meaning |
+|---|---|---|
+| 401 | 409 | the key was revoked or mistyped |
+| 403 | 409 | the key lacks `reports:read` |
+| 404 | 409 | the site is unknown for this key, or the service predates `reports:read` |
+| 422, 429 | the same | a bad period; rate limited |
+| 5xx, or unreachable | 502 | the service is down |
+
+The service's own text is never shown. Errors are cached for 30 seconds, so a service that is down does not cost every admin page the whole timeout.
+
+Analytics → Settings → **The site on the service** reads the tracker script (`window.__an_cfg`) to show:
+- the cookie level;
+- whether a consent banner is published, with its version and languages;
+- the automatic events.
+
+It then checks the key with today's overview.
 
 ## What the plugin outputs
 
@@ -71,7 +115,7 @@ analytics_connector_track_conversion( 'purchase', [
 ] );
 ```
 
-Sends `POST {service}/api/v1/server/sites/{publicKey}/conversions` (see [server-side conversions](server-side-conversions.md) and the [API reference](../api/conversions.md)) with `Authorization: Bearer ANALYTICS_CONNECTOR_API_KEY`, `Content-Type: application/json`, `blocking => false`, `timeout => 2`:
+Sends `POST {service}/api/v1/server/sites/{publicKey}/conversions` (see [server-side conversions](server-side-conversions.md) and the [API reference](../api/conversions.md)) with `Authorization: Bearer <the API key>` (the constant, or the key saved in Settings), `Content-Type: application/json`, `blocking => false`, `timeout => 2`:
 
 ```json
 {"id":"order-8812","name":"purchase","occurred_at":"2026-09-17T10:00:00Z","visitor_id":"AbCdEfGhIjKlMnOpQr_-12",
@@ -102,11 +146,29 @@ Sends `POST {service}/api/v1/server/sites/{publicKey}/conversions` (see [server-
 ## Tests
 
 ```sh
+make test-wordpress           # from the repository root: the unit tests, then the smoke test
+
 cd services/wordpress-plugin/analytics-connector/tests
 composer install
 vendor/bin/phpunit            # PHPUnit 13 + Brain Monkey, no WordPress needed
 ./smoke/smoke.sh              # Docker: WordPress php8.4 + MariaDB 11 + wp-cli
 ```
 
-The smoke test (nightly CI, see [../development/testing.md](../development/testing.md)) installs WordPress, activates the plugin, sets the option with wp-cli and checks: deferred script tag in `<head>` after the stub, no PHP notices with `WP_DEBUG`, shortcode and block output, proxy mode URL, menu attribute, content meta tag, and `analytics_connector_track_conversion()` returning `false` without an API key.
+The unit tests cover:
+- settings and capabilities;
+- the key's encryption, including new salts and the constant winning;
+- the client: the whitelist, the Bearer header, no redirects, the cache and its flush, every refusal;
+- the tracker check and the REST routes.
+
+The smoke test (nightly CI, see [../development/testing.md](../development/testing.md)) installs WordPress, activates the plugin, sets the option with wp-cli and checks:
+- the deferred script tag in `<head>`, after the stub;
+- no PHP notices with `WP_DEBUG`;
+- the shortcode and block output;
+- the proxy mode URL;
+- the menu attribute;
+- the content meta tag;
+- `analytics_connector_track_conversion()` returning `false` without an API key.
+
 Environment overrides: `WP_SMOKE_PORT` (default 8089), `WP_SMOKE_WP_IMAGE`, `WP_SMOKE_CLI_IMAGE`, `WP_SMOKE_DB_IMAGE`, `KEEP=1`.
+
+The admin screens have an end-to-end test (Playwright and axe, `npm run test:e2e` in the plugin) that runs on the WordPress workspace's dev site with the service mocked. The nightly job builds the admin app and checks that the committed `build/` is its build. The release workflow (`.github/workflows/wordpress-plugin-release.yml`, on `wordpress-plugin-v*` tags) runs all of the above and publishes the zip.

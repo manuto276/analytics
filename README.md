@@ -30,7 +30,7 @@ guidelines of 10 June 2021). See [docs/privacy](docs/privacy) and the points mar
 | `services/dashboard` | Nuxt 4 + Nuxt UI 4 static SPA |
 | `services/tracker` | Tracker and consent banner (TypeScript, esbuild, < 5 KB gzip) |
 | `services/e2e` | Playwright end-to-end tests with fixture sites |
-| `services/wordpress-plugin/analytics-connector` | Optional generic WordPress plugin (GPL-2.0-or-later) |
+| `services/wordpress-plugin/analytics-connector` | [Analytics for WordPress](services/wordpress-plugin/analytics-connector/README.md): the tracker, consent links and a dashboard in WordPress (GPL-2.0-or-later, released on `wordpress-plugin-v*` tags) |
 | `deploy/docker` | Dockerfile (dev, test, package, runtime stages) and compose files |
 | `deploy/manual` | `build.sh`, `publish.sh` and the deploy `console` for managed PHP hosts |
 | `deploy/examples` | nginx vhost, first-party proxy, Varnish and crontab examples |

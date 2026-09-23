@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2560" height="640" viewBox="0 0 2560 640">
+  <!-- Analytics for WordPress, banner (dark): the family's layout; a field of small charts on the right, one in colour. docs/icon.md -->
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#1e3a8a"/></linearGradient><radialGradient id="light" cx="0.25" cy="0.15" r="0.9"><stop offset="0" stop-color="#fff" stop-opacity="0.22"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b1020"/><stop offset="1" stop-color="#0f172a"/></linearGradient><clipPath id="field"><rect x="1700" y="0" width="860" height="640"/></clipPath></defs>
+  <rect width="2560" height="640" fill="url(#bg)"/>
+  <g transform="translate(192 192) scale(0.5)">
+  <rect width="512" height="512" rx="112.6" fill="url(#g)"/>
+  <rect width="512" height="512" rx="112.6" fill="url(#light)"/>
+  <g transform="translate(87.04 87.04) scale(0.8687)">
+    <g fill="#fff"><rect x="53.23" y="210.45" width="64" height="90.5" rx="32"/>
+    <rect x="162.49" y="172.99" width="64" height="127.96" rx="32"/>
+    <rect x="271.75" y="120.01" width="64" height="180.94" rx="32"/>
+    <circle cx="303.75" cy="56" r="32"/></g>
+    <g fill="#fff" opacity="0.55"><rect x="53.23" y="332.96" width="282.52" height="32.01" rx="16.01"/></g>
+  </g>
+  </g>
+  <text x="532" y="304" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-weight="700" font-size="150" letter-spacing="-4" fill="#f1f5f9">analytics</text>
+  <rect x="536" y="344" width="112" height="10" rx="5" fill="url(#g)"/>
+  <text x="532" y="428" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="46" fill="#cbd5e1">Your own statistics, inside WordPress.</text>
+  <text x="532" y="498" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="31" fill="#94a3b8">the tracker · the consent banner · a dashboard · the key stays on the server</text>
+  <g clip-path="url(#field)">
+    <rect x="1840" y="64" width="150" height="150" rx="33" fill="#16213d"/>
+    <rect x="1872" y="141" width="22" height="31" rx="11" fill="#24345e"/>
+    <rect x="1902" y="130" width="22" height="42" rx="11" fill="#24345e"/>
+    <rect x="1932" y="125" width="22" height="47" rx="11" fill="#24345e"/>
+    <circle cx="1943" cy="103" r="11" fill="#24345e"/>
+    <rect x="1872" y="182" width="82" height="10" rx="5" fill="#24345e" opacity="0.55"/>
+    <rect x="2012" y="64" width="150" height="150" rx="33" fill="#16213d"/>
+    <rect x="2044" y="147" width="22" height="25" rx="11" fill="#24345e"/>
+    <rect x="2074" y="146" width="22" height="26" rx="11" fill="#24345e"/>
+    <rect x="2104" y="109" width="22" height="63" rx="11" fill="#24345e"/>
+    <circle cx="2115" cy="87" r="11" fill="#24345e"/>
+    <rect x="2044" y="182" width="82" height="10" rx="5" fill="#24345e" opacity="0.55"/>
+    <rect x="2184" y="64" width="150" height="150" rx="33" fill="#16213d"/>
+    <rect x="2216" y="144" width="22" height="28" rx="11" fill="#24345e"/>
+    <rect x="2246" y="127" width="22" height="45" rx="11" fill="#24345e"/>
+    <rect x="2276" y="116" width="22" height="56" rx="11" fill="#24345e"/>
+    <circle cx="2287" cy="94" r="11" fill="#24345e"/>
+    <rect x="2216" y="182" width="82" height="10" rx="5" fill="#24345e" opacity="0.55"/>
+    <rect x="2356" y="64" width="150" height="150" rx="33" fill="#16213d"/>
+    <rect x="2388" y="147" width="22" height="25" rx="11" fill="#24345e"/>
+    <rect x="2418" y="118" width="22" height="54" rx="11" fill="#24345e"/>
+    <rect x="2448" y="113" width="22" height="59" rx="11" fill="#24345e"/>
+    <circle cx="2459" cy="91" r="11" fill="#24345e"/>
+    <rect x="2388" y="182" width="82" height="10" rx="5" fill="#24345e" opacity="0.55"/>
+    <rect x="2528" y="64" width="150" height="150" rx="33" fill="#16213d"/>
+    <rect x="2560" y="148" width="22" height="24" rx="11" fill="#24345e"/>
+    <rect x="2590" y="145" width="22" height="27" rx="11" fill="#24345e"/>
+    <rect x="2620" y="137" width="22" height="35" rx="11" fill="#24345e"/>
+    <circle cx="2631" cy="115" r="11" fill="#24345e"/>
+    <rect x="2560" y="182" width="82" height="10" rx="5" fill="#24345e" opacity="0.55"/>
+    <rect x="1754" y="236" width="150" height="150" rx="33" fill="#16213d"/>
+    <rect x="1786" y="318" width="22" height="26" rx="11" fill="#24345e"/>
+    <rect x="1816" y="296" width="22" height="48" rx="11" fill="#24345e"/>
+    <rect x="1846" y="295" width="22" height="49" rx="11" fill="#24345e"/>
+    <circle cx="1857" cy="273" r="11" fill="#24345e"/>
+    <rect x="1786" y="354" width="82" height="10" rx="5" fill="#24345e" opacity="0.55"/>
+    <rect x="1926" y="236" width="150" height="150" rx="33" fill="#16213d"/>
+    <rect x="1958" y="317" width="22" height="27" rx="11" fill="#24345e"/>
+    <rect x="1988" y="307" width="22" height="37" rx="11" fill="#24345e"/>
+    <rect x="2018" y="287" width="22" height="57" rx="11" fill="#24345e"/>
+    <circle cx="2029" cy="265" r="11" fill="#24345e"/>
+    <rect x="1958" y="354" width="82" height="10" rx="5" fill="#24345e" opacity="0.55"/>
+    <rect x="2098" y="236" width="150" height="150" rx="33" fill="url(#g)"/>
+    <rect x="2130" y="319" width="22" height="25" rx="11" fill="#ffffff"/>
+    <rect x="2160" y="295" width="22" height="49" rx="11" fill="#ffffff"/>
+    <rect x="2190" y="286" width="22" height="58" rx="11" fill="#ffffff"/>
+    <circle cx="2201" cy="264" r="11" fill="#ffffff"/>
+    <rect x="2130" y="354" width="82" height="10" rx="5" fill="#ffffff" opacity="0.55"/>
+    <rect x="2270" y="236" width="150" height="150" rx="33" fill="#16213d"/>
+    <rect x="2302" y="315" width="22" height="29" rx="11" fill="#24345e"/>
+    <rect x="2332" y="308" width="22" height="36" rx="11" fill="#24345e"/>
+    <rect x="2362" y="282" width="22" height="62" rx="11" fill="#24345e"/>
+    <circle cx="2373" cy="260" r="11" fill="#24345e"/>
+    <rect x="2302" y="354" width="82" height="10" rx="5" fill="#24345e" opacity="0.55"/>
+    <rect x="2442" y="236" width="150" height="150" rx="33" fill="#16213d"/>
+    <rect x="2474" y="319" width="22" height="25" rx="11" fill="#24345e"/>
+    <rect x="2504" y="285" width="22" height="59" rx="11" fill="#24345e"/>
+    <rect x="2534" y="282" width="22" height="62" rx="11" fill="#24345e"/>
+    <circle cx="2545" cy="260" r="11" fill="#24345e"/>
+    <rect x="2474" y="354" width="82" height="10" rx="5" fill="#24345e" opacity="0.55"/>
+    <rect x="1840" y="408" width="150" height="150" rx="33" fill="#16213d"/>
+    <rect x="1872" y="469" width="22" height="47" rx="11" fill="#24345e"/>
+    <rect x="1902" y="458" width="22" height="58" rx="11" fill="#24345e"/>
+    <rect x="1932" y="457" width="22" height="59" rx="11" fill="#24345e"/>
+    <circle cx="1943" cy="435" r="11" fill="#24345e"/>
+    <rect x="1872" y="526" width="82" height="10" rx="5" fill="#24345e" opacity="0.55"/>
+    <rect x="2012" y="408" width="150" height="150" rx="33" fill="#16213d"/>
+    <rect x="2044" y="492" width="22" height="24" rx="11" fill="#24345e"/>
+    <rect x="2074" y="491" width="22" height="25" rx="11" fill="#24345e"/>
+    <rect x="2104" y="480" width="22" height="36" rx="11" fill="#24345e"/>
+    <circle cx="2115" cy="458" r="11" fill="#24345e"/>
+    <rect x="2044" y="526" width="82" height="10" rx="5" fill="#24345e" opacity="0.55"/>
+    <rect x="2184" y="408" width="150" height="150" rx="33" fill="#16213d"/>
+    <rect x="2216" y="486" width="22" height="30" rx="11" fill="#24345e"/>
+    <rect x="2246" y="476" width="22" height="40" rx="11" fill="#24345e"/>
+    <rect x="2276" y="459" width="22" height="57" rx="11" fill="#24345e"/>
+    <circle cx="2287" cy="437" r="11" fill="#24345e"/>
+    <rect x="2216" y="526" width="82" height="10" rx="5" fill="#24345e" opacity="0.55"/>
+    <rect x="2356" y="408" width="150" height="150" rx="33" fill="#16213d"/>
+    <rect x="2388" y="485" width="22" height="31" rx="11" fill="#24345e"/>
+    <rect x="2418" y="468" width="22" height="48" rx="11" fill="#24345e"/>
+    <rect x="2448" y="460" width="22" height="56" rx="11" fill="#24345e"/>
+    <circle cx="2459" cy="438" r="11" fill="#24345e"/>
+    <rect x="2388" y="526" width="82" height="10" rx="5" fill="#24345e" opacity="0.55"/>
+    <rect x="2528" y="408" width="150" height="150" rx="33" fill="#16213d"/>
+    <rect x="2560" y="487" width="22" height="29" rx="11" fill="#24345e"/>
+    <rect x="2590" y="475" width="22" height="41" rx="11" fill="#24345e"/>
+    <rect x="2620" y="458" width="22" height="58" rx="11" fill="#24345e"/>
+    <circle cx="2631" cy="436" r="11" fill="#24345e"/>
+    <rect x="2560" y="526" width="82" height="10" rx="5" fill="#24345e" opacity="0.55"/>
+  </g>
+</svg>
