@@ -93,8 +93,9 @@ Note that logs rotate and `job_runs` is purged after 90 days.
 | What the attacker had | What they could learn |
 |---|---|
 | A dashboard session or account | aggregate reports for the sites that account can see; the audit log; site settings. **No individual visitor rows** — no endpoint returns them |
-| An API key (`conversions:write`) | write conversions for one site. It cannot read reports |
+| An API key (`conversions:write`) | write conversions for one site. Without `reports:read` it cannot read reports |
 | An API key (`stats:read`) | content-key aggregates for one site, suppressed below `min_group_size` |
+| An API key (`reports:read`) | the aggregate reports of one site (overview, pages, sources, countries, devices, events, conversions, consent, realtime) — what a viewer of that site sees in the dashboard. No individual rows |
 | Read access to the database | 13 months of visit-level rows: sanitised URLs, referrer hosts, campaign parameters, country, browser/OS/device families, daily visitor hashes, and — for consented visitors — visitor ids. No IP addresses, no User-Agent strings, no readable `customer_ref`, no passwords, no usable tokens |
 | A database backup **including `daily_salts`** | additionally the ability to recompute base-level visitor hashes for the days whose salt is present, which makes those rows linkable to a candidate address plus User-Agent. This is why the salt is excluded from dumps |
 | `.env` | the ability to decrypt TOTP secrets and to compute `customer_ref` hashes; database access if the DSN is in it |

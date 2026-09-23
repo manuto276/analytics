@@ -34,6 +34,7 @@ or `POST /api/v1/sites/{siteId}/api-keys` (permission `site:manage`), listed wit
 |---|---|
 | `conversions:write` | `POST …/conversions` |
 | `stats:read` | `GET …/content/{contentKey}/stats` |
+| `reports:read` | `GET …/reports/{report}` — the dashboard's reports, see [reporting.md](reporting.md#with-an-api-key-server-to-server) |
 
 A key belongs to exactly one site. Using it against another site's public key gives `404 not_found` —
 the same answer as a key that does not exist, so keys cannot be used to enumerate sites. A key may

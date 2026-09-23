@@ -12,7 +12,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(name: 'idx_api_keys_site', columns: ['site_id'])]
 class ApiKey
 {
-    public const array SCOPES = ['conversions:write', 'stats:read'];
+    public const array SCOPES = ['conversions:write', 'stats:read', 'reports:read'];
 
     #[ORM\Id]
     #[ORM\GeneratedValue]

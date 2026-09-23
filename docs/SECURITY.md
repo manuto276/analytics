@@ -156,7 +156,7 @@ The inline-script hashes are generated at build time into `services/api/config/c
 ### API keys
 
 `ak_<prefix>_<secret>`: an 8-character public prefix and 32 random bytes base64url. Only the SHA-256
-of the secret is stored; the key is shown once. Scoped (`conversions:write`, `stats:read`), bound to
+of the secret is stored; the key is shown once. Scoped (`conversions:write`, `stats:read`, `reports:read`), bound to
 one site, optionally expiring, revocable, with a throttled `last_used_at`. A key used against another
 site's public key answers `404`, the same as a non-existent site.
 

@@ -1988,7 +1988,7 @@ export interface paths {
                 content: {
                     "application/json": {
                         name: string;
-                        scopes: ("conversions:write" | "stats:read")[];
+                        scopes: ("conversions:write" | "stats:read" | "reports:read")[];
                         /** Format: date-time */
                         expires_at?: string | null;
                     };
@@ -4012,6 +4012,744 @@ export interface paths {
                 403: components["responses"]["Problem"];
                 422: components["responses"]["Problem"];
                 429: components["responses"]["Problem"];
+                default: components["responses"]["Problem"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/server/sites/{publicKey}/reports/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                publicKey: components["parameters"]["PublicKey"];
+            };
+            cookie?: never;
+        };
+        /** Headline metrics with comparison deltas (scope reports:read). Same response as /sites/{siteId}/reports/overview */
+        get: {
+            parameters: {
+                query?: {
+                    period?: components["parameters"]["Period"];
+                    /** @description Start day (inclusive) in the site time zone; required with period=custom */
+                    from?: components["parameters"]["From"];
+                    /** @description End day (inclusive); required with period=custom */
+                    to?: components["parameters"]["To"];
+                    interval?: components["parameters"]["Interval"];
+                    compare?: components["parameters"]["Compare"];
+                    /** @description filter[dim][op]=value, dims: page, entry_page, exit_page, host, channel, source, referrer, utm_source, utm_medium, utm_campaign, utm_content, utm_term, device, browser, os, country, event, content, level; ops: is, is_not, contains, prefix, glob */
+                    filter?: components["parameters"]["Filter"];
+                };
+                header?: never;
+                path: {
+                    publicKey: components["parameters"]["PublicKey"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                metrics: components["schemas"]["OverviewMetrics"];
+                                compare: components["schemas"]["OverviewMetrics"] | null;
+                                /** @description Relative change against the comparison range: (current - previous) / previous, as a fraction (0.25 = +25%). null when the previous value is 0 or unavailable. */
+                                deltas: {
+                                    [key: string]: number | null;
+                                };
+                            };
+                            meta: components["schemas"]["ReportMeta"];
+                        };
+                    };
+                };
+                /** @description Not modified */
+                304: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                401: components["responses"]["Problem"];
+                404: components["responses"]["Problem"];
+                422: components["responses"]["Problem"];
+                default: components["responses"]["Problem"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/server/sites/{publicKey}/reports/timeseries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                publicKey: components["parameters"]["PublicKey"];
+            };
+            cookie?: never;
+        };
+        /** Metrics per interval with optional comparison series (scope reports:read). Same response as /sites/{siteId}/reports/timeseries */
+        get: {
+            parameters: {
+                query?: {
+                    period?: components["parameters"]["Period"];
+                    /** @description Start day (inclusive) in the site time zone; required with period=custom */
+                    from?: components["parameters"]["From"];
+                    /** @description End day (inclusive); required with period=custom */
+                    to?: components["parameters"]["To"];
+                    interval?: components["parameters"]["Interval"];
+                    compare?: components["parameters"]["Compare"];
+                    /** @description filter[dim][op]=value, dims: page, entry_page, exit_page, host, channel, source, referrer, utm_source, utm_medium, utm_campaign, utm_content, utm_term, device, browser, os, country, event, content, level; ops: is, is_not, contains, prefix, glob */
+                    filter?: components["parameters"]["Filter"];
+                };
+                header?: never;
+                path: {
+                    publicKey: components["parameters"]["PublicKey"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                points: components["schemas"]["TimeseriesPoint"][];
+                                compare_points: components["schemas"]["TimeseriesPoint"][] | null;
+                            };
+                            meta: components["schemas"]["ReportMeta"];
+                        };
+                    };
+                };
+                /** @description Not modified */
+                304: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                401: components["responses"]["Problem"];
+                404: components["responses"]["Problem"];
+                422: components["responses"]["Problem"];
+                default: components["responses"]["Problem"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/server/sites/{publicKey}/reports/pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                publicKey: components["parameters"]["PublicKey"];
+            };
+            cookie?: never;
+        };
+        /** Top, entry or exit pages (scope reports:read). Same response as /sites/{siteId}/reports/pages */
+        get: {
+            parameters: {
+                query?: {
+                    period?: components["parameters"]["Period"];
+                    /** @description Start day (inclusive) in the site time zone; required with period=custom */
+                    from?: components["parameters"]["From"];
+                    /** @description End day (inclusive); required with period=custom */
+                    to?: components["parameters"]["To"];
+                    compare?: components["parameters"]["Compare"];
+                    /** @description filter[dim][op]=value, dims: page, entry_page, exit_page, host, channel, source, referrer, utm_source, utm_medium, utm_campaign, utm_content, utm_term, device, browser, os, country, event, content, level; ops: is, is_not, contains, prefix, glob */
+                    filter?: components["parameters"]["Filter"];
+                    limit?: components["parameters"]["Limit"];
+                    cursor?: components["parameters"]["Cursor"];
+                    /** @description Metric name, prefix with - for descending (default descending by the main metric) */
+                    sort?: components["parameters"]["Sort"];
+                    kind?: "top" | "entry" | "exit";
+                };
+                header?: never;
+                path: {
+                    publicKey: components["parameters"]["PublicKey"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                rows: components["schemas"]["PagesRow"][];
+                                total_rows: number;
+                            };
+                            meta: components["schemas"]["ReportMeta"];
+                        };
+                        "text/csv": string;
+                    };
+                };
+                /** @description Not modified */
+                304: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                401: components["responses"]["Problem"];
+                404: components["responses"]["Problem"];
+                422: components["responses"]["Problem"];
+                default: components["responses"]["Problem"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/server/sites/{publicKey}/reports/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                publicKey: components["parameters"]["PublicKey"];
+            };
+            cookie?: never;
+        };
+        /** Traffic by channel, source or referrer (scope reports:read). Same response as /sites/{siteId}/reports/sources */
+        get: {
+            parameters: {
+                query?: {
+                    period?: components["parameters"]["Period"];
+                    /** @description Start day (inclusive) in the site time zone; required with period=custom */
+                    from?: components["parameters"]["From"];
+                    /** @description End day (inclusive); required with period=custom */
+                    to?: components["parameters"]["To"];
+                    compare?: components["parameters"]["Compare"];
+                    /** @description filter[dim][op]=value, dims: page, entry_page, exit_page, host, channel, source, referrer, utm_source, utm_medium, utm_campaign, utm_content, utm_term, device, browser, os, country, event, content, level; ops: is, is_not, contains, prefix, glob */
+                    filter?: components["parameters"]["Filter"];
+                    limit?: components["parameters"]["Limit"];
+                    cursor?: components["parameters"]["Cursor"];
+                    /** @description Metric name, prefix with - for descending (default descending by the main metric) */
+                    sort?: components["parameters"]["Sort"];
+                    group?: "channel" | "source" | "referrer";
+                };
+                header?: never;
+                path: {
+                    publicKey: components["parameters"]["PublicKey"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                rows: components["schemas"]["SourcesRow"][];
+                                total_rows: number;
+                            };
+                            meta: components["schemas"]["ReportMeta"];
+                        };
+                        "text/csv": string;
+                    };
+                };
+                /** @description Not modified */
+                304: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                401: components["responses"]["Problem"];
+                404: components["responses"]["Problem"];
+                422: components["responses"]["Problem"];
+                default: components["responses"]["Problem"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/server/sites/{publicKey}/reports/tech": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                publicKey: components["parameters"]["PublicKey"];
+            };
+            cookie?: never;
+        };
+        /** Devices, browsers or operating systems (scope reports:read). Same response as /sites/{siteId}/reports/tech */
+        get: {
+            parameters: {
+                query?: {
+                    period?: components["parameters"]["Period"];
+                    /** @description Start day (inclusive) in the site time zone; required with period=custom */
+                    from?: components["parameters"]["From"];
+                    /** @description End day (inclusive); required with period=custom */
+                    to?: components["parameters"]["To"];
+                    compare?: components["parameters"]["Compare"];
+                    /** @description filter[dim][op]=value, dims: page, entry_page, exit_page, host, channel, source, referrer, utm_source, utm_medium, utm_campaign, utm_content, utm_term, device, browser, os, country, event, content, level; ops: is, is_not, contains, prefix, glob */
+                    filter?: components["parameters"]["Filter"];
+                    limit?: components["parameters"]["Limit"];
+                    cursor?: components["parameters"]["Cursor"];
+                    /** @description Metric name, prefix with - for descending (default descending by the main metric) */
+                    sort?: components["parameters"]["Sort"];
+                    group?: "device" | "browser" | "os";
+                };
+                header?: never;
+                path: {
+                    publicKey: components["parameters"]["PublicKey"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                rows: components["schemas"]["TechRow"][];
+                                total_rows: number;
+                            };
+                            meta: components["schemas"]["ReportMeta"];
+                        };
+                        "text/csv": string;
+                    };
+                };
+                /** @description Not modified */
+                304: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                401: components["responses"]["Problem"];
+                404: components["responses"]["Problem"];
+                422: components["responses"]["Problem"];
+                default: components["responses"]["Problem"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/server/sites/{publicKey}/reports/countries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                publicKey: components["parameters"]["PublicKey"];
+            };
+            cookie?: never;
+        };
+        /** Countries (DB-IP Lite, CC BY 4.0) (scope reports:read). Same response as /sites/{siteId}/reports/countries */
+        get: {
+            parameters: {
+                query?: {
+                    period?: components["parameters"]["Period"];
+                    /** @description Start day (inclusive) in the site time zone; required with period=custom */
+                    from?: components["parameters"]["From"];
+                    /** @description End day (inclusive); required with period=custom */
+                    to?: components["parameters"]["To"];
+                    compare?: components["parameters"]["Compare"];
+                    /** @description filter[dim][op]=value, dims: page, entry_page, exit_page, host, channel, source, referrer, utm_source, utm_medium, utm_campaign, utm_content, utm_term, device, browser, os, country, event, content, level; ops: is, is_not, contains, prefix, glob */
+                    filter?: components["parameters"]["Filter"];
+                    limit?: components["parameters"]["Limit"];
+                    cursor?: components["parameters"]["Cursor"];
+                    /** @description Metric name, prefix with - for descending (default descending by the main metric) */
+                    sort?: components["parameters"]["Sort"];
+                };
+                header?: never;
+                path: {
+                    publicKey: components["parameters"]["PublicKey"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                rows: components["schemas"]["CountriesRow"][];
+                                total_rows: number;
+                            };
+                            meta: components["schemas"]["ReportMeta"];
+                        };
+                        "text/csv": string;
+                    };
+                };
+                /** @description Not modified */
+                304: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                401: components["responses"]["Problem"];
+                404: components["responses"]["Problem"];
+                422: components["responses"]["Problem"];
+                default: components["responses"]["Problem"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/server/sites/{publicKey}/reports/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                publicKey: components["parameters"]["PublicKey"];
+            };
+            cookie?: never;
+        };
+        /** Custom events (scope reports:read). Same response as /sites/{siteId}/reports/events */
+        get: {
+            parameters: {
+                query?: {
+                    period?: components["parameters"]["Period"];
+                    /** @description Start day (inclusive) in the site time zone; required with period=custom */
+                    from?: components["parameters"]["From"];
+                    /** @description End day (inclusive); required with period=custom */
+                    to?: components["parameters"]["To"];
+                    compare?: components["parameters"]["Compare"];
+                    /** @description filter[dim][op]=value, dims: page, entry_page, exit_page, host, channel, source, referrer, utm_source, utm_medium, utm_campaign, utm_content, utm_term, device, browser, os, country, event, content, level; ops: is, is_not, contains, prefix, glob */
+                    filter?: components["parameters"]["Filter"];
+                    limit?: components["parameters"]["Limit"];
+                    cursor?: components["parameters"]["Cursor"];
+                    /** @description Metric name, prefix with - for descending (default descending by the main metric) */
+                    sort?: components["parameters"]["Sort"];
+                };
+                header?: never;
+                path: {
+                    publicKey: components["parameters"]["PublicKey"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                rows: components["schemas"]["EventsRow"][];
+                                total_rows: number;
+                            };
+                            meta: components["schemas"]["ReportMeta"];
+                        };
+                        "text/csv": string;
+                    };
+                };
+                /** @description Not modified */
+                304: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                401: components["responses"]["Problem"];
+                404: components["responses"]["Problem"];
+                422: components["responses"]["Problem"];
+                default: components["responses"]["Problem"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/server/sites/{publicKey}/reports/realtime": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                publicKey: components["parameters"]["PublicKey"];
+            };
+            cookie?: never;
+        };
+        /** Active visitors (5 min), pageviews per minute (30 min), top pages and sources (scope reports:read). Same response as /sites/{siteId}/reports/realtime */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    publicKey: components["parameters"]["PublicKey"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Realtime"];
+                            meta: components["schemas"]["ReportMeta"];
+                        };
+                    };
+                };
+                401: components["responses"]["Problem"];
+                404: components["responses"]["Problem"];
+                default: components["responses"]["Problem"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/server/sites/{publicKey}/reports/goals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                publicKey: components["parameters"]["PublicKey"];
+            };
+            cookie?: never;
+        };
+        /** Goal completions (scope reports:read). Same response as /sites/{siteId}/reports/goals */
+        get: {
+            parameters: {
+                query?: {
+                    period?: components["parameters"]["Period"];
+                    /** @description Start day (inclusive) in the site time zone; required with period=custom */
+                    from?: components["parameters"]["From"];
+                    /** @description End day (inclusive); required with period=custom */
+                    to?: components["parameters"]["To"];
+                    limit?: components["parameters"]["Limit"];
+                    cursor?: components["parameters"]["Cursor"];
+                    /** @description Metric name, prefix with - for descending (default descending by the main metric) */
+                    sort?: components["parameters"]["Sort"];
+                };
+                header?: never;
+                path: {
+                    publicKey: components["parameters"]["PublicKey"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                rows: components["schemas"]["GoalsRow"][];
+                                total_rows: number;
+                            };
+                            meta: components["schemas"]["ReportMeta"];
+                        };
+                        "text/csv": string;
+                    };
+                };
+                /** @description Not modified */
+                304: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                401: components["responses"]["Problem"];
+                404: components["responses"]["Problem"];
+                422: components["responses"]["Problem"];
+                default: components["responses"]["Problem"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/server/sites/{publicKey}/reports/conversions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                publicKey: components["parameters"]["PublicKey"];
+            };
+            cookie?: never;
+        };
+        /** Conversions by name with value (scope reports:read). Same response as /sites/{siteId}/reports/conversions */
+        get: {
+            parameters: {
+                query?: {
+                    period?: components["parameters"]["Period"];
+                    /** @description Start day (inclusive) in the site time zone; required with period=custom */
+                    from?: components["parameters"]["From"];
+                    /** @description End day (inclusive); required with period=custom */
+                    to?: components["parameters"]["To"];
+                    limit?: components["parameters"]["Limit"];
+                    cursor?: components["parameters"]["Cursor"];
+                    /** @description Metric name, prefix with - for descending (default descending by the main metric) */
+                    sort?: components["parameters"]["Sort"];
+                };
+                header?: never;
+                path: {
+                    publicKey: components["parameters"]["PublicKey"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: {
+                                rows: components["schemas"]["ConversionsRow"][];
+                                total_rows: number;
+                            };
+                            meta: components["schemas"]["ReportMeta"];
+                        };
+                        "text/csv": string;
+                    };
+                };
+                /** @description Not modified */
+                304: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                401: components["responses"]["Problem"];
+                404: components["responses"]["Problem"];
+                422: components["responses"]["Problem"];
+                default: components["responses"]["Problem"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/server/sites/{publicKey}/reports/consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                publicKey: components["parameters"]["PublicKey"];
+            };
+            cookie?: never;
+        };
+        /** Banner statistics per day and consent version (scope reports:read). Same response as /sites/{siteId}/reports/consent */
+        get: {
+            parameters: {
+                query?: {
+                    period?: components["parameters"]["Period"];
+                    /** @description Start day (inclusive) in the site time zone; required with period=custom */
+                    from?: components["parameters"]["From"];
+                    /** @description End day (inclusive); required with period=custom */
+                    to?: components["parameters"]["To"];
+                };
+                header?: never;
+                path: {
+                    publicKey: components["parameters"]["PublicKey"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["ConsentReport"];
+                            meta: components["schemas"]["ReportMeta"];
+                        };
+                    };
+                };
+                /** @description Not modified */
+                304: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                401: components["responses"]["Problem"];
+                404: components["responses"]["Problem"];
+                422: components["responses"]["Problem"];
                 default: components["responses"]["Problem"];
             };
         };

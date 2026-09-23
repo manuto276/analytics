@@ -495,7 +495,8 @@
       "secretOnce": "Copy the key now: it will not be shown again.",
       "scopes": {
         "conversions_write": "Write conversions",
-        "stats_read": "Read content statistics"
+        "stats_read": "Read content statistics",
+        "reports_read": "Read reports (e.g. the WordPress plugin's dashboard)"
       }
     }
   },

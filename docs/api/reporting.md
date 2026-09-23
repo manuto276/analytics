@@ -27,7 +27,26 @@ curl -s -b jar.txt "$BASE/api/v1/sites/1/reports/overview?period=7d&compare=prev
 When `data.status` is `mfa_required`, complete the sign-in with `POST /api/v1/auth/mfa` and the same
 cookie jar; until then every other API call answers `401 mfa_required`.
 
-There is **no API-key access to the reporting endpoints.** The only server-to-server read is
+### With an API key (server to server)
+
+A server can read the same reports with an API key that has the **`reports:read`** scope — the
+WordPress plugin's dashboard does (see [ADR 0009](../architecture/adr/0009-wordpress-plugin-dashboard.md)):
+
+```sh
+curl -s -H "Authorization: Bearer ak_1a2b3c4d_…" \
+  "$BASE/api/v1/server/sites/pk_XXXXXXXXXXXXXXXXXXXXX/reports/overview?period=7d&compare=previous_period"
+```
+
+The routes are `/api/v1/server/sites/{publicKey}/reports/{report}` for `overview`, `timeseries`,
+`pages`, `sources`, `tech`, `countries`, `events`, `realtime`, `goals`, `conversions` and `consent`.
+They are answered by the same controller as the dashboard's routes: the same parameters, the same
+bodies, the same `ETag` and cache headers. The reports that depend on the dashboard's own
+configuration (`funnels`, `attribution`, `cohorts`, `content`, event properties, landing pages,
+campaigns) stay dashboard-only.
+
+A key belongs to one site; used against another site's public key it answers `404`, and without the
+scope `403`. The key is a secret: call these routes from a server, never from a browser (they send no
+CORS headers). The other server-to-server read is
 `GET /api/v1/server/sites/{publicKey}/content/{contentKey}/stats` (scope `stats:read`), described in
 [conversions.md](conversions.md#content-stats).
 

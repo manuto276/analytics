@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ApiKey, ApiResponse } from '~/types'
 
-type Scope = 'conversions:write' | 'stats:read'
+type Scope = 'conversions:write' | 'stats:read' | 'reports:read'
 
 const { t } = useI18n()
 const api = useApi()
@@ -18,7 +18,7 @@ const { data: keys, refresh } = useAsyncData<ApiKey[]>(
   { default: () => [] }
 )
 
-const scopeItems = computed(() => (['conversions:write', 'stats:read'] as const).map(value => ({ label: t(`settings.apiKeys.scopes.${value.replace(':', '_')}`), value })))
+const scopeItems = computed(() => (['conversions:write', 'stats:read', 'reports:read'] as const).map(value => ({ label: t(`settings.apiKeys.scopes.${value.replace(':', '_')}`), value })))
 
 const open = ref(false)
 const creating = ref(false)

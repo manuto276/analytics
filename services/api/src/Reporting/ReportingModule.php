@@ -48,6 +48,32 @@ final class ReportingModule extends Module
         $routes->get($base . '/consent', [ReportsController::class, 'consent'], $view);
     }
 
+    /**
+     * The same reports for a server holding an API key with `reports:read` — a CMS showing the
+     * site's numbers in its own admin, say. ApiKeyAuthMiddleware resolves the site from the public
+     * key and puts it in the request exactly where the session routes put it, so the controller
+     * is the same and so is every response. Aggregates only, like every report.
+     *
+     * The dashboard-only reports (funnels, attribution, cohorts, content prefixes, event props)
+     * are not exposed here: they need the dashboard's own configuration to mean anything.
+     */
+    public function serverRoutes(SecuredRoutes $routes): void
+    {
+        $base = '/sites/{publicKey:pk_[A-Za-z0-9]{21}}/reports';
+        $read = 'reports:read';
+        $routes->get($base . '/overview', [ReportsController::class, 'overview'], $read);
+        $routes->get($base . '/timeseries', [ReportsController::class, 'timeseries'], $read);
+        $routes->get($base . '/pages', [ReportsController::class, 'pages'], $read);
+        $routes->get($base . '/sources', [ReportsController::class, 'sources'], $read);
+        $routes->get($base . '/tech', [ReportsController::class, 'tech'], $read);
+        $routes->get($base . '/countries', [ReportsController::class, 'countries'], $read);
+        $routes->get($base . '/events', [ReportsController::class, 'events'], $read);
+        $routes->get($base . '/realtime', [ReportsController::class, 'realtime'], $read);
+        $routes->get($base . '/goals', [ReportsController::class, 'goals'], $read);
+        $routes->get($base . '/conversions', [ReportsController::class, 'conversions'], $read);
+        $routes->get($base . '/consent', [ReportsController::class, 'consent'], $read);
+    }
+
     public function commands(): array
     {
         return [

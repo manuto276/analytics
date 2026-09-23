@@ -7,7 +7,8 @@ info:
 
     * Dashboard routes use an httpOnly session cookie (`__Host-an_session`) and require the
       `X-CSRF-Token` header (value from `POST /auth/login` or `GET /auth/me`) on every non-GET request.
-    * Server routes (`/server/*`) use `Authorization: Bearer ak_<prefix>_<secret>` API keys with scopes.
+    * Server routes (`/server/*`) use `Authorization: Bearer ak_<prefix>_<secret>` API keys with scopes
+      (`conversions:write`, `stats:read`, `reports:read`).
     * Errors are RFC 9457 problem details (`application/problem+json`) with a stable `code`.
     * Reports expose aggregates only; no endpoint returns individual visitor or conversion rows.
   license:
@@ -1043,7 +1044,7 @@ paths:
                 name: { type: string }
                 scopes:
                   type: array
-                  items: { type: string, enum: ['conversions:write', 'stats:read'] }
+                  items: { type: string, enum: ['conversions:write', 'stats:read', 'reports:read'] }
                 expires_at: { type: string, format: date-time, nullable: true }
       responses:
         default: { $ref: '#/components/responses/Problem' }
@@ -1329,7 +1330,7 @@ paths:
         - $ref: '#/components/parameters/Interval'
         - $ref: '#/components/parameters/Compare'
         - $ref: '#/components/parameters/Filter'
-      responses:
+      responses: &resp_overview
         default: { $ref: '#/components/responses/Problem' }
         '200':
           description: OK
@@ -1360,7 +1361,7 @@ paths:
       tags: [reports]
       summary: Metrics per interval with optional comparison series
       parameters: *reportParams
-      responses:
+      responses: &resp_timeseries
         default: { $ref: '#/components/responses/Problem' }
         '200':
           description: OK
@@ -1393,7 +1394,7 @@ paths:
     get:
       tags: [reports]
       summary: Top, entry or exit pages
-      parameters:
+      parameters: &params_pages
         - $ref: '#/components/parameters/Period'
         - $ref: '#/components/parameters/From'
         - $ref: '#/components/parameters/To'
@@ -1403,7 +1404,7 @@ paths:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Sort'
         - { name: kind, in: query, schema: { type: string, enum: [top, entry, exit], default: top } }
-      responses:
+      responses: &resp_pages
         default: { $ref: '#/components/responses/Problem' }
         '200':
           description: OK
@@ -1472,7 +1473,7 @@ paths:
     get:
       tags: [reports]
       summary: Traffic by channel, source or referrer
-      parameters:
+      parameters: &params_sources
         - $ref: '#/components/parameters/Period'
         - $ref: '#/components/parameters/From'
         - $ref: '#/components/parameters/To'
@@ -1482,7 +1483,7 @@ paths:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Sort'
         - { name: group, in: query, schema: { type: string, enum: [channel, source, referrer], default: channel } }
-      responses:
+      responses: &resp_sources
         default: { $ref: '#/components/responses/Problem' }
         '200':
           description: OK
@@ -1543,7 +1544,7 @@ paths:
     get:
       tags: [reports]
       summary: Devices, browsers or operating systems
-      parameters:
+      parameters: &params_tech
         - $ref: '#/components/parameters/Period'
         - $ref: '#/components/parameters/From'
         - $ref: '#/components/parameters/To'
@@ -1553,7 +1554,7 @@ paths:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Sort'
         - { name: group, in: query, schema: { type: string, enum: [device, browser, os], default: device } }
-      responses:
+      responses: &resp_tech
         default: { $ref: '#/components/responses/Problem' }
         '200':
           description: OK
@@ -1584,7 +1585,7 @@ paths:
       tags: [reports]
       summary: Countries (DB-IP Lite, CC BY 4.0)
       parameters: *tableParams
-      responses:
+      responses: &resp_countries
         default: { $ref: '#/components/responses/Problem' }
         '200':
           description: OK
@@ -1615,7 +1616,7 @@ paths:
       tags: [reports]
       summary: Custom events
       parameters: *tableParams
-      responses:
+      responses: &resp_events
         default: { $ref: '#/components/responses/Problem' }
         '200':
           description: OK
@@ -1718,7 +1719,7 @@ paths:
     get:
       tags: [reports]
       summary: Active visitors (5 min), pageviews per minute (30 min), top pages and sources
-      responses:
+      responses: &resp_realtime
         default: { $ref: '#/components/responses/Problem' }
         '200':
           description: OK
@@ -1737,14 +1738,14 @@ paths:
     get:
       tags: [reports]
       summary: Goal completions
-      parameters:
+      parameters: &params_goals
         - $ref: '#/components/parameters/Period'
         - $ref: '#/components/parameters/From'
         - $ref: '#/components/parameters/To'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Sort'
-      responses:
+      responses: &resp_goals
         default: { $ref: '#/components/responses/Problem' }
         '200':
           description: OK
@@ -1774,14 +1775,14 @@ paths:
     get:
       tags: [reports]
       summary: Conversions by name with value
-      parameters:
+      parameters: &params_conversions
         - $ref: '#/components/parameters/Period'
         - $ref: '#/components/parameters/From'
         - $ref: '#/components/parameters/To'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Sort'
-      responses:
+      responses: &resp_conversions
         default: { $ref: '#/components/responses/Problem' }
         '200':
           description: OK
@@ -1895,11 +1896,11 @@ paths:
     get:
       tags: [reports]
       summary: Banner statistics per day and consent version
-      parameters:
+      parameters: &params_consent
         - $ref: '#/components/parameters/Period'
         - $ref: '#/components/parameters/From'
         - $ref: '#/components/parameters/To'
-      responses:
+      responses: &resp_consent
         default: { $ref: '#/components/responses/Problem' }
         '200':
           description: OK
@@ -2080,6 +2081,105 @@ paths:
         '403': { $ref: '#/components/responses/Problem' }
         '422': { $ref: '#/components/responses/Problem' }
         '429': { $ref: '#/components/responses/Problem' }
+
+  /server/sites/{publicKey}/reports/overview:
+    parameters: [ { $ref: '#/components/parameters/PublicKey' } ]
+    get:
+      tags: [server]
+      summary: 'Headline metrics with comparison deltas (scope reports:read). Same response as /sites/{siteId}/reports/overview'
+      security:
+        - apiKey: []
+      parameters: *reportParams
+      responses: *resp_overview
+  /server/sites/{publicKey}/reports/timeseries:
+    parameters: [ { $ref: '#/components/parameters/PublicKey' } ]
+    get:
+      tags: [server]
+      summary: 'Metrics per interval with optional comparison series (scope reports:read). Same response as /sites/{siteId}/reports/timeseries'
+      security:
+        - apiKey: []
+      parameters: *reportParams
+      responses: *resp_timeseries
+  /server/sites/{publicKey}/reports/pages:
+    parameters: [ { $ref: '#/components/parameters/PublicKey' } ]
+    get:
+      tags: [server]
+      summary: 'Top, entry or exit pages (scope reports:read). Same response as /sites/{siteId}/reports/pages'
+      security:
+        - apiKey: []
+      parameters: *params_pages
+      responses: *resp_pages
+  /server/sites/{publicKey}/reports/sources:
+    parameters: [ { $ref: '#/components/parameters/PublicKey' } ]
+    get:
+      tags: [server]
+      summary: 'Traffic by channel, source or referrer (scope reports:read). Same response as /sites/{siteId}/reports/sources'
+      security:
+        - apiKey: []
+      parameters: *params_sources
+      responses: *resp_sources
+  /server/sites/{publicKey}/reports/tech:
+    parameters: [ { $ref: '#/components/parameters/PublicKey' } ]
+    get:
+      tags: [server]
+      summary: 'Devices, browsers or operating systems (scope reports:read). Same response as /sites/{siteId}/reports/tech'
+      security:
+        - apiKey: []
+      parameters: *params_tech
+      responses: *resp_tech
+  /server/sites/{publicKey}/reports/countries:
+    parameters: [ { $ref: '#/components/parameters/PublicKey' } ]
+    get:
+      tags: [server]
+      summary: 'Countries (DB-IP Lite, CC BY 4.0) (scope reports:read). Same response as /sites/{siteId}/reports/countries'
+      security:
+        - apiKey: []
+      parameters: *tableParams
+      responses: *resp_countries
+  /server/sites/{publicKey}/reports/events:
+    parameters: [ { $ref: '#/components/parameters/PublicKey' } ]
+    get:
+      tags: [server]
+      summary: 'Custom events (scope reports:read). Same response as /sites/{siteId}/reports/events'
+      security:
+        - apiKey: []
+      parameters: *tableParams
+      responses: *resp_events
+  /server/sites/{publicKey}/reports/realtime:
+    parameters: [ { $ref: '#/components/parameters/PublicKey' } ]
+    get:
+      tags: [server]
+      summary: 'Active visitors (5 min), pageviews per minute (30 min), top pages and sources (scope reports:read). Same response as /sites/{siteId}/reports/realtime'
+      security:
+        - apiKey: []
+      responses: *resp_realtime
+  /server/sites/{publicKey}/reports/goals:
+    parameters: [ { $ref: '#/components/parameters/PublicKey' } ]
+    get:
+      tags: [server]
+      summary: 'Goal completions (scope reports:read). Same response as /sites/{siteId}/reports/goals'
+      security:
+        - apiKey: []
+      parameters: *params_goals
+      responses: *resp_goals
+  /server/sites/{publicKey}/reports/conversions:
+    parameters: [ { $ref: '#/components/parameters/PublicKey' } ]
+    get:
+      tags: [server]
+      summary: 'Conversions by name with value (scope reports:read). Same response as /sites/{siteId}/reports/conversions'
+      security:
+        - apiKey: []
+      parameters: *params_conversions
+      responses: *resp_conversions
+  /server/sites/{publicKey}/reports/consent:
+    parameters: [ { $ref: '#/components/parameters/PublicKey' } ]
+    get:
+      tags: [server]
+      summary: 'Banner statistics per day and consent version (scope reports:read). Same response as /sites/{siteId}/reports/consent'
+      security:
+        - apiKey: []
+      parameters: *params_consent
+      responses: *resp_consent
 
 components:
   securitySchemes:
