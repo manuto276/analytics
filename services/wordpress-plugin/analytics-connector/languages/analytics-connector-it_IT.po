@@ -1,0 +1,784 @@
+# Copyright (C) 2026 Analytics contributors
+# This file is distributed under the GPL-2.0-or-later.
+msgid ""
+msgstr ""
+"Project-Id-Version: Analytics 1.0.0\n"
+"Report-Msgid-Bugs-To: https://github.com/manuto276/analytics/issues\n"
+"Last-Translator: Analytics contributors\n"
+"Language-Team: Italiano\n"
+"Language: it_IT\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-09-23T10:58:23+00:00\n"
+"PO-Revision-Date: 2026-09-23 13:00+0200\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: analytics-connector\n"
+
+#. Plugin Name of the plugin
+#: analytics-connector.php
+#: includes/admin-app.php:39
+#: includes/admin-app.php:122
+msgid "Analytics"
+msgstr "Analytics"
+
+#. Plugin URI of the plugin
+#: analytics-connector.php
+msgid "https://github.com/manuto276/analytics"
+msgstr ""
+
+#. Description of the plugin
+#: analytics-connector.php
+msgid "The site's visits, sources and conversions, measured by your own analytics service — the tracker and its consent banner on every page, and a dashboard in WordPress."
+msgstr "Le visite, le provenienze e le conversioni del sito, misurate dal tuo servizio di analytics: il tracker e il suo banner dei consensi su ogni pagina, e una dashboard in WordPress."
+
+#. Author of the plugin
+#: analytics-connector.php
+msgid "Analytics contributors"
+msgstr ""
+
+#: includes/admin-app.php:33
+#: build/admin.js:1
+#: build/admin.js:5
+msgid "Overview"
+msgstr "Panoramica"
+
+#: includes/admin-app.php:34
+#: includes/admin-app.php:111
+#: build/admin.js:1
+#: build/admin.js:5
+msgid "Settings"
+msgstr "Impostazioni"
+
+#: includes/admin-app.php:135
+msgid "Visitors today"
+msgstr "Visitatori oggi"
+
+#: includes/admin-app.php:136
+msgid "Visitors, last 7 days"
+msgstr "Visitatori, ultimi 7 giorni"
+
+#: includes/admin-app.php:137
+msgid "Pageviews, last 7 days"
+msgstr "Pagine viste, ultimi 7 giorni"
+
+#: includes/admin-app.php:149
+msgid "All the statistics"
+msgstr "Tutte le statistiche"
+
+#: includes/client.php:93
+msgid "Enter the service address and the public key in Analytics → Settings."
+msgstr "Inserisci l’indirizzo del servizio e la chiave pubblica in Analytics → Impostazioni."
+
+#: includes/client.php:96
+msgid "Paste an API key with the “Read reports” permission in Analytics → Settings to see the statistics here."
+msgstr "Incolla una chiave API con il permesso «Lettura dei report» in Analytics → Impostazioni per vedere qui le statistiche."
+
+#: includes/client.php:143
+msgid "The analytics service sent an answer the plugin could not read. Check the service address."
+msgstr "Il servizio di analytics ha mandato una risposta che il plugin non sa leggere. Controlla l’indirizzo del servizio."
+
+#: includes/client.php:161
+msgid "The analytics service cannot be reached. Check the service address, or try again in a minute."
+msgstr "Il servizio di analytics non risponde. Controlla l’indirizzo del servizio, o riprova tra un minuto."
+
+#: includes/client.php:170
+msgid "The service refused the API key: it may have been revoked or mistyped. Create a new one and paste it in Settings."
+msgstr "Il servizio ha rifiutato la chiave API: forse è stata revocata o copiata male. Creane una nuova e incollala nelle Impostazioni."
+
+#: includes/client.php:171
+msgid "The API key cannot read reports. Create one with the “Read reports” permission."
+msgstr "La chiave API non può leggere i report. Creane una con il permesso «Lettura dei report»."
+
+#: includes/client.php:172
+msgid "The service does not know this site with this key, or it is too old to send reports to WordPress. Check the public key; if it is right, the service needs updating."
+msgstr "Il servizio non conosce questo sito con questa chiave, oppure è troppo vecchio per mandare i report a WordPress. Controlla la chiave pubblica; se è giusta, il servizio va aggiornato."
+
+#: includes/client.php:173
+msgid "The service did not accept the period asked for."
+msgstr "Il servizio non ha accettato il periodo richiesto."
+
+#: includes/client.php:174
+msgid "Too many requests to the service. Try again in a minute."
+msgstr "Troppe richieste al servizio. Riprova tra un minuto."
+
+#: includes/client.php:176
+msgid "The analytics service had a problem. Try again in a minute."
+msgstr "Il servizio di analytics ha avuto un problema. Riprova tra un minuto."
+
+#: includes/frontend.php:83
+#: blocks/consent-link/editor.js:16
+msgid "Cookie settings"
+msgstr "Impostazioni cookie"
+
+#: includes/rest-admin.php:88
+msgid "The public key must be “pk_” followed by 21 letters or digits."
+msgstr "La chiave pubblica è «pk_» seguito da 21 lettere o cifre."
+
+#: includes/rest-admin.php:93
+msgid "That is not an API key: it starts with “ak_” and is 55 characters long. Copy it again from the analytics dashboard."
+msgstr "Questa non è una chiave API: comincia con «ak_» ed è lunga 55 caratteri. Copiala di nuovo dalla dashboard di analytics."
+
+#: includes/rest-admin.php:96
+msgid "The API key is set in wp-config.php: change it there."
+msgstr "La chiave API è impostata in wp-config.php: cambiala lì."
+
+#: includes/rest-admin.php:124
+msgid "Unknown report."
+msgstr "Report sconosciuto."
+
+#: includes/settings.php:64
+msgid "The public key must be \"pk_\" followed by 21 letters or digits. The previous key was kept."
+msgstr "La chiave pubblica è \"pk_\" seguito da 21 lettere o cifre. È stata tenuta la chiave precedente."
+
+#: blocks/consent-link/editor.js:9
+msgid "Link"
+msgstr "Link"
+
+#: blocks/consent-link/editor.js:11
+msgid "Label"
+msgstr "Etichetta"
+
+#: build/admin.js:1
+msgid "Something went wrong. Please try again."
+msgstr "Qualcosa è andato storto. Riprova."
+
+#. translators: %s: site name.
+#: build/admin.js:2
+#, js-format
+msgid "Analytics · %s"
+msgstr "Analytics · %s"
+
+#: build/admin.js:2
+msgid "Analytics sections"
+msgstr "Sezioni di Analytics"
+
+#: build/admin.js:2
+msgid "Loading…"
+msgstr "Caricamento…"
+
+#. translators: 1: a value, 2: a day or hour, 3: the value in the previous period.
+#: build/admin.js:3
+#, js-format
+msgid "<strong>%1$s</strong> · %2$s <span>(before: %3$s)</span>"
+msgstr "<strong>%1$s</strong> · %2$s <span>(prima: %3$s)</span>"
+
+#. translators: 1: a value, 2: a day or hour.
+#: build/admin.js:4
+#, js-format
+msgid "<strong>%1$s</strong> · %2$s"
+msgstr "<strong>%1$s</strong> · %2$s"
+
+#: build/admin.js:4
+msgid "point at the chart, or focus it and use the arrow keys"
+msgstr "passa sul grafico, oppure selezionalo e usa le frecce"
+
+#. translators: 1: the metric, e.g. "Visitors per day", 2: the number of points.
+#: build/admin.js:5
+#, js-format
+msgid "%1$s: %2$s points. Use the arrow keys to read each one."
+msgstr "%1$s: %2$s punti. Usa le frecce per leggerli uno per uno."
+
+#: build/admin.js:5
+msgid "Today"
+msgstr "Oggi"
+
+#: build/admin.js:5
+msgid "7 days"
+msgstr "7 giorni"
+
+#: build/admin.js:5
+msgid "30 days"
+msgstr "30 giorni"
+
+#: build/admin.js:5
+msgid "90 days"
+msgstr "90 giorni"
+
+#: build/admin.js:5
+msgid "12 months"
+msgstr "12 mesi"
+
+#: build/admin.js:5
+msgid "Period"
+msgstr "Periodo"
+
+#: build/admin.js:5
+msgid "Visitors per hour"
+msgstr "Visitatori all’ora"
+
+#: build/admin.js:5
+msgid "Visitors per day"
+msgstr "Visitatori al giorno"
+
+#: build/admin.js:5
+msgid "Visitors per week"
+msgstr "Visitatori alla settimana"
+
+#: build/admin.js:5
+msgid "Visitors per month"
+msgstr "Visitatori al mese"
+
+#: build/admin.js:5
+msgid "Visits per hour"
+msgstr "Visite all’ora"
+
+#: build/admin.js:5
+msgid "Visits per day"
+msgstr "Visite al giorno"
+
+#: build/admin.js:5
+msgid "Visits per week"
+msgstr "Visite alla settimana"
+
+#: build/admin.js:5
+msgid "Visits per month"
+msgstr "Visite al mese"
+
+#: build/admin.js:5
+msgid "Pageviews per hour"
+msgstr "Pagine viste all’ora"
+
+#: build/admin.js:5
+msgid "Pageviews per day"
+msgstr "Pagine viste al giorno"
+
+#: build/admin.js:5
+msgid "Pageviews per week"
+msgstr "Pagine viste alla settimana"
+
+#: build/admin.js:5
+msgid "Pageviews per month"
+msgstr "Pagine viste al mese"
+
+#: build/admin.js:5
+msgid "Conversions per hour"
+msgstr "Conversioni all’ora"
+
+#: build/admin.js:5
+msgid "Conversions per day"
+msgstr "Conversioni al giorno"
+
+#: build/admin.js:5
+msgid "Conversions per week"
+msgstr "Conversioni alla settimana"
+
+#: build/admin.js:5
+msgid "Conversions per month"
+msgstr "Conversioni al mese"
+
+#: build/admin.js:5
+msgid "Pages"
+msgstr "Pagine"
+
+#: build/admin.js:5
+msgid "The most read"
+msgstr "Le più lette"
+
+#: build/admin.js:5
+msgid "Pageviews"
+msgstr "Pagine viste"
+
+#: build/admin.js:5
+msgid "Sources"
+msgstr "Provenienze"
+
+#: build/admin.js:5
+msgid "Where visits come from"
+msgstr "Da dove arrivano le visite"
+
+#: build/admin.js:5
+msgid "Direct"
+msgstr "Dirette"
+
+#: build/admin.js:5
+msgid "Search engines"
+msgstr "Motori di ricerca"
+
+#: build/admin.js:5
+msgid "Paid search"
+msgstr "Ricerca a pagamento"
+
+#: build/admin.js:5
+msgid "Social networks"
+msgstr "Social network"
+
+#: build/admin.js:5
+msgid "Paid social"
+msgstr "Social a pagamento"
+
+#: build/admin.js:5
+msgid "Email"
+msgstr "Email"
+
+#: build/admin.js:5
+msgid "Other sites"
+msgstr "Altri siti"
+
+#: build/admin.js:5
+msgid "Campaigns"
+msgstr "Campagne"
+
+#: build/admin.js:5
+msgid "Internal"
+msgstr "Interne"
+
+#: build/admin.js:5
+msgid "Unknown"
+msgstr "Sconosciuto"
+
+#: build/admin.js:5
+msgid "Visits"
+msgstr "Visite"
+
+#: build/admin.js:5
+msgid "Countries"
+msgstr "Paesi"
+
+#: build/admin.js:5
+msgid "Devices"
+msgstr "Dispositivi"
+
+#: build/admin.js:5
+msgid "Computer"
+msgstr "Computer"
+
+#: build/admin.js:5
+msgid "Phone"
+msgstr "Telefono"
+
+#: build/admin.js:5
+msgid "Tablet"
+msgstr "Tablet"
+
+#: build/admin.js:5
+msgid "Events"
+msgstr "Eventi"
+
+#: build/admin.js:5
+msgid "Clicks, forms, downloads you track"
+msgstr "Clic, moduli, download che tracci"
+
+#: build/admin.js:5
+msgid "Times"
+msgstr "Volte"
+
+#: build/admin.js:5
+msgid "No events in this period. The tracker sends them for the links, forms and downloads enabled on the service, and for analytics.track() calls."
+msgstr "Nessun evento in questo periodo. Il tracker li manda per i link, i moduli e i download attivati sul servizio, e per le chiamate a analytics.track()."
+
+#: build/admin.js:5
+msgid "Everything else — campaigns, goals, funnels — on the analytics service"
+msgstr "Tutto il resto (campagne, obiettivi, funnel) sul servizio di analytics"
+
+#: build/admin.js:5
+msgid "(opens in a new tab)"
+msgstr "(si apre in una nuova scheda)"
+
+#: build/admin.js:5
+msgid "The period in numbers"
+msgstr "Il periodo in numeri"
+
+#: build/admin.js:5
+msgid "Visitors"
+msgstr "Visitatori"
+
+#: build/admin.js:5
+msgid "Bounce rate"
+msgstr "Frequenza di rimbalzo"
+
+#: build/admin.js:5
+msgid "Visit duration"
+msgstr "Durata della visita"
+
+#: build/admin.js:5
+msgid "Conversions"
+msgstr "Conversioni"
+
+#. translators: %s: the value in the previous period.
+#: build/admin.js:5
+#, js-format
+msgid "before: %s"
+msgstr "prima: %s"
+
+#. translators: %s: a change, e.g. "+12%".
+#: build/admin.js:5
+#, js-format
+msgid "%s on the previous period"
+msgstr "%s sul periodo precedente"
+
+#: build/admin.js:5
+msgid "Nothing in this period."
+msgstr "Niente in questo periodo."
+
+#. translators: 1: a list, e.g. "Pages", 2: what the numbers count, e.g. "Pageviews".
+#: build/admin.js:5
+#, js-format
+msgid "%1$s, by %2$s"
+msgstr "%1$s, per %2$s"
+
+#: build/admin.js:5
+msgid "Now"
+msgstr "Adesso"
+
+#: build/admin.js:5
+msgid "The last 5 minutes, updated every 30 seconds"
+msgstr "Gli ultimi 5 minuti, aggiornati ogni 30 secondi"
+
+#: build/admin.js:5
+msgid "visitor on the site"
+msgid_plural "visitors on the site"
+msgstr[0] "visitatore sul sito"
+msgstr[1] "visitatori sul sito"
+
+#: build/admin.js:5
+msgid "The statistics cannot be read yet"
+msgstr "Le statistiche non si possono ancora leggere"
+
+#: build/admin.js:5
+msgid "Connect WordPress to your statistics"
+msgstr "Collega WordPress alle tue statistiche"
+
+#: build/admin.js:5
+msgid "Open Settings"
+msgstr "Apri le Impostazioni"
+
+#: build/admin.js:5
+msgid "In Settings → Connection, enter the address of the analytics service and the site’s public key (pk_…)."
+msgstr "In Impostazioni → Connessione, inserisci l’indirizzo del servizio di analytics e la chiave pubblica del sito (pk_…)."
+
+#: build/admin.js:5
+msgid "On the analytics service, create an API key with the “Read reports” permission"
+msgstr "Sul servizio di analytics, crea una chiave API con il permesso «Lettura dei report»"
+
+#: build/admin.js:5
+msgid "Paste it in Settings → API key. It stays on the server: the browser never sees it."
+msgstr "Incollala in Impostazioni → Chiave API. Resta sul server: il browser non la vede mai."
+
+#: build/admin.js:5
+msgid "An administrator has to connect the site to the analytics service first."
+msgstr "Prima un amministratore deve collegare il sito al servizio di analytics."
+
+#: build/admin.js:5
+msgid "Connection"
+msgstr "Connessione"
+
+#: build/admin.js:5
+msgid "API key"
+msgstr "Chiave API"
+
+#: build/admin.js:5
+msgid "Who is counted"
+msgstr "Chi viene contato"
+
+#: build/admin.js:5
+msgid "The site on the service"
+msgstr "Il sito sul servizio"
+
+#: build/admin.js:5
+msgid "Consent and events"
+msgstr "Consenso ed eventi"
+
+#: build/admin.js:5
+msgid "Where the tracker comes from. Every page of the site loads it, with the consent banner when the service has one published."
+msgstr "Da dove arriva il tracker. Ogni pagina del sito lo carica, con il banner dei consensi quando il servizio ne ha uno pubblicato."
+
+#: build/admin.js:5
+msgid "Service address"
+msgstr "Indirizzo del servizio"
+
+#: build/admin.js:5
+msgid "The address of your analytics service, without a path."
+msgstr "L’indirizzo del tuo servizio di analytics, senza percorso."
+
+#: build/admin.js:5
+msgid "Public key"
+msgstr "Chiave pubblica"
+
+#: build/admin.js:5
+msgid "The site’s key on the service, the pk_… in its tracking code. It is public: it is in every page."
+msgstr "La chiave del sito sul servizio, il pk_… nel suo codice di tracciamento. È pubblica: è in ogni pagina."
+
+#: build/admin.js:5
+msgid "How the tracker is loaded"
+msgstr "Come si carica il tracker"
+
+#: build/admin.js:5
+msgid "From the service"
+msgstr "Dal servizio"
+
+#: build/admin.js:5
+msgid "Through a path of this site (a reverse proxy you set up on the web server)"
+msgstr "Da un percorso di questo sito (un reverse proxy che configuri sul web server)"
+
+#: build/admin.js:5
+msgid "Proxy path"
+msgstr "Percorso del proxy"
+
+#: build/admin.js:5
+msgid "The script is then loaded from this site: {path}{public key}.js."
+msgstr "Lo script si carica allora da questo sito: {percorso}{chiave pubblica}.js."
+
+#: build/admin.js:5
+msgid "JavaScript name"
+msgstr "Nome JavaScript"
+
+#: build/admin.js:5
+msgid "The global the site’s scripts call, as in analytics.track( … ). Change it only if another script already uses that name."
+msgstr "Il nome globale che chiamano gli script del sito, come in analytics.track( … ). Cambialo solo se un altro script usa già quel nome."
+
+#: build/admin.js:5
+msgid "With a key that can read reports, Analytics → Overview shows the site’s statistics here, without going to the service."
+msgstr "Con una chiave che può leggere i report, Analytics → Panoramica mostra qui le statistiche del sito, senza andare sul servizio."
+
+#: build/admin.js:5
+msgid "To remove"
+msgstr "Da rimuovere"
+
+#: build/admin.js:5
+msgid "Saved"
+msgstr "Salvata"
+
+#: build/admin.js:5
+msgid "Set in wp-config.php (ANALYTICS_CONNECTOR_API_KEY): change it there."
+msgstr "Impostata in wp-config.php (ANALYTICS_CONNECTOR_API_KEY): cambiala lì."
+
+#: build/admin.js:5
+msgid "Keep it"
+msgstr "Tienila"
+
+#: build/admin.js:5
+msgid "Remove"
+msgstr "Rimuovi"
+
+#: build/admin.js:5
+msgid "Replace with a new key"
+msgstr "Sostituisci con una nuova chiave"
+
+#: build/admin.js:5
+msgid "Paste the key"
+msgstr "Incolla la chiave"
+
+#: build/admin.js:5
+msgid "On the service: Settings → API keys, a new key with the “Read reports” permission. The key stays on this server, encrypted; the page shows only its beginning."
+msgstr "Sul servizio: Impostazioni → Chiavi API, una nuova chiave con il permesso «Lettura dei report». La chiave resta su questo server, cifrata; la pagina ne mostra solo l’inizio."
+
+#: build/admin.js:5
+msgid "Who sees the statistics: administrators and editors (the analytics_view capability). Who changes these settings: administrators (analytics_manage)."
+msgstr "Chi vede le statistiche: amministratori e editori (il permesso analytics_view). Chi cambia queste impostazioni: gli amministratori (analytics_manage)."
+
+#: build/admin.js:5
+msgid "The site’s own people, logged in, do not load the tracker: their visits are not counted."
+msgstr "Le persone del sito, quando hanno fatto l’accesso, non caricano il tracker: le loro visite non si contano."
+
+#: build/admin.js:5
+msgid "Not counted: logged-in users who can"
+msgstr "Non contare: gli utenti collegati che possono"
+
+#: build/admin.js:5
+msgid "A WordPress capability: edit_posts (the default) leaves out authors, editors and administrators; manage_options only administrators. Empty counts everyone."
+msgstr "Un permesso di WordPress: edit_posts (il predefinito) esclude autori, editori e amministratori; manage_options solo gli amministratori. Vuoto conta tutti."
+
+#: build/admin.js:5
+msgid "The service leaves out bots, and the paths and IP addresses excluded in its site settings."
+msgstr "Il servizio esclude i bot, e i percorsi e gli indirizzi IP esclusi nelle impostazioni del sito."
+
+#: build/admin.js:5
+msgid "Asking the service…"
+msgstr "Chiedo al servizio…"
+
+#: build/admin.js:5
+msgid "On"
+msgstr "Attivo"
+
+#: build/admin.js:5
+msgid "Off"
+msgstr "Spento"
+
+#: build/admin.js:5
+msgid "The tracker"
+msgstr "Il tracker"
+
+#: build/admin.js:5
+msgid "What the service sends every page, and what its settings say."
+msgstr "Cosa manda il servizio a ogni pagina, e cosa dicono le sue impostazioni."
+
+#: build/admin.js:5
+msgid "Check again"
+msgstr "Controlla di nuovo"
+
+#: build/admin.js:5
+msgid "Script"
+msgstr "Script"
+
+#. translators: %s: size in kB.
+#: build/admin.js:5
+#, js-format
+msgid "Served · %s kB"
+msgstr "Servito · %s kB"
+
+#: build/admin.js:5
+msgid "Not set up: enter the service address and the public key"
+msgstr "Non configurato: inserisci l’indirizzo del servizio e la chiave pubblica"
+
+#: build/admin.js:5
+msgid "The service cannot be reached"
+msgstr "Il servizio non risponde"
+
+#. translators: %d: HTTP status.
+#: build/admin.js:5
+#, js-format
+msgid "Not served (HTTP %d): check the public key"
+msgstr "Non servito (HTTP %d): controlla la chiave pubblica"
+
+#: build/admin.js:5
+msgid "Cookies"
+msgstr "Cookie"
+
+#: build/admin.js:5
+msgid "After consent: returning visitors are recognised"
+msgstr "Dopo il consenso: chi torna viene riconosciuto"
+
+#: build/admin.js:5
+msgid "None: every visit is anonymous"
+msgstr "Nessuno: ogni visita è anonima"
+
+#: build/admin.js:5
+msgid "Consent banner"
+msgstr "Banner dei consensi"
+
+#. translators: 1: version, 2: languages.
+#: build/admin.js:5
+#, js-format
+msgid "Published · version %1$d · %2$s"
+msgstr "Pubblicato · versione %1$d · %2$s"
+
+#: build/admin.js:5
+msgid "Not published: nobody is asked, so nobody gets cookies"
+msgstr "Non pubblicato: non si chiede a nessuno, quindi nessuno riceve cookie"
+
+#: build/admin.js:5
+msgid "Not needed without cookies"
+msgstr "Non serve senza cookie"
+
+#: build/admin.js:5
+msgid "Links to other sites"
+msgstr "Link ad altri siti"
+
+#: build/admin.js:5
+msgid "Downloads"
+msgstr "Download"
+
+#: build/admin.js:5
+msgid "Forms sent"
+msgstr "Moduli inviati"
+
+#: build/admin.js:5
+msgid "The API key"
+msgstr "La chiave API"
+
+#: build/admin.js:5
+msgid "Reports"
+msgstr "Report"
+
+#: build/admin.js:5
+msgid "No key: the Overview stays empty"
+msgstr "Nessuna chiave: la Panoramica resta vuota"
+
+#: build/admin.js:5
+msgid "The key reads this site’s reports"
+msgstr "La chiave legge i report di questo sito"
+
+#: build/admin.js:5
+msgid "Key"
+msgstr "Chiave"
+
+#: build/admin.js:5
+msgid "from wp-config.php"
+msgstr "da wp-config.php"
+
+#: build/admin.js:5
+msgid "saved here, encrypted"
+msgstr "salvata qui, cifrata"
+
+#: build/admin.js:5
+msgid "Change the banner, cookies and automatic events on the service"
+msgstr "Cambia il banner, i cookie e gli eventi automatici sul servizio"
+
+#: build/admin.js:5
+msgid "A link to change the choice"
+msgstr "Un link per cambiare la scelta"
+
+#: build/admin.js:5
+msgid "Visitors must be able to change their mind about cookies. Any of these opens the banner again:"
+msgstr "Chi visita il sito deve poter cambiare idea sui cookie. Ognuno di questi riapre il banner:"
+
+#: build/admin.js:5
+msgid "Block"
+msgstr "Blocco"
+
+#: build/admin.js:5
+msgid "“Consent settings link”, in the editor or a footer template."
+msgstr "«Link alle impostazioni del consenso», nell’editor o in un template del piè di pagina."
+
+#: build/admin.js:5
+msgid "Shortcode"
+msgstr "Shortcode"
+
+#: build/admin.js:5
+msgid "Menu"
+msgstr "Menu"
+
+#: build/admin.js:5
+msgid "A custom link to"
+msgstr "Un link personalizzato a"
+
+#: build/admin.js:5
+msgid "Events and conversions"
+msgstr "Eventi e conversioni"
+
+#: build/admin.js:5
+msgid "A click"
+msgstr "Un clic"
+
+#: build/admin.js:5
+msgid "from the server, for what happens after the page: a payment, a confirmed booking. Needs an API key with “Write conversions”."
+msgstr "dal server, per ciò che succede dopo la pagina: un pagamento, una prenotazione confermata. Serve una chiave API con «Scrittura conversioni»."
+
+#: build/admin.js:5
+msgid "Settings saved."
+msgstr "Impostazioni salvate."
+
+#: build/admin.js:5
+msgid "Save changes"
+msgstr "Salva le modifiche"
+
+#: build/admin.js:5
+msgid "Settings sections"
+msgstr "Sezioni delle impostazioni"
+
+#: blocks/consent-link/block.json
+msgctxt "block title"
+msgid "Consent settings link"
+msgstr "Link alle impostazioni del consenso"
+
+#: blocks/consent-link/block.json
+msgctxt "block description"
+msgid "A link that reopens the analytics consent preferences."
+msgstr "Un link che riapre le preferenze del consenso di analytics."
+
+#: blocks/consent-link/block.json
+msgctxt "block keyword"
+msgid "cookie"
+msgstr "cookie"
+
+#: blocks/consent-link/block.json
+msgctxt "block keyword"
+msgid "consent"
+msgstr "consenso"
+
+#: blocks/consent-link/block.json
+msgctxt "block keyword"
+msgid "privacy"
+msgstr "privacy"

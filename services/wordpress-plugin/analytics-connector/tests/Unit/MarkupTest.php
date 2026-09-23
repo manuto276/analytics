@@ -36,11 +36,14 @@ final class MarkupTest extends TestCase
 
     public function testInitRegistersShortcodeAndBlock(): void
     {
+        Functions\when('plugin_basename')->justReturn('analytics-connector/analytics-connector.php');
+        Functions\expect('load_plugin_textdomain')->once()->with('analytics-connector', false, 'analytics-connector/languages');
         Functions\expect('add_shortcode')->once()->with('analytics_consent_link', 'analytics_connector_consent_link_shortcode');
         Functions\expect('register_block_type')->once()->with(
             \Mockery::on(static fn (string $path): bool => is_file($path . '/block.json')),
             ['render_callback' => 'analytics_connector_render_consent_block'],
-        );
+        )->andReturn((object) ['editor_script_handles' => ['analytics-connector-consent-link-editor-script']]);
+        Functions\expect('wp_set_script_translations')->once()->with('analytics-connector-consent-link-editor-script', 'analytics-connector', \Mockery::type('string'));
 
         analytics_connector_init();
     }

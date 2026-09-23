@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<!--
+  The WordPress rules that catch real problems — escaping, nonces, sanitising input,
+  translatable strings, prefixes — and PHP compatibility, as the workspace's other plugins.
+  `composer install && vendor/bin/phpcs` in this folder.
+-->
+<ruleset name="Analytics for WordPress">
+    <file>.</file>
+    <exclude-pattern>/vendor/*</exclude-pattern>
+    <exclude-pattern>/node_modules/*</exclude-pattern>
+    <exclude-pattern>/build/*</exclude-pattern>
+    <exclude-pattern>/dist/*</exclude-pattern>
+    <exclude-pattern>/tests/*</exclude-pattern>
+    <arg name="extensions" value="php"/>
+    <arg value="sp"/>
+
+    <config name="testVersion" value="8.1-"/>
+    <config name="minimum_wp_version" value="6.6"/>
+
+    <rule ref="PHPCompatibilityWP"/>
+    <rule ref="WordPress.Security"/>
+    <rule ref="WordPress.DB.PreparedSQL"/>
+    <rule ref="WordPress.WP.I18n">
+        <properties>
+            <property name="text_domain" type="array">
+                <element value="analytics-connector"/>
+            </property>
+        </properties>
+    </rule>
+    <rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+        <properties>
+            <property name="prefixes" type="array">
+                <element value="analytics_connector"/>
+                <element value="ANALYTICS_CONNECTOR"/>
+            </property>
+        </properties>
+    </rule>
+</ruleset>

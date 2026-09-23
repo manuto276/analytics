@@ -1,21 +1,24 @@
-=== Analytics Connector ===
+=== Analytics ===
 Contributors: analytics
 Tags: analytics, statistics, privacy, consent, cookies
-Requires at least: 6.5
+Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.1.0
+Stable tag: 1.0.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Connects a WordPress site to a self-hosted Analytics service: tracker script, consent settings links, content keys and server-side conversions.
+The site's statistics from your self-hosted Analytics service: the tracker and its consent banner on every page, and a dashboard in WordPress.
 
 == Description ==
 
-Analytics Connector is an optional helper for sites measured by a self-hosted Analytics service. It does not collect or store anything in WordPress: the tracker, the consent banner and all data live on the analytics service.
+Analytics connects a WordPress site to a self-hosted Analytics service. The tracker, the consent banner and all the data live on the service; WordPress loads the tracker and, with an API key that can read reports, shows the statistics in its own admin.
 
 Features:
 
+* **Analytics → Overview**: visitors, visits, pageviews, bounce rate, visit duration and conversions for a period, compared with the one before; one of them drawn over time; pages, sources, countries, devices and events; who is on the site now. Administrators and editors (the `analytics_view` capability).
+* A widget on the WordPress dashboard: visitors today and in the last 7 days.
+* **Analytics → Settings**: the connection, the API key (stored encrypted, never sent to the browser), who is not counted, and a check of what the service sends: the tracker, the cookie level, the consent banner, the automatic events. Administrators (`analytics_manage`).
 * Loads the tracker on every public page, in the `<head>` with `defer`, whatever theme or page builder is used, preceded by the small queue stub so that `analytics.track()` calls made before the script loads are not lost.
 * Loads the script directly from the service (`https://stats.example.net/t/pk_….js`) or through a first-party proxy path on your own domain (`/stats/pk_….js`).
 * Does not track logged-in users who have a chosen capability (default `edit_posts`).
@@ -25,17 +28,20 @@ Features:
 
 == Installation ==
 
-1. Copy the `analytics-connector` folder to `wp-content/plugins/` and activate the plugin.
-2. Go to **Settings → Analytics**.
-3. Enter the **Service URL** (e.g. `https://stats.example.net`) and the site **Public key** (`pk_` followed by 21 letters or digits) from the analytics dashboard.
-4. Choose the **Load mode**:
-   * **Direct**: the script loads from `{service URL}/t/{public key}.js`.
-   * **First-party proxy path**: the script loads from `{proxy path}{public key}.js` on this site (e.g. `/stats/pk_….js`). Your web server must forward that path to `https://stats.example.net/t/` (see "First-party proxy" below).
-5. Optionally change **Do not track users who can** (empty = track everyone) and the **JavaScript global** (default `analytics`; it must match the global name configured for the site in the analytics dashboard).
+1. Upload the release zip in **Plugins → Add New → Upload Plugin** and activate it.
+2. Go to **Analytics → Settings → Connection**.
+3. Enter the **service address** (e.g. `https://stats.example.net`) and the site's **public key** (`pk_` followed by 21 letters or digits).
+4. Choose how the tracker is loaded:
+   * **From the service**: `{service address}/t/{public key}.js`.
+   * **Through a path of this site**: `{proxy path}{public key}.js` (e.g. `/stats/pk_….js`). Your web server must forward that path to `https://stats.example.net/t/` (see "First-party proxy" below).
+5. Optionally change who is not counted (a capability; empty counts everyone) and the **JavaScript name** (default `analytics`; it must match the global configured for the site on the service).
+6. For the dashboard: on the service, create an API key with the **Read reports** permission and paste it in **Settings → API key**.
 
-The server-side conversions API key is never stored in the database. Define it in `wp-config.php`:
+The key is stored encrypted with a key derived from the site's salts, and the screens show only its beginning. To keep it out of the database altogether, define it in `wp-config.php` instead; the constant wins over the saved key:
 
-`define( 'ANALYTICS_CONNECTOR_API_KEY', 'your-api-key-with-conversions-write-scope' );`
+`define( 'ANALYTICS_CONNECTOR_API_KEY', 'ak_…' );`
+
+The same key sends server-side conversions when it also has the **Write conversions** permission.
 
 == Frequently Asked Questions ==
 
@@ -78,7 +84,7 @@ Arguments (all optional):
 * `value` – `array( 'amount_minor' => 4900, 'currency' => 'EUR' )`.
 * `props` – up to 10 scalar properties.
 
-The request is a non-blocking `POST {service URL}/api/v1/server/sites/{public key}/conversions` with a 2 second timeout, so it never slows the page down and its result is not checked. The function returns `false` when the plugin is not configured or `ANALYTICS_CONNECTOR_API_KEY` is not defined.
+The request is a non-blocking `POST {service URL}/api/v1/server/sites/{public key}/conversions` with a 2 second timeout, so it never slows the page down and its result is not checked. The function returns `false` when the plugin is not configured or there is no API key.
 
 = Does it work with page caches? =
 
@@ -107,6 +113,13 @@ Example nginx configuration on the WordPress server:
 The analytics service must list the proxy IP in `TRUSTED_PROXIES`.
 
 == Changelog ==
+
+= 1.0.0 =
+* Named Analytics. The slug, the option and the functions are unchanged: sites update in place.
+* A dashboard in WordPress (Analytics → Overview) and a dashboard widget, read from the service with an API key that has the Read reports permission.
+* Settings on a screen of their own, with the API key stored encrypted and a check of the tracker and the key.
+* Capabilities `analytics_view` (administrators, editors) and `analytics_manage` (administrators).
+* Italian.
 
 = 0.1.0 =
 * First release.

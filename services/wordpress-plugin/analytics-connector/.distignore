@@ -1,0 +1,23 @@
+# Left out of the release zip: sources and tooling. The zip ships build/.
+.git
+.github-assets
+.gitignore
+.distignore
+.editorconfig
+bin
+design
+dist
+docs
+node_modules
+src
+tests
+vendor
+composer.json
+composer.lock
+package.json
+package-lock.json
+phpcs.xml.dist
+CHANGELOG.md
+README.md
+*.zip
+.DS_Store

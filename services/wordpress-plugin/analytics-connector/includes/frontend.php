@@ -67,10 +67,15 @@ function analytics_connector_content_meta(): void {
 	}
 }
 
-/** Registers the shortcode and the consent link block. */
+/** Loads the translations, registers the shortcode and the consent link block. */
 function analytics_connector_init(): void {
+	// The plugin is not on wordpress.org: its translations ship in languages/.
+	load_plugin_textdomain( 'analytics-connector', false, dirname( plugin_basename( ANALYTICS_CONNECTOR_FILE ) ) . '/languages' );
 	add_shortcode( 'analytics_consent_link', 'analytics_connector_consent_link_shortcode' );
-	register_block_type( dirname( __DIR__ ) . '/blocks/consent-link', array( 'render_callback' => 'analytics_connector_render_consent_block' ) );
+	$block = register_block_type( dirname( __DIR__ ) . '/blocks/consent-link', array( 'render_callback' => 'analytics_connector_render_consent_block' ) );
+	foreach ( $block ? $block->editor_script_handles : array() as $handle ) {
+		wp_set_script_translations( $handle, 'analytics-connector', ANALYTICS_CONNECTOR_DIR . 'languages' );
+	}
 }
 
 /**

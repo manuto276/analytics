@@ -1,0 +1,1112 @@
+// The panel, from the workspace's other plugins (Chiaro's, recoloured): it sits on
+// @wordpress/components and adds only what is missing. The dashboard's own pieces — the
+// period, the numbers with their change, the line chart — are at the end.
+
+.anc-screen {
+	--anc-ink: #1e1e1e;
+	--anc-muted: #5f6368;
+	--anc-faint: #646970;
+	--anc-line: #e2e4e7;
+	--anc-soft: #f6f7f9;
+	--anc-card: #fff;
+	--anc-brand: #1d4ed8;
+	--anc-brand-soft: #e6ecfd;
+	--anc-green: #107a3d;
+	--anc-green-soft: #e6f4ea;
+	--anc-amber: #8a5a00;
+	--anc-amber-soft: #fff4d6;
+	--anc-radius: 12px;
+
+	background: #f3f4f6;
+
+	#wpcontent {
+		padding-left: 0;
+	}
+
+	#wpbody-content {
+		padding-bottom: 48px;
+	}
+
+	// Notices from WordPress and other plugins stay, but within the right margin.
+	#wpbody-content > .notice,
+	#wpbody-content > .update-nag {
+		margin: 16px 32px 0;
+	}
+}
+
+.anc-wrap {
+	margin: 0;
+}
+
+.anc-app {
+	color: var(--anc-ink);
+	font-size: 14px;
+	line-height: 1.5;
+
+	> .components-notice,
+	.anc-notice {
+		margin: 0 32px 20px;
+	}
+
+	> :not(.anc-header):not(.components-notice):not(.anc-notice) {
+		margin-left: 32px;
+		margin-right: 32px;
+	}
+
+	@media (max-width: 782px) {
+		> :not(.anc-header):not(.components-notice):not(.anc-notice) {
+			margin-left: 12px;
+			margin-right: 12px;
+		}
+	}
+}
+
+/* Header ------------------------------------------------------------------- */
+
+.anc-header {
+	background: #fff;
+	border-bottom: 1px solid var(--anc-line);
+	margin-bottom: 28px;
+	padding: 20px 32px 0;
+
+	@media (max-width: 782px) {
+		padding: 16px 12px 0;
+	}
+
+	&__top {
+		align-items: center;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 16px;
+		justify-content: space-between;
+	}
+
+	&__actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+}
+
+.anc-brand {
+	align-items: center;
+	display: flex;
+	gap: 14px;
+	min-width: 0;
+
+	img {
+		border-radius: 10px;
+		box-shadow: 0 4px 12px rgba(29, 78, 216, 0.25);
+		display: block;
+		flex: none;
+		height: 44px;
+		width: 44px;
+	}
+
+	> div {
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		min-height: 44px;
+		min-width: 0;
+	}
+
+	&__kicker {
+		color: var(--anc-muted);
+		display: block;
+		font-size: 12px;
+		letter-spacing: 0.02em;
+		line-height: 16px;
+	}
+
+	// WordPress's `.wrap h1` is more specific than a single class and adds 13px of
+	// padding: win it with specificity here, not with !important.
+	.anc-wrap &__title {
+		font-size: 22px;
+		font-weight: 600;
+		line-height: 28px;
+		margin: 0;
+		overflow: hidden;
+		padding: 0;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+}
+
+.anc-tabs {
+	display: flex;
+	gap: 4px;
+	// The first tab's text on the icon's axis, not its border.
+	margin: 16px 0 0 -12px;
+	overflow-x: auto;
+}
+
+.anc-tab {
+	border-bottom: 2px solid transparent;
+	color: var(--anc-muted);
+	font-weight: 500;
+	padding: 10px 12px 12px;
+	text-decoration: none;
+	white-space: nowrap;
+
+	&:hover {
+		color: var(--anc-ink);
+	}
+
+	&:focus {
+		box-shadow: none;
+		outline: 2px solid var(--wp-admin-theme-color, #2271b1);
+		outline-offset: -2px;
+	}
+
+	&.is-active {
+		border-bottom-color: var(--anc-brand);
+		color: var(--anc-ink);
+	}
+}
+
+/* Cards -------------------------------------------------------------------- */
+
+.anc-card {
+	background: var(--anc-card);
+	border: 1px solid var(--anc-line);
+	border-radius: var(--anc-radius);
+	margin-bottom: 20px;
+	transition: opacity 0.15s;
+
+	&.is-loading {
+		opacity: 0.55;
+	}
+
+	&__head {
+		align-items: flex-start;
+		display: flex;
+		gap: 16px;
+		justify-content: space-between;
+		padding: 18px 22px 0;
+	}
+
+	&__title {
+		font-size: 15px;
+		font-weight: 600;
+		margin: 0;
+	}
+
+	&__subtitle {
+		color: var(--anc-muted);
+		margin: 4px 0 0;
+		text-wrap: pretty;
+	}
+
+	&__body {
+		padding: 18px 22px 22px;
+
+		&.is-flush {
+			padding: 12px 0 0;
+		}
+	}
+
+	> .anc-card__body.is-flush:first-child {
+		padding-top: 0;
+	}
+}
+
+.anc-loading {
+	align-items: center;
+	color: var(--anc-muted);
+	display: flex;
+	gap: 8px;
+	padding: 40px 0;
+
+	.components-spinner {
+		margin: 0;
+	}
+}
+
+.anc-empty {
+	padding: 48px 24px;
+	text-align: center;
+
+	&__title {
+		font-size: 15px;
+		font-weight: 600;
+		margin: 0 0 6px;
+	}
+
+	&__text {
+		color: var(--anc-muted);
+		margin: 0 auto 16px;
+		max-width: 46ch;
+	}
+}
+
+/* Big numbers -------------------------------------------------------------- */
+
+// One grid, three columns, for the numbers and the cards below: the edges of every
+// row fall on the same lines.
+.anc-dashboard {
+	align-items: stretch;
+	display: grid;
+	gap: 20px;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+
+	> .anc-card {
+		margin: 0;
+	}
+
+	&__wide {
+		grid-column: span 2;
+	}
+
+	@media (max-width: 1100px) {
+		grid-template-columns: 1fr;
+
+		&__wide {
+			grid-column: auto;
+		}
+	}
+}
+
+.anc-bars {
+	display: grid;
+	gap: 10px;
+	list-style: none;
+	margin: 0 0 12px;
+	padding: 0;
+
+	li {
+		align-items: center;
+		display: grid;
+		gap: 10px;
+		grid-template-columns: minmax(0, 1.4fr) minmax(40px, 1fr) auto;
+	}
+
+	&__label {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	&__track {
+		background: var(--anc-soft);
+		border-radius: 4px;
+		height: 8px;
+		overflow: hidden;
+
+		span {
+			background: var(--anc-brand);
+			display: block;
+			height: 100%;
+		}
+	}
+
+	&__value {
+		font-variant-numeric: tabular-nums;
+	}
+}
+
+.anc-ways {
+	border-top: 1px solid var(--anc-line);
+	display: grid;
+	gap: 8px;
+	list-style: none;
+	margin: 16px 0 0;
+	padding: 16px 0 0;
+
+	li {
+		align-items: baseline;
+		display: flex;
+		gap: 12px;
+		justify-content: space-between;
+	}
+}
+
+.anc-stat {
+	background: #fff;
+	border: 1px solid var(--anc-line);
+	border-radius: var(--anc-radius);
+	color: inherit;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 18px 22px 20px;
+	text-decoration: none;
+	transition: border-color 0.15s, box-shadow 0.15s;
+
+	&:hover,
+	&:focus {
+		border-color: #c9ccd1;
+		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+		color: inherit;
+	}
+
+	&__label {
+		color: var(--anc-muted);
+		font-weight: 500;
+	}
+
+	&__value {
+		font-size: 40px;
+		font-variant-numeric: tabular-nums;
+		font-weight: 600;
+		letter-spacing: -0.02em;
+		line-height: 1.1;
+	}
+
+	&__note {
+		color: var(--anc-faint);
+		font-size: 13px;
+	}
+
+	&.is-accent {
+		background: linear-gradient(135deg, #172554 0%, #1d4ed8 60%, #3b82f6 100%);
+		border-color: transparent;
+		color: #fff;
+
+		.anc-stat__label,
+		.anc-stat__note {
+			color: rgba(255, 255, 255, 0.78);
+		}
+
+		&:hover,
+		&:focus {
+			box-shadow: 0 8px 24px rgba(29, 78, 216, 0.3);
+			color: #fff;
+		}
+	}
+}
+
+/* Lists -------------------------------------------------------------------- */
+
+.anc-mini-list {
+	list-style: none;
+	margin: 0;
+
+	li {
+		border-top: 1px solid var(--anc-line);
+		margin: 0;
+	}
+
+	a {
+		color: inherit;
+		display: block;
+		padding: 12px 22px;
+		text-decoration: none;
+
+		&:hover {
+			background: var(--anc-soft);
+		}
+	}
+
+	&__title {
+		display: block;
+		font-weight: 500;
+		margin-bottom: 4px;
+	}
+
+	&__meta {
+		align-items: center;
+		color: var(--anc-muted);
+		display: flex;
+		font-size: 13px;
+		gap: 8px;
+	}
+
+	.anc-progress {
+		margin-top: 8px;
+	}
+}
+
+.anc-badge {
+	border-radius: 999px;
+	display: inline-block;
+	font-size: 12px;
+	font-weight: 500;
+	line-height: 20px;
+	padding: 0 9px;
+	vertical-align: middle;
+	white-space: nowrap;
+
+	&.is-draft {
+		background: #eef0f2;
+		color: #50575e;
+	}
+
+	&.is-sending {
+		background: var(--anc-amber-soft);
+		color: var(--anc-amber);
+	}
+
+	&.is-sent {
+		background: var(--anc-green-soft);
+		color: var(--anc-green);
+	}
+
+	&.is-cancelled {
+		background: #fcebea;
+		color: #b32d2e;
+	}
+}
+
+.anc-progress {
+	background: #eef0f2;
+	border-radius: 999px;
+	height: 6px;
+	margin-top: 6px;
+	max-width: 220px;
+	overflow: hidden;
+
+	&__bar {
+		background: var(--anc-brand);
+		border-radius: inherit;
+		height: 100%;
+		transition: width 0.6s ease;
+	}
+}
+
+.anc-table {
+	border-collapse: collapse;
+	width: 100%;
+
+	th {
+		border-bottom: 1px solid var(--anc-line);
+		color: var(--anc-muted);
+		font-size: 12px;
+		font-weight: 500;
+		padding: 12px 22px;
+		text-align: left;
+	}
+
+	td {
+		border-bottom: 1px solid var(--anc-line);
+		height: 24px;
+		padding: 14px 22px;
+		vertical-align: middle;
+	}
+
+	th,
+	td {
+		line-height: 20px;
+		white-space: nowrap;
+
+		&:first-child {
+			white-space: normal;
+			width: 100%;
+		}
+	}
+
+	.anc-badge,
+	.components-button {
+		vertical-align: middle;
+	}
+
+	tbody tr:last-child td {
+		border-bottom: 0;
+	}
+
+	tbody tr:hover td {
+		background: var(--anc-soft);
+	}
+
+	.is-num {
+		font-variant-numeric: tabular-nums;
+		text-align: right;
+	}
+
+	.is-actions {
+		text-align: right;
+		width: 1%;
+	}
+
+	&__primary {
+		color: var(--anc-ink);
+		display: block;
+		overflow-wrap: anywhere;
+		font-weight: 500;
+		text-decoration: none;
+
+		&:hover {
+			color: var(--anc-brand);
+		}
+	}
+
+	&__secondary {
+		color: var(--anc-faint);
+		display: block;
+		font-size: 13px;
+		margin-top: 2px;
+	}
+
+	@media (max-width: 782px) {
+		th:nth-child(n + 3),
+		td:nth-child(n + 3):not(.is-actions) {
+			display: none;
+		}
+
+		th,
+		td {
+			padding-left: 14px;
+			padding-right: 14px;
+		}
+	}
+}
+
+.anc-app .is-mono {
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 13px;
+}
+
+.anc-toolbar {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	justify-content: space-between;
+	margin-bottom: 16px;
+}
+
+.anc-filters {
+	background: #e9ebee;
+	border-radius: 10px;
+	display: inline-flex;
+	gap: 2px;
+	padding: 3px;
+}
+
+.anc-filter {
+	align-items: center;
+	background: transparent;
+	border: 0;
+	border-radius: 8px;
+	color: var(--anc-muted);
+	cursor: pointer;
+	display: inline-flex;
+	font: inherit;
+	font-weight: 500;
+	gap: 6px;
+	height: 32px;
+	line-height: 1;
+	padding: 0 12px;
+
+	&:hover {
+		color: var(--anc-ink);
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--wp-admin-theme-color, #2271b1);
+	}
+
+	&.is-active {
+		background: #fff;
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+		color: var(--anc-ink);
+	}
+
+	&__count {
+		background: rgba(0, 0, 0, 0.06);
+		border-radius: 999px;
+		color: var(--anc-muted);
+		display: inline-block;
+		font-size: 11px;
+		font-variant-numeric: tabular-nums;
+		font-weight: 600;
+		line-height: 18px;
+		min-width: 18px;
+		padding: 0 6px;
+		text-align: center;
+	}
+
+	&.is-active .anc-filter__count {
+		background: var(--anc-brand-soft);
+		color: var(--anc-brand);
+	}
+}
+
+.anc-search {
+	max-width: 320px;
+	width: 100%;
+}
+
+.anc-pager {
+	align-items: center;
+	border-top: 1px solid var(--anc-line);
+	color: var(--anc-muted);
+	display: flex;
+	justify-content: space-between;
+	padding: 12px 22px;
+
+	> div {
+		display: flex;
+		gap: 8px;
+	}
+}
+
+
+
+/* Modals ------------------------------------------------------------------- */
+
+.anc-modal-lead {
+	font-size: 15px;
+}
+
+.anc-modal-actions {
+	display: flex;
+	gap: 8px;
+	justify-content: flex-end;
+	margin-top: 24px;
+}
+
+.anc-hint {
+	color: var(--anc-muted);
+	font-size: 13px;
+}
+
+/* Settings ----------------------------------------------------------------- */
+
+.anc-settings {
+	align-items: start;
+	display: grid;
+	gap: 24px;
+	grid-template-columns: 200px minmax(0, 1fr);
+
+	@media (max-width: 960px) {
+		grid-template-columns: 1fr;
+	}
+}
+
+.anc-side {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	position: sticky;
+	top: 52px;
+
+	@media (max-width: 960px) {
+		flex-direction: row;
+		overflow-x: auto;
+		position: static;
+	}
+
+	&__item {
+		background: transparent;
+		border: 0;
+		border-radius: 8px;
+		color: var(--anc-muted);
+		cursor: pointer;
+		font: inherit;
+		font-weight: 500;
+		padding: 9px 12px;
+		text-align: left;
+		white-space: nowrap;
+
+		&:hover {
+			background: #e9ebee;
+			color: var(--anc-ink);
+		}
+
+		&:focus-visible {
+			outline: 2px solid var(--wp-admin-theme-color, #2271b1);
+		}
+
+		&.is-active {
+			background: #fff;
+			box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+			color: var(--anc-brand);
+		}
+	}
+}
+
+.anc-settings__main {
+	max-width: 880px;
+	min-width: 0;
+}
+
+.anc-fields {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+
+	&--grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+
+		@media (max-width: 782px) {
+			grid-template-columns: 1fr;
+		}
+	}
+
+	&.is-disabled {
+		opacity: 0.55;
+	}
+}
+
+.anc-tokens {
+	display: grid;
+	gap: 10px 20px;
+	grid-template-columns: max-content 1fr;
+	margin: 0;
+
+	dt {
+		color: var(--anc-muted);
+	}
+
+	dd {
+		margin: 0;
+		overflow-wrap: anywhere;
+	}
+}
+
+.anc-code {
+	background: #0f1d3d;
+	border-radius: 10px;
+	color: #dbe4ff;
+	font-size: 12.5px;
+	line-height: 1.6;
+	margin: 0;
+	overflow-x: auto;
+	padding: 16px 18px;
+}
+
+/* Fields ------------------------------------------------------------------- */
+
+// One look for every field. Native ones (TextControl, TextareaControl) carry the border
+// on the input; InputControl-based ones (numbers, selects, search) draw it on a separate
+// element, the "backdrop". Each is styled where its border lives, with the same values:
+// 40px, thin border, 8px corners, a focus ring.
+.anc-app {
+	--anc-field-border: #d0d4d9;
+	--anc-field-ring: 0 0 0 3px rgba(29, 78, 216, 0.15);
+
+	.components-text-control__input,
+	.components-textarea-control__input {
+		background: #fff;
+		border: 1px solid var(--anc-field-border);
+		border-radius: 8px;
+		box-shadow: none;
+		color: var(--anc-ink);
+		font-size: 14px;
+		line-height: 20px;
+		min-height: 40px;
+		padding: 9px 12px;
+		transition: border-color 0.12s, box-shadow 0.12s;
+
+		&:hover {
+			border-color: #a7aaad;
+		}
+
+		&:focus {
+			border-color: var(--anc-brand);
+			box-shadow: var(--anc-field-ring);
+			outline: none;
+		}
+
+		&::placeholder {
+			color: var(--anc-faint);
+		}
+
+		&:disabled {
+			background: var(--anc-soft);
+		}
+	}
+
+	.components-textarea-control__input {
+		resize: vertical;
+	}
+
+	.components-input-control__container {
+		background: #fff !important;
+		border-radius: 8px;
+
+		.components-input-control__backdrop {
+			border: 1px solid var(--anc-field-border) !important;
+			border-radius: 8px !important;
+			box-shadow: none !important;
+			transition: border-color 0.12s, box-shadow 0.12s;
+		}
+
+		&:hover .components-input-control__backdrop {
+			border-color: #a7aaad !important;
+		}
+
+		&:focus-within .components-input-control__backdrop {
+			border-color: var(--anc-brand) !important;
+			box-shadow: var(--anc-field-ring) !important;
+		}
+
+		input.components-input-control__input,
+		select.components-select-control__input {
+			color: var(--anc-ink);
+			font-size: 14px !important;
+			min-height: 40px !important;
+			padding-left: 12px !important;
+		}
+	}
+
+	.is-disabled .components-input-control__container,
+	.components-input-control__container:has(:disabled) {
+		background: var(--anc-soft) !important;
+	}
+
+	// InputControl adds its own gap between label and field, on top of the margin:
+	// without it, side-by-side fields start at the same height.
+	.components-input-base {
+		gap: 0 !important;
+	}
+
+	// Labels: one style, including the ones InputControl writes in uppercase.
+	.components-base-control__label,
+	.components-input-control__label,
+	.components-input-control__label label,
+	.anc-field__label {
+		color: var(--anc-ink) !important;
+		display: block;
+		font-size: 12px !important;
+		font-weight: 600 !important;
+		letter-spacing: 0 !important;
+		line-height: 16px !important;
+		margin: 0 0 6px !important;
+		padding: 0 !important;
+		text-transform: none !important;
+	}
+
+	.components-base-control__help {
+		color: var(--anc-muted);
+		font-size: 12px;
+		line-height: 1.45;
+		margin-top: 6px;
+	}
+
+	.anc-title-field input {
+		font-size: 18px;
+		font-weight: 500;
+		min-height: 48px;
+	}
+}
+
+
+/* The dashboard ------------------------------------------------------------ */
+
+.anc-dashboard__full {
+	grid-column: 1 / -1;
+}
+
+// Six numbers in a row; the three that can be drawn are buttons that choose the chart.
+.anc-numbers {
+	display: grid;
+	gap: 12px;
+	grid-template-columns: repeat(6, minmax(0, 1fr));
+
+	@media (max-width: 1280px) {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+
+	@media (max-width: 600px) {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.anc-stat {
+		font: inherit;
+		padding: 14px 16px 16px;
+		text-align: left;
+	}
+
+	button.anc-stat {
+		cursor: pointer;
+
+		&:focus-visible {
+			outline: 2px solid var(--anc-brand);
+			outline-offset: 2px;
+		}
+	}
+
+	.anc-stat.is-active {
+		border-color: var(--anc-brand);
+		box-shadow: inset 0 -3px 0 var(--anc-brand);
+	}
+
+	.anc-stat__value {
+		font-size: 28px;
+	}
+
+	.anc-stat__note {
+		&.is-up {
+			color: var(--anc-green);
+		}
+
+		&.is-down {
+			color: #b32d2e;
+		}
+	}
+}
+
+.anc-dashboard__chart {
+	color: var(--anc-brand);
+}
+
+.anc-chart {
+	&__readout {
+		color: var(--anc-muted);
+		margin-bottom: 8px;
+		min-height: 21px;
+
+		strong {
+			color: var(--anc-ink);
+			font-size: 16px;
+			font-variant-numeric: tabular-nums;
+		}
+	}
+
+	&__hint,
+	&__before {
+		color: var(--anc-faint);
+	}
+
+	svg {
+		display: block;
+		height: auto;
+		overflow: visible;
+		width: 100%;
+
+		&:focus-visible {
+			border-radius: 6px;
+			outline: 2px solid var(--anc-brand);
+			outline-offset: 4px;
+		}
+	}
+
+	&__grid {
+		stroke: var(--anc-line);
+		stroke-dasharray: 2 4;
+	}
+
+	&__tick {
+		fill: var(--anc-faint);
+		font-size: 11px;
+		font-variant-numeric: tabular-nums;
+	}
+
+	&__hit {
+		fill: transparent;
+	}
+
+	&__area {
+		fill: url(#anc-area);
+		pointer-events: none;
+	}
+
+	&__line {
+		fill: none;
+		pointer-events: none;
+		stroke: currentColor;
+		stroke-linejoin: round;
+		stroke-width: 2.5;
+	}
+
+	&__compare {
+		fill: none;
+		pointer-events: none;
+		stroke: #a7aaad;
+		stroke-dasharray: 4 4;
+		stroke-width: 1.5;
+	}
+
+	&__cursor {
+		pointer-events: none;
+
+		line {
+			stroke: var(--anc-line);
+		}
+
+		circle {
+			fill: #fff;
+			stroke: currentColor;
+			stroke-width: 2.5;
+		}
+	}
+}
+
+.anc-now {
+	&__count {
+		align-items: center;
+		display: flex;
+		font-size: 15px;
+		gap: 8px;
+		margin: 0;
+
+		strong {
+			font-size: 32px;
+			font-variant-numeric: tabular-nums;
+			font-weight: 600;
+		}
+	}
+
+	&__dot {
+		background: #a7aaad;
+		border-radius: 50%;
+		height: 10px;
+		width: 10px;
+
+		&.is-live {
+			animation: anc-pulse 2s ease-in-out infinite;
+			background: var(--anc-green);
+		}
+	}
+}
+
+@keyframes anc-pulse {
+	50% {
+		box-shadow: 0 0 0 6px rgba(16, 122, 61, 0.15);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.anc-now__dot.is-live {
+		animation: none;
+	}
+}
+
+.anc-footnote {
+	color: var(--anc-muted);
+	margin-top: 24px;
+}
+
+.anc-setup {
+	max-width: 720px;
+
+	.anc-empty__text p {
+		margin: 0 0 12px;
+	}
+}
+
+.anc-steps {
+	margin: 0 0 20px 1.4em;
+	text-align: left;
+
+	li {
+		margin-bottom: 8px;
+	}
+}
+
+.anc-key {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	margin: 0;
+}
+
+.anc-app .anc-badge {
+	white-space: normal;
+}
+
+// The periods stay on one line; on a phone they scroll sideways inside their own box.
+.anc-header__actions:has(.anc-filters) {
+	max-width: 100%;
+	min-width: 0;
+}
+
+.anc-header__actions .anc-filters {
+	max-width: 100%;
+	overflow-x: auto;
+	white-space: nowrap;
+}

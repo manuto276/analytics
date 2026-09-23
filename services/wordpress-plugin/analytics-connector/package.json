@@ -1,0 +1,34 @@
+{
+  "name": "analytics-connector",
+  "private": true,
+  "description": "Analytics for WordPress: the admin screens. `npm run build` writes build/, which is what WordPress loads.",
+  "scripts": {
+    "build": "wp-scripts build src/admin.js --output-path=build",
+    "start": "wp-scripts start src/admin.js --output-path=build",
+    "lint:js": "wp-scripts lint-js src",
+    "test:e2e": "node tests/e2e/admin.mjs"
+  },
+  "devDependencies": {
+    "@wordpress/scripts": "^30.0.0",
+    "axe-core": "^4.13.0",
+    "playwright": "^1.55.0",
+    "typescript": "^5.9.3"
+  },
+  "eslintConfig": {
+    "extends": [
+      "plugin:@wordpress/eslint-plugin/recommended"
+    ],
+    "rules": {
+      "camelcase": [
+        "error",
+        {
+          "properties": "never",
+          "ignoreDestructuring": true
+        }
+      ],
+      "no-nested-ternary": "off",
+      "jsdoc/require-param": "off",
+      "jsdoc/require-returns": "off"
+    }
+  }
+}

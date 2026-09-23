@@ -9,7 +9,8 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * Sends a conversion to the analytics service without waiting for the response.
- * Needs the service URL, the public key and the ANALYTICS_CONNECTOR_API_KEY constant (scope conversions:write).
+ * Needs the service URL, the public key and an API key with the conversions:write scope — the
+ * ANALYTICS_CONNECTOR_API_KEY constant, or the key saved in Analytics → Settings.
  *
  * @param string               $name Conversion name, e.g. "purchase".
  * @param array<string, mixed> $args id, occurred_at (timestamp|DateTimeInterface), visitor_id (default an_vid cookie),
@@ -18,7 +19,7 @@ defined( 'ABSPATH' ) || exit;
  */
 function analytics_connector_track_conversion( string $name, array $args = array() ): bool {
 	$settings = analytics_connector_get_settings();
-	$api_key  = defined( 'ANALYTICS_CONNECTOR_API_KEY' ) ? (string) constant( 'ANALYTICS_CONNECTOR_API_KEY' ) : '';
+	$api_key  = analytics_connector_get_api_key();
 
 	if ( '' === $api_key || '' === $name || '' === $settings['service_url'] || ! analytics_connector_is_valid_public_key( $settings['public_key'] ) ) {
 		return false;

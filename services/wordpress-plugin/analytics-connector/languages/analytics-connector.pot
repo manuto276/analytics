@@ -1,0 +1,782 @@
+# Copyright (C) 2026 Analytics contributors
+# This file is distributed under the GPL-2.0-or-later.
+msgid ""
+msgstr ""
+"Project-Id-Version: Analytics 1.0.0\n"
+"Report-Msgid-Bugs-To: https://github.com/manuto276/analytics/issues\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-09-23T10:59:29+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: analytics-connector\n"
+
+#. Plugin Name of the plugin
+#: analytics-connector.php
+#: includes/admin-app.php:39
+#: includes/admin-app.php:122
+msgid "Analytics"
+msgstr ""
+
+#. Plugin URI of the plugin
+#: analytics-connector.php
+msgid "https://github.com/manuto276/analytics"
+msgstr ""
+
+#. Description of the plugin
+#: analytics-connector.php
+msgid "The site's visits, sources and conversions, measured by your own analytics service — the tracker and its consent banner on every page, and a dashboard in WordPress."
+msgstr ""
+
+#. Author of the plugin
+#: analytics-connector.php
+msgid "Analytics contributors"
+msgstr ""
+
+#: includes/admin-app.php:33
+#: build/admin.js:1
+#: build/admin.js:5
+msgid "Overview"
+msgstr ""
+
+#: includes/admin-app.php:34
+#: includes/admin-app.php:111
+#: build/admin.js:1
+#: build/admin.js:5
+msgid "Settings"
+msgstr ""
+
+#: includes/admin-app.php:135
+msgid "Visitors today"
+msgstr ""
+
+#: includes/admin-app.php:136
+msgid "Visitors, last 7 days"
+msgstr ""
+
+#: includes/admin-app.php:137
+msgid "Pageviews, last 7 days"
+msgstr ""
+
+#: includes/admin-app.php:149
+msgid "All the statistics"
+msgstr ""
+
+#: includes/client.php:93
+msgid "Enter the service address and the public key in Analytics → Settings."
+msgstr ""
+
+#: includes/client.php:96
+msgid "Paste an API key with the “Read reports” permission in Analytics → Settings to see the statistics here."
+msgstr ""
+
+#: includes/client.php:143
+msgid "The analytics service sent an answer the plugin could not read. Check the service address."
+msgstr ""
+
+#: includes/client.php:161
+msgid "The analytics service cannot be reached. Check the service address, or try again in a minute."
+msgstr ""
+
+#: includes/client.php:170
+msgid "The service refused the API key: it may have been revoked or mistyped. Create a new one and paste it in Settings."
+msgstr ""
+
+#: includes/client.php:171
+msgid "The API key cannot read reports. Create one with the “Read reports” permission."
+msgstr ""
+
+#: includes/client.php:172
+msgid "The service does not know this site with this key, or it is too old to send reports to WordPress. Check the public key; if it is right, the service needs updating."
+msgstr ""
+
+#: includes/client.php:173
+msgid "The service did not accept the period asked for."
+msgstr ""
+
+#: includes/client.php:174
+msgid "Too many requests to the service. Try again in a minute."
+msgstr ""
+
+#: includes/client.php:176
+msgid "The analytics service had a problem. Try again in a minute."
+msgstr ""
+
+#: includes/frontend.php:83
+#: blocks/consent-link/editor.js:16
+msgid "Cookie settings"
+msgstr ""
+
+#: includes/rest-admin.php:88
+msgid "The public key must be “pk_” followed by 21 letters or digits."
+msgstr ""
+
+#: includes/rest-admin.php:93
+msgid "That is not an API key: it starts with “ak_” and is 55 characters long. Copy it again from the analytics dashboard."
+msgstr ""
+
+#: includes/rest-admin.php:96
+msgid "The API key is set in wp-config.php: change it there."
+msgstr ""
+
+#: includes/rest-admin.php:124
+msgid "Unknown report."
+msgstr ""
+
+#: includes/settings.php:64
+msgid "The public key must be \"pk_\" followed by 21 letters or digits. The previous key was kept."
+msgstr ""
+
+#: blocks/consent-link/editor.js:9
+msgid "Link"
+msgstr ""
+
+#: blocks/consent-link/editor.js:11
+msgid "Label"
+msgstr ""
+
+#: build/admin.js:1
+msgid "Something went wrong. Please try again."
+msgstr ""
+
+#. translators: %s: site name.
+#: build/admin.js:2
+#, js-format
+msgid "Analytics · %s"
+msgstr ""
+
+#: build/admin.js:2
+msgid "Analytics sections"
+msgstr ""
+
+#: build/admin.js:2
+msgid "Loading…"
+msgstr ""
+
+#. translators: 1: a value, 2: a day or hour, 3: the value in the previous period.
+#: build/admin.js:3
+#, js-format
+msgid "<strong>%1$s</strong> · %2$s <span>(before: %3$s)</span>"
+msgstr ""
+
+#. translators: 1: a value, 2: a day or hour.
+#: build/admin.js:4
+#, js-format
+msgid "<strong>%1$s</strong> · %2$s"
+msgstr ""
+
+#: build/admin.js:4
+msgid "point at the chart, or focus it and use the arrow keys"
+msgstr ""
+
+#. translators: 1: the metric, e.g. "Visitors per day", 2: the number of points.
+#: build/admin.js:5
+#, js-format
+msgid "%1$s: %2$s points. Use the arrow keys to read each one."
+msgstr ""
+
+#: build/admin.js:5
+msgid "Today"
+msgstr ""
+
+#: build/admin.js:5
+msgid "7 days"
+msgstr ""
+
+#: build/admin.js:5
+msgid "30 days"
+msgstr ""
+
+#: build/admin.js:5
+msgid "90 days"
+msgstr ""
+
+#: build/admin.js:5
+msgid "12 months"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Period"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Visitors per hour"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Visitors per day"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Visitors per week"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Visitors per month"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Visits per hour"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Visits per day"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Visits per week"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Visits per month"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Pageviews per hour"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Pageviews per day"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Pageviews per week"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Pageviews per month"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Conversions per hour"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Conversions per day"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Conversions per week"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Conversions per month"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Pages"
+msgstr ""
+
+#: build/admin.js:5
+msgid "The most read"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Pageviews"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Sources"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Where visits come from"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Direct"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Search engines"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Paid search"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Social networks"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Paid social"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Email"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Other sites"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Campaigns"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Internal"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Unknown"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Visits"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Countries"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Devices"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Computer"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Phone"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Tablet"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Events"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Clicks, forms, downloads you track"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Times"
+msgstr ""
+
+#: build/admin.js:5
+msgid "No events in this period. The tracker sends them for the links, forms and downloads enabled on the service, and for analytics.track() calls."
+msgstr ""
+
+#: build/admin.js:5
+msgid "Everything else — campaigns, goals, funnels — on the analytics service"
+msgstr ""
+
+#: build/admin.js:5
+msgid "(opens in a new tab)"
+msgstr ""
+
+#: build/admin.js:5
+msgid "The period in numbers"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Visitors"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Bounce rate"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Visit duration"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Conversions"
+msgstr ""
+
+#. translators: %s: the value in the previous period.
+#: build/admin.js:5
+#, js-format
+msgid "before: %s"
+msgstr ""
+
+#. translators: %s: a change, e.g. "+12%".
+#: build/admin.js:5
+#, js-format
+msgid "%s on the previous period"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Nothing in this period."
+msgstr ""
+
+#. translators: 1: a list, e.g. "Pages", 2: what the numbers count, e.g. "Pageviews".
+#: build/admin.js:5
+#, js-format
+msgid "%1$s, by %2$s"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Now"
+msgstr ""
+
+#: build/admin.js:5
+msgid "The last 5 minutes, updated every 30 seconds"
+msgstr ""
+
+#: build/admin.js:5
+msgid "visitor on the site"
+msgid_plural "visitors on the site"
+msgstr[0] ""
+msgstr[1] ""
+
+#: build/admin.js:5
+msgid "The statistics cannot be read yet"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Connect WordPress to your statistics"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Open Settings"
+msgstr ""
+
+#: build/admin.js:5
+msgid "In Settings → Connection, enter the address of the analytics service and the site’s public key (pk_…)."
+msgstr ""
+
+#: build/admin.js:5
+msgid "On the analytics service, create an API key with the “Read reports” permission"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Paste it in Settings → API key. It stays on the server: the browser never sees it."
+msgstr ""
+
+#: build/admin.js:5
+msgid "An administrator has to connect the site to the analytics service first."
+msgstr ""
+
+#: build/admin.js:5
+msgid "Connection"
+msgstr ""
+
+#: build/admin.js:5
+msgid "API key"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Who is counted"
+msgstr ""
+
+#: build/admin.js:5
+msgid "The site on the service"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Consent and events"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Where the tracker comes from. Every page of the site loads it, with the consent banner when the service has one published."
+msgstr ""
+
+#: build/admin.js:5
+msgid "Service address"
+msgstr ""
+
+#: build/admin.js:5
+msgid "The address of your analytics service, without a path."
+msgstr ""
+
+#: build/admin.js:5
+msgid "Public key"
+msgstr ""
+
+#: build/admin.js:5
+msgid "The site’s key on the service, the pk_… in its tracking code. It is public: it is in every page."
+msgstr ""
+
+#: build/admin.js:5
+msgid "How the tracker is loaded"
+msgstr ""
+
+#: build/admin.js:5
+msgid "From the service"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Through a path of this site (a reverse proxy you set up on the web server)"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Proxy path"
+msgstr ""
+
+#: build/admin.js:5
+msgid "The script is then loaded from this site: {path}{public key}.js."
+msgstr ""
+
+#: build/admin.js:5
+msgid "JavaScript name"
+msgstr ""
+
+#: build/admin.js:5
+msgid "The global the site’s scripts call, as in analytics.track( … ). Change it only if another script already uses that name."
+msgstr ""
+
+#: build/admin.js:5
+msgid "With a key that can read reports, Analytics → Overview shows the site’s statistics here, without going to the service."
+msgstr ""
+
+#: build/admin.js:5
+msgid "To remove"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Saved"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Set in wp-config.php (ANALYTICS_CONNECTOR_API_KEY): change it there."
+msgstr ""
+
+#: build/admin.js:5
+msgid "Keep it"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Remove"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Replace with a new key"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Paste the key"
+msgstr ""
+
+#: build/admin.js:5
+msgid "On the service: Settings → API keys, a new key with the “Read reports” permission. The key stays on this server, encrypted; the page shows only its beginning."
+msgstr ""
+
+#: build/admin.js:5
+msgid "Who sees the statistics: administrators and editors (the analytics_view capability). Who changes these settings: administrators (analytics_manage)."
+msgstr ""
+
+#: build/admin.js:5
+msgid "The site’s own people, logged in, do not load the tracker: their visits are not counted."
+msgstr ""
+
+#: build/admin.js:5
+msgid "Not counted: logged-in users who can"
+msgstr ""
+
+#: build/admin.js:5
+msgid "A WordPress capability: edit_posts (the default) leaves out authors, editors and administrators; manage_options only administrators. Empty counts everyone."
+msgstr ""
+
+#: build/admin.js:5
+msgid "The service leaves out bots, and the paths and IP addresses excluded in its site settings."
+msgstr ""
+
+#: build/admin.js:5
+msgid "Asking the service…"
+msgstr ""
+
+#: build/admin.js:5
+msgid "On"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Off"
+msgstr ""
+
+#: build/admin.js:5
+msgid "The tracker"
+msgstr ""
+
+#: build/admin.js:5
+msgid "What the service sends every page, and what its settings say."
+msgstr ""
+
+#: build/admin.js:5
+msgid "Check again"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Script"
+msgstr ""
+
+#. translators: %s: size in kB.
+#: build/admin.js:5
+#, js-format
+msgid "Served · %s kB"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Not set up: enter the service address and the public key"
+msgstr ""
+
+#: build/admin.js:5
+msgid "The service cannot be reached"
+msgstr ""
+
+#. translators: %d: HTTP status.
+#: build/admin.js:5
+#, js-format
+msgid "Not served (HTTP %d): check the public key"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Cookies"
+msgstr ""
+
+#: build/admin.js:5
+msgid "After consent: returning visitors are recognised"
+msgstr ""
+
+#: build/admin.js:5
+msgid "None: every visit is anonymous"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Consent banner"
+msgstr ""
+
+#. translators: 1: version, 2: languages.
+#: build/admin.js:5
+#, js-format
+msgid "Published · version %1$d · %2$s"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Not published: nobody is asked, so nobody gets cookies"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Not needed without cookies"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Links to other sites"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Downloads"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Forms sent"
+msgstr ""
+
+#: build/admin.js:5
+msgid "The API key"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Reports"
+msgstr ""
+
+#: build/admin.js:5
+msgid "No key: the Overview stays empty"
+msgstr ""
+
+#: build/admin.js:5
+msgid "The key reads this site’s reports"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Key"
+msgstr ""
+
+#: build/admin.js:5
+msgid "from wp-config.php"
+msgstr ""
+
+#: build/admin.js:5
+msgid "saved here, encrypted"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Change the banner, cookies and automatic events on the service"
+msgstr ""
+
+#: build/admin.js:5
+msgid "A link to change the choice"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Visitors must be able to change their mind about cookies. Any of these opens the banner again:"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Block"
+msgstr ""
+
+#: build/admin.js:5
+msgid "“Consent settings link”, in the editor or a footer template."
+msgstr ""
+
+#: build/admin.js:5
+msgid "Shortcode"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Menu"
+msgstr ""
+
+#: build/admin.js:5
+msgid "A custom link to"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Events and conversions"
+msgstr ""
+
+#: build/admin.js:5
+msgid "A click"
+msgstr ""
+
+#: build/admin.js:5
+msgid "from the server, for what happens after the page: a payment, a confirmed booking. Needs an API key with “Write conversions”."
+msgstr ""
+
+#: build/admin.js:5
+msgid "Settings saved."
+msgstr ""
+
+#: build/admin.js:5
+msgid "Save changes"
+msgstr ""
+
+#: build/admin.js:5
+msgid "Settings sections"
+msgstr ""
+
+#: blocks/consent-link/block.json
+msgctxt "block title"
+msgid "Consent settings link"
+msgstr ""
+
+#: blocks/consent-link/block.json
+msgctxt "block description"
+msgid "A link that reopens the analytics consent preferences."
+msgstr ""
+
+#: blocks/consent-link/block.json
+msgctxt "block keyword"
+msgid "cookie"
+msgstr ""
+
+#: blocks/consent-link/block.json
+msgctxt "block keyword"
+msgid "consent"
+msgstr ""
+
+#: blocks/consent-link/block.json
+msgctxt "block keyword"
+msgid "privacy"
+msgstr ""
