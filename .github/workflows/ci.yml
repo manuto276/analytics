@@ -235,6 +235,45 @@ jobs:
         working-directory: services/dashboard
         run: pnpm generate
 
+  sdk:
+    name: SDK (${{ matrix.package }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [browser, node]
+    defaults:
+      run:
+        working-directory: services/sdk/${{ matrix.package }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+      - name: Enable pnpm
+        run: corepack enable
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        run: pnpm lint
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: OpenAPI types are up to date
+        if: matrix.package == 'node'
+        run: pnpm openapi-types:check
+      - name: Tracker types are up to date
+        if: matrix.package == 'browser'
+        run: pnpm tracker-types:check
+      - name: Test
+        run: pnpm test:coverage
+      - name: Build
+        run: pnpm build
+      - name: Package checks
+        run: pnpm pack:check
+      - name: Smoke test of the build
+        if: matrix.package == 'node'
+        run: pnpm smoke
+
   deploy-console:
     name: Deploy console tests
     runs-on: ubuntu-latest
@@ -332,7 +371,7 @@ jobs:
           tar -xzOf "$pkg" ./BUILD_INFO.json
           test "$(tar -xzOf "$pkg" ./REVISION | tr -d '[:space:]')" = "$GITHUB_SHA"
           for entry in ./bin/analytics ./public/index.php ./public/index.html ./vendor/autoload.php \
-                       ./resources/tracker/tracker.js ./deploy/console ./.env.example ./config/csp.php; do
+                       ./resources/tracker/tracker.js ./resources/tracker/banner.js ./deploy/console ./.env.example ./config/csp.php; do
             tar -tzf "$pkg" "$entry" > /dev/null || { echo "missing $entry"; exit 1; }
           done
 

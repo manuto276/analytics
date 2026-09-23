@@ -1,0 +1,132 @@
+name: SDK release
+
+# The JavaScript SDKs are released on their own tags (ADR 0010): `sdk-browser-vX.Y.Z` publishes
+# @manuto276/analytics-browser from services/sdk/browser, `sdk-node-vX.Y.Z` publishes
+# @manuto276/analytics-node from services/sdk/node. The service keeps `v*` (release.yml) and the
+# WordPress plugin `wordpress-plugin-v*`. The tag must match the package's version.
+
+on:
+  push:
+    tags: ['sdk-browser-v*', 'sdk-node-v*']
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Test, publish to GitHub Packages and release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Which package
+        id: pkg
+        run: |
+          case "$GITHUB_REF_NAME" in
+            sdk-browser-v*) dir=services/sdk/browser; version="${GITHUB_REF_NAME#sdk-browser-v}"; title="Browser SDK" ;;
+            sdk-node-v*) dir=services/sdk/node; version="${GITHUB_REF_NAME#sdk-node-v}"; title="Node SDK" ;;
+            *) echo "::error::Unexpected tag $GITHUB_REF_NAME"; exit 1 ;;
+          esac
+          {
+            echo "dir=$dir"
+            echo "version=$version"
+            echo "title=$title"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: The tag matches the package's version
+        working-directory: ${{ steps.pkg.outputs.dir }}
+        env:
+          VERSION: ${{ steps.pkg.outputs.version }}
+        run: |
+          pkg_version=$(node -p "require('./package.json').version")
+          [ "$pkg_version" = "$VERSION" ] || { echo "::error::Tag $GITHUB_REF_NAME, but package.json has $pkg_version"; exit 1; }
+          grep -q "^## \[$VERSION\]" CHANGELOG.md || { echo "::error::No $VERSION in CHANGELOG.md"; exit 1; }
+          node -e "const p = require('./package.json'); if (p.publishConfig?.registry !== 'https://npm.pkg.github.com' || p.license !== 'MIT') process.exit(1)" \
+            || { echo "::error::package.json must publish to https://npm.pkg.github.com under MIT"; exit 1; }
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          registry-url: https://npm.pkg.github.com
+          scope: '@manuto276'
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install
+        working-directory: ${{ steps.pkg.outputs.dir }}
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        working-directory: ${{ steps.pkg.outputs.dir }}
+        run: pnpm lint
+
+      - name: Typecheck
+        working-directory: ${{ steps.pkg.outputs.dir }}
+        run: pnpm typecheck
+
+      - name: Generated types are up to date
+        working-directory: ${{ steps.pkg.outputs.dir }}
+        run: |
+          if [ -f scripts/openapi-types.mjs ]; then pnpm openapi-types:check; fi
+          if [ -f scripts/tracker-types.mjs ]; then pnpm tracker-types:check; fi
+
+      - name: Test
+        working-directory: ${{ steps.pkg.outputs.dir }}
+        run: pnpm test:coverage
+
+      - name: Build
+        working-directory: ${{ steps.pkg.outputs.dir }}
+        run: pnpm build
+
+      - name: Package checks (publint, types for every resolution)
+        working-directory: ${{ steps.pkg.outputs.dir }}
+        run: pnpm pack:check
+
+      - name: The tarball
+        id: tarball
+        working-directory: ${{ steps.pkg.outputs.dir }}
+        run: |
+          mkdir -p release
+          npm pack --pack-destination release
+          file=$(ls release/*.tgz)
+          tar -tzf "$file" > release/contents.txt
+          grep -qx 'package/LICENSE' release/contents.txt
+          grep -qx 'package/dist/esm/index.js' release/contents.txt
+          grep -qx 'package/dist/cjs/index.js' release/contents.txt
+          grep -qx 'package/dist/esm/index.d.ts' release/contents.txt
+          if grep -Eq '^package/(src|test|scripts|node_modules|coverage)/' release/contents.txt; then
+            echo "::error::The tarball contains sources, tests or dependencies"; exit 1
+          fi
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+
+      - name: Release notes from the changelog
+        working-directory: ${{ steps.pkg.outputs.dir }}
+        env:
+          VERSION: ${{ steps.pkg.outputs.version }}
+        run: |
+          awk -v v="$VERSION" '
+            $0 ~ "^## \\[" v "\\]" { on = 1; next }
+            on && /^## \[/ { exit }
+            on { print }
+          ' CHANGELOG.md > release/notes.md
+          test -s release/notes.md
+
+      - name: Publish to GitHub Packages
+        working-directory: ${{ steps.pkg.outputs.dir }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm publish "${{ steps.tarball.outputs.file }}" --registry https://npm.pkg.github.com
+
+      - name: GitHub release
+        working-directory: ${{ steps.pkg.outputs.dir }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "${{ steps.tarball.outputs.file }}" \
+            --title "${{ steps.pkg.outputs.title }} ${{ steps.pkg.outputs.version }}" \
+            --notes-file release/notes.md \
+            --latest=false

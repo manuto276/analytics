@@ -31,6 +31,7 @@ guidelines of 10 June 2021). See [docs/privacy](docs/privacy) and the points mar
 | `services/tracker` | Tracker and consent banner (TypeScript, esbuild, < 5 KB gzip) |
 | `services/e2e` | Playwright end-to-end tests with fixture sites |
 | `services/wordpress-plugin/analytics-connector` | [Analytics for WordPress](services/wordpress-plugin/analytics-connector/README.md): the tracker, consent links and a dashboard in WordPress (GPL-2.0-or-later, released on `wordpress-plugin-v*` tags) |
+| `services/sdk/browser`, `services/sdk/node` | JavaScript SDKs `@manuto276/analytics-browser` (typed loader, React and Vue bindings) and `@manuto276/analytics-node` (server API client), MIT, on GitHub Packages, released on `sdk-browser-v*` / `sdk-node-v*` tags |
 | `deploy/docker` | Dockerfile (dev, test, package, runtime stages) and compose files |
 | `deploy/manual` | `build.sh`, `publish.sh` and the deploy `console` for managed PHP hosts |
 | `deploy/examples` | nginx vhost, first-party proxy, Varnish and crontab examples |
@@ -50,8 +51,19 @@ See [docs/development/setup.md](docs/development/setup.md). The full documentati
 (architecture, ADRs, privacy, API, integration, deployment, operations) starts at
 [docs/README.md](docs/README.md).
 
+## Documentation
+
+* Integration: [tracker snippet](docs/integration/tracker.md) ·
+  [browser SDK](docs/integration/sdk-browser.md) (bundlers, React, Vue, Next.js, Nuxt) ·
+  [Node SDK](docs/integration/sdk-node.md) ·
+  [server-side conversions](docs/integration/server-side-conversions.md) ·
+  [consent banner](docs/integration/consent-banner.md) ·
+  [WordPress](docs/integration/wordpress.md)
+* Everything else: [docs/README.md](docs/README.md)
+
 ## License
 
 AGPL-3.0-or-later. See [LICENSE](LICENSE) and [NOTICE](NOTICE). If you run a modified version as a
 network service, you must offer its source code to its users; the dashboard footer and the tracker
-header link to the source.
+header link to the source. The JavaScript SDKs in `services/sdk` are MIT and the WordPress plugin is
+GPL-2.0-or-later, each with its own `LICENSE`.

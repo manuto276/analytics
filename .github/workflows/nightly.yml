@@ -136,6 +136,45 @@ jobs:
           corepack enable
           (cd services/tracker && pnpm install --frozen-lockfile && pnpm audit --audit-level moderate) || true
           (cd services/dashboard && pnpm install --frozen-lockfile && pnpm audit --audit-level moderate) || true
+          (cd services/sdk/browser && pnpm install --frozen-lockfile && pnpm audit --audit-level moderate) || true
+          (cd services/sdk/node && pnpm install --frozen-lockfile && pnpm audit --audit-level moderate) || true
+
+  sdk:
+    name: SDKs (full suites, Node SDK on every supported Node)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+      - name: Enable pnpm
+        run: corepack enable
+      - name: Browser SDK
+        working-directory: services/sdk/browser
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm lint
+          pnpm typecheck
+          pnpm tracker-types:check
+          pnpm test:coverage
+          pnpm build
+          pnpm pack:check
+      - name: Node SDK
+        working-directory: services/sdk/node
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm lint
+          pnpm typecheck
+          pnpm openapi-types:check
+          pnpm test:coverage
+          pnpm build
+          pnpm pack:check
+      - name: Node SDK build on Node 18, 20 and 22
+        working-directory: services/sdk/node
+        run: |
+          for v in 18 20 22; do
+            docker run --rm -v "$PWD:/sdk:ro" -w /sdk "node:$v-slim" sh -c 'node scripts/smoke.mjs && node scripts/smoke.cjs'
+          done
 
   wordpress-plugin:
     name: WordPress plugin smoke

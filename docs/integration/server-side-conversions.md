@@ -40,6 +40,12 @@ const raw = req.cookies?.an_vid
 const visitorId = /^[A-Za-z0-9_-]{22}$/.test(raw ?? '') ? raw : null
 ```
 
+```js
+// Node SDK: an IncomingMessage, an Express request or a Fetch Request
+import { visitorIdFromRequest } from '@manuto276/analytics-node'
+const visitorId = visitorIdFromRequest(req)
+```
+
 Always validate the format: it is attacker-controlled input, and an invalid value is rejected by the
 API anyway.
 
@@ -95,6 +101,35 @@ curl_setopt_array($ch, [
     CURLOPT_TIMEOUT => 5,
 ]);
 curl_exec($ch);   // 202 {"accepted":1,"duplicates":0,"rejected":[]}
+```
+
+In Node, the [Node SDK](sdk-node.md) (`@manuto276/analytics-node`, MIT) applies the same rules —
+the payload, the `visitor_id` check, minor units, ISO 8601 — and retries `429`/`5xx` honouring
+`Retry-After`:
+
+```ts
+import { AnalyticsApiError, createClient, visitorIdFromRequest } from '@manuto276/analytics-node'
+
+const analytics = createClient({
+  serviceUrl: 'https://stats.example.net',
+  apiKey: process.env.ANALYTICS_API_KEY,        // conversions:write
+  publicKey: 'pk_XXXXXXXXXXXXXXXXXXXXX',
+})
+
+try {
+  const result = await analytics.conversions.send({
+    id: `order-${order.id}`,                      // idempotency key
+    name: 'purchase',
+    occurred_at: order.paidAt,                    // Date, epoch ms or ISO 8601
+    visitor_id: visitorIdFromRequest(req),        // dropped unless it is a valid an_vid
+    customer_ref: order.customerId,
+    value: { amount_minor: order.totalCents, currency: 'EUR' },
+    props: { plan: order.plan },
+  })                                              // {accepted: 1, duplicates: 0, rejected: []}
+} catch (e) {
+  if (e instanceof AnalyticsApiError && e.retryable) await jobs.retryLater(order.id)  // same id
+  else throw e                                    // 4xx: fix the payload (e.code, e.errors)
+}
 ```
 
 WordPress has a helper: `analytics_connector_track_conversion()` — see [wordpress.md](wordpress.md).

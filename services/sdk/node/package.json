@@ -1,0 +1,60 @@
+{
+  "name": "@manuto276/analytics-node",
+  "version": "0.1.0",
+  "description": "Node client for the analytics server API: conversions, content stats and reports, with retries and typed errors.",
+  "license": "MIT",
+  "author": "The analytics contributors",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/manuto276/analytics.git",
+    "directory": "services/sdk/node"
+  },
+  "homepage": "https://github.com/manuto276/analytics/blob/main/docs/integration/sdk-node.md",
+  "bugs": "https://github.com/manuto276/analytics/issues",
+  "keywords": ["analytics", "conversions", "server-side", "privacy"],
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "import": { "types": "./dist/esm/index.d.ts", "default": "./dist/esm/index.js" },
+      "require": { "types": "./dist/cjs/index.d.ts", "default": "./dist/cjs/index.js" }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": ["dist", "LICENSE", "README.md", "CHANGELOG.md"],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "packageManager": "pnpm@12.4.1",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p test/tsconfig.json",
+    "openapi-types": "node scripts/openapi-types.mjs",
+    "openapi-types:check": "node scripts/openapi-types.mjs --check",
+    "smoke": "node scripts/smoke.mjs && node scripts/smoke.cjs",
+    "pack:check": "publint --pack npm && attw --pack ."
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^18.19.0",
+    "@vitest/coverage-v8": "^5.0.1",
+    "eslint": "^10.10.0",
+    "globals": "^17.12.0",
+    "openapi-typescript": "^7.13.0",
+    "publint": "^0.3.24",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.70.0",
+    "vitest": "^5.0.1",
+    "yaml": "^2.9.1"
+  }
+}

@@ -28,6 +28,10 @@ COMPOSE_TEST := $(COMPOSE) -p $(TEST_PROJECT) -f $(DOCKER_DIR)/compose.base.yml 
 PHP := $(COMPOSE_TEST) run --rm -T php
 PHP_NODEPS := $(COMPOSE_TEST) run --rm -T --no-deps php
 NODE := $(COMPOSE_TEST) run --rm -T --no-deps node
+# The SDKs get their own Linux node_modules volumes too (not declared in the compose files).
+SDK_VOLUMES := -v $(TEST_PROJECT)_node-modules-sdk-browser:/src/services/sdk/browser/node_modules \
+               -v $(TEST_PROJECT)_node-modules-sdk-node:/src/services/sdk/node/node_modules
+NODE_SDK := $(COMPOSE_TEST) run --rm -T --no-deps $(SDK_VOLUMES) node
 PLAYWRIGHT := $(COMPOSE_TEST) run --rm -T playwright
 
 COMMA := ,
@@ -38,7 +42,7 @@ PACKAGE = $(shell ls -1t $(DIST)/analytics-*.tar.gz 2>/dev/null | head -n1)
 
 .PHONY: help up down logs sh certs install node-init db-reset seed \
         test test-unit test-integration test-functional test-migrations \
-        test-tracker test-tracker-browser test-dashboard test-e2e e2e-setup \
+        test-tracker test-tracker-browser test-dashboard test-sdk sdk-init test-e2e e2e-setup \
         test-deploy test-smoke test-image test-wordpress coverage mutation perf e2e-snapshots e2e-report \
         stan deptrac cs cs-fix rector lint lint-js lint-infra typecheck typecheck-e2e openapi-types size package ci \
         images build-images
@@ -75,10 +79,16 @@ node-init:
 	@$(COMPOSE_TEST) run --rm -T --no-deps --user root node sh -lc \
 	  'chown $(DOCKER_UID):$(DOCKER_GID) /src/services/tracker/node_modules /src/services/dashboard/node_modules /src/services/e2e/node_modules' >/dev/null
 
-install: node-init ## Install PHP and JavaScript dependencies inside the containers
+sdk-init:
+	@$(COMPOSE_TEST) run --rm -T --no-deps --user root $(SDK_VOLUMES) node sh -lc \
+	  'chown $(DOCKER_UID):$(DOCKER_GID) /src/services/sdk/browser/node_modules /src/services/sdk/node/node_modules' >/dev/null
+
+install: node-init sdk-init ## Install PHP and JavaScript dependencies inside the containers
 	$(PHP_NODEPS) composer install
 	$(NODE) sh -lc 'cd services/tracker && $(PNPM) install --frozen-lockfile'
 	$(NODE) sh -lc 'cd services/dashboard && $(PNPM) install --frozen-lockfile'
+	$(NODE_SDK) sh -lc 'cd services/sdk/browser && $(PNPM) install --frozen-lockfile'
+	$(NODE_SDK) sh -lc 'cd services/sdk/node && $(PNPM) install --frozen-lockfile'
 
 db-reset: ## Drop, recreate and migrate the test database
 	$(PHP) sh -lc 'php bin/analytics migrations:migrate --no-interaction --allow-no-migration'
@@ -88,7 +98,7 @@ seed: ## Seed demo data into the test database (bin/analytics dev:seed)
 
 ## ----------------------------------------------------------------- tests ----
 
-test: test-unit test-integration test-functional test-migrations test-tracker test-dashboard ## Run the default suites (PHP + tracker + dashboard)
+test: test-unit test-integration test-functional test-migrations test-tracker test-dashboard test-sdk ## Run the default suites (PHP + tracker + dashboard + SDKs)
 
 test-unit: ## PHPUnit unit suite
 	$(PHP_NODEPS) $(PHPUNIT) --testsuite unit
@@ -110,6 +120,10 @@ test-tracker-browser: ## Tracker tests in real browsers (Playwright project "tra
 
 test-dashboard: node-init ## Dashboard unit and component tests (Vitest)
 	$(NODE) sh -lc 'cd services/dashboard && $(PNPM) install --frozen-lockfile && $(PNPM) test'
+
+test-sdk: sdk-init ## SDK packages: generated types, Vitest with coverage, build, package checks
+	$(NODE_SDK) sh -lc 'cd services/sdk/browser && $(PNPM) install --frozen-lockfile && $(PNPM) tracker-types:check && $(PNPM) test:coverage && $(PNPM) build && $(PNPM) pack:check'
+	$(NODE_SDK) sh -lc 'cd services/sdk/node && $(PNPM) install --frozen-lockfile && $(PNPM) openapi-types:check && $(PNPM) test:coverage && $(PNPM) build && $(PNPM) pack:check && $(PNPM) smoke'
 
 e2e-setup: ## Bring the test stack up and create the e2e admin, site and fixture key
 	TEST_PROJECT=$(TEST_PROJECT) ./$(DOCKER_DIR)/scripts/e2e-setup.sh
@@ -175,9 +189,11 @@ rector: ## Rector (dry run)
 
 lint: cs lint-js typecheck-e2e lint-infra ## Lint everything: PHP CS, ESLint, workflows, Dockerfile, shell scripts
 
-lint-js: node-init ## ESLint for the tracker and the dashboard
+lint-js: node-init sdk-init ## ESLint for the tracker, the dashboard and the SDKs
 	$(NODE) sh -lc 'cd services/tracker && $(PNPM) install --frozen-lockfile && $(PNPM) lint'
 	$(NODE) sh -lc 'cd services/dashboard && $(PNPM) install --frozen-lockfile && $(PNPM) lint'
+	$(NODE_SDK) sh -lc 'cd services/sdk/browser && $(PNPM) install --frozen-lockfile && $(PNPM) lint'
+	$(NODE_SDK) sh -lc 'cd services/sdk/node && $(PNPM) install --frozen-lockfile && $(PNPM) lint'
 
 lint-infra: ## actionlint, hadolint and shellcheck on the infrastructure files
 	docker run --rm -v "$(CURDIR):/repo" -w /repo rhysd/actionlint:latest -color
@@ -188,15 +204,18 @@ lint-infra: ## actionlint, hadolint and shellcheck on the infrastructure files
 	  deploy/manual/build.sh deploy/manual/publish.sh deploy/manual/smoke/smoke.sh deploy/manual/smoke/repack.sh \
 	  services/wordpress-plugin/analytics-connector/tests/smoke/smoke.sh
 
-typecheck: node-init typecheck-e2e ## TypeScript checks (tracker + dashboard + e2e)
+typecheck: node-init sdk-init typecheck-e2e ## TypeScript checks (tracker + dashboard + SDKs + e2e)
 	$(NODE) sh -lc 'cd services/tracker && $(PNPM) install --frozen-lockfile && $(PNPM) typecheck'
 	$(NODE) sh -lc 'cd services/dashboard && $(PNPM) install --frozen-lockfile && $(PNPM) typecheck'
+	$(NODE_SDK) sh -lc 'cd services/sdk/browser && $(PNPM) install --frozen-lockfile && $(PNPM) typecheck'
+	$(NODE_SDK) sh -lc 'cd services/sdk/node && $(PNPM) install --frozen-lockfile && $(PNPM) typecheck'
 
 typecheck-e2e: node-init ## TypeScript check of the end-to-end specs (Playwright only transpiles)
 	$(NODE) sh -lc 'cd services/e2e && npm ci --no-audit --no-fund --silent && npm run typecheck'
 
-openapi-types: node-init ## Regenerate the dashboard API types from docs/api/openapi.yaml
+openapi-types: node-init sdk-init ## Regenerate the dashboard and Node SDK API types from docs/api/openapi.yaml
 	$(NODE) sh -lc 'cd services/dashboard && $(PNPM) install --frozen-lockfile && $(PNPM) openapi-types'
+	$(NODE_SDK) sh -lc 'cd services/sdk/node && $(PNPM) install --frozen-lockfile && $(PNPM) openapi-types'
 
 size: node-init ## Tracker size budget (size-limit, ≤ 5.0 KB gzip)
 	$(NODE) sh -lc 'cd services/tracker && $(PNPM) install --frozen-lockfile && $(PNPM) build && $(PNPM) size'
@@ -224,6 +243,7 @@ ci: ## Everything CI runs, in the same order (see .github/workflows/ci.yml)
 	$(MAKE) test-unit test-integration test-functional test-migrations
 	$(MAKE) test-tracker size typecheck
 	$(MAKE) test-dashboard
+	$(MAKE) test-sdk
 	$(MAKE) test-deploy
 	$(MAKE) test-e2e
 	$(MAKE) package

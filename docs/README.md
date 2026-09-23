@@ -10,6 +10,7 @@ feature was planned but not built, the page says so.
 |---|---|
 | Understand the system | [architecture/overview.md](architecture/overview.md) |
 | Put the tracker on a site | [integration/tracker.md](integration/tracker.md) |
+| Use it from a JavaScript app or a Node backend | [integration/sdk-browser.md](integration/sdk-browser.md) · [integration/sdk-node.md](integration/sdk-node.md) |
 | Install the service | [deploy/tarball.md](deploy/tarball.md) or [deploy/docker.md](deploy/docker.md) |
 | Query the API | [api/reporting.md](api/reporting.md) |
 | Answer a privacy question | [privacy/two-levels.md](privacy/two-levels.md) |
@@ -35,7 +36,9 @@ Decision records: [0001 Slim + Doctrine DBAL split](architecture/adr/0001-slim-d
 [0005 static SPA on the same origin](architecture/adr/0005-static-spa-same-origin.md) ·
 [0006 tracker license](architecture/adr/0006-tracker-license.md) ·
 [0007 geo DB-IP Lite](architecture/adr/0007-geo-dbip-lite.md) ·
-[0008 separate WordPress plugin](architecture/adr/0008-separate-wordpress-plugin.md)
+[0008 separate WordPress plugin](architecture/adr/0008-separate-wordpress-plugin.md) ·
+[0009 WordPress plugin dashboard](architecture/adr/0009-wordpress-plugin-dashboard.md) ·
+[0010 SDK packages](architecture/adr/0010-sdk-packages.md)
 
 ## Privacy and law
 
@@ -66,7 +69,8 @@ Decision records: [0001 Slim + Doctrine DBAL split](architecture/adr/0001-slim-d
 [tracker.md](integration/tracker.md) · [consent-banner.md](integration/consent-banner.md) ·
 [spa.md](integration/spa.md) · [server-side-conversions.md](integration/server-side-conversions.md) ·
 [first-party-proxy.md](integration/first-party-proxy.md) · [caching-proxies.md](integration/caching-proxies.md) ·
-[wordpress.md](integration/wordpress.md)
+[wordpress.md](integration/wordpress.md) · [sdk-browser.md](integration/sdk-browser.md) ·
+[sdk-node.md](integration/sdk-node.md)
 
 ## Deployment
 

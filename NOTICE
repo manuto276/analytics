@@ -27,6 +27,11 @@ Third-party components
 * MaxMind test database (services/api/tests/fixtures/GeoIP2-Country-Test.mmdb) from
   https://github.com/maxmind/MaxMind-DB, Apache-2.0; used only by the test suite.
 * PHP and JavaScript dependencies are listed with their licenses in services/api/composer.lock,
-  services/dashboard/pnpm-lock.yaml and services/tracker/pnpm-lock.yaml.
+  services/dashboard/pnpm-lock.yaml, services/tracker/pnpm-lock.yaml and the SDKs' lockfiles.
 * The optional WordPress plugin in services/wordpress-plugin/analytics-connector is licensed
   GPL-2.0-or-later (see its own LICENSE file).
+* The JavaScript SDK packages in services/sdk/browser (@manuto276/analytics-browser) and
+  services/sdk/node (@manuto276/analytics-node) are licensed under the MIT License (see the LICENSE
+  file in each directory), because they are bundled into other people's applications. They contain
+  no tracker or server code; the tracker and the server remain AGPL-3.0-or-later. See
+  docs/architecture/adr/0010-sdk-packages.md.
